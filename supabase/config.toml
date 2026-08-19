@@ -1,0 +1,5 @@
+project_id = "wlr-command-personnel"
+
+[functions.notify-discord]
+enabled = true
+verify_jwt = true

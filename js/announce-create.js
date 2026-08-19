@@ -6,6 +6,7 @@ import { t } from './i18n.js';
 // 'announcement_covers' Storage bucket, then inserts into public.announcements.
 // RLS restricts both the upload and the insert to command admins.
 import { createAnnouncement } from './announcement-service.js';
+import { supabaseClient } from './supabase-client.js';
 
 let currentAdmin = null;
 
@@ -66,17 +67,15 @@ document.querySelector('#announce-form').addEventListener('submit', async (event
     });
 
     // DISCORD WEBHOOK INJECT POINT:
-    // Trigger the notification here, after the announcement row is committed.
-    // Example:
-    //   await fetch(DISCORD_WEBHOOK_URL, {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify({
-    //       content: `New announcement: ${title} (capacity ${maxCapacity})`
-    //     })
-    //   });
-    // Keep the webhook URL out of frontend code in production: proxy it through
-    // a Supabase Edge Function so the URL is never exposed to the browser.
+    // Proxy through Edge Function notify-discord so the webhook URL stays server-side.
+    if (supabaseClient) {
+      const { error: notifyError } = await supabaseClient.functions.invoke('notify-discord', {
+        body: { title, content, maxCapacity }
+      });
+      if (notifyError) {
+        console.warn('Discord notify failed', notifyError.message);
+      }
+    }
 
     showToast(t('create.published'), 'success');
     window.setTimeout(() => {
