@@ -131,12 +131,13 @@ p {
 }
 
 .clan-insignia {
-  width: 42px;
-  height: 42px;
-  object-fit: cover;
-  border-radius: 10px;
+  width: 52px;
+  height: 52px;
+  object-fit: contain;
+  border-radius: 12px;
   border: 1px solid var(--border);
-  background: var(--bg-muted);
+  background: var(--bg-elevated);
+  padding: 2px;
 }
 
 .clan-title {
@@ -252,16 +253,39 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow: auto;
 }
 
 .command-drawer.is-open {
   transform: translateX(0);
 }
 
+.drawer-group {
+  display: grid;
+  gap: 0.25rem;
+  padding-bottom: 0.7rem;
+  margin-bottom: 0.5rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.drawer-group:last-of-type {
+  border-bottom: 0;
+  margin-bottom: 0;
+}
+
+.drawer-group-title {
+  margin: 0;
+  padding: 0.25rem 0.95rem 0.35rem;
+  font-size: 0.72rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
 .command-drawer a,
 .command-drawer button.linkish {
   display: block;
-  padding: 0.85rem 0.95rem;
+  padding: 0.75rem 0.95rem;
   border-radius: 10px;
   border: 1px solid transparent;
   background: transparent;
@@ -409,21 +433,7 @@ body.is-local-test .page-shell {
 }
 
 .status-banner {
-  display: none;
-  margin-bottom: 1rem;
-  padding: 0.8rem 1rem;
-  border-radius: 10px;
-  border: 1px solid var(--border);
-  background: var(--accent-soft);
-}
-
-.status-banner.is-visible {
-  display: block;
-}
-
-.status-banner.is-error {
-  background: var(--danger-soft);
-  color: var(--danger);
+  display: none !important;
 }
 
 .avatar-stage {
@@ -1025,4 +1035,124 @@ body.is-local-test .page-shell {
   .page-content {
     width: min(960px, calc(100% - var(--page-pad) * 2));
   }
+}
+
+.wlr-notice {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  display: grid;
+  place-items: center;
+  padding: 1.2rem;
+  background: rgba(10, 16, 28, 0.46);
+  backdrop-filter: blur(8px);
+}
+
+.wlr-notice[hidden] {
+  display: none !important;
+}
+
+.wlr-notice-card {
+  width: min(420px, 100%);
+  padding: 1.4rem 1.3rem 1.2rem;
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+  text-align: center;
+}
+
+.wlr-notice-crest {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 0.9rem;
+  object-fit: contain;
+  border-radius: 16px;
+  background: var(--bg-muted);
+}
+
+.wlr-notice.is-loading .wlr-notice-crest {
+  animation: wlr-crest-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes wlr-crest-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(0.96);
+    opacity: 0.7;
+  }
+}
+
+.wlr-notice-status {
+  color: var(--text);
+  font-weight: 600;
+  line-height: 1.5;
+}
+
+.wlr-notice.is-error .wlr-notice-status {
+  color: var(--danger);
+}
+
+.wlr-notice-actions,
+.wlr-notice-choices {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 1rem;
+}
+
+.wlr-notice-choices[hidden],
+.wlr-notice-actions[hidden] {
+  display: none !important;
+}
+
+.wlr-notice-choices {
+  max-height: 40vh;
+  overflow: auto;
+}
+
+.wlr-notice-actions {
+  grid-template-columns: 1fr 1fr;
+}
+
+.wlr-notice-choice {
+  width: 100%;
+  text-align: left;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  cursor: pointer;
+}
+
+.wlr-notice-choice.is-selected,
+.wlr-notice-choice:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.choice-trigger {
+  width: 100%;
+  min-height: 42px;
+  padding: 0.55rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg);
+  text-align: left;
+  cursor: pointer;
+}
+
+select.select-field.is-native-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.toast-stack {
+  display: none !important;
 }

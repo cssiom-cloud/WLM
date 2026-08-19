@@ -1,5 +1,6 @@
 import { readCurrentPersonnel, signOutSession } from './session.js';
 import { getLang, setLang, t } from './i18n.js';
+import { showStatus } from './ui.js';
 
 let lastActivePage = '';
 let langListenerBound = false;
@@ -15,6 +16,23 @@ function langSwitchMarkup() {
       <button type="button" data-lang="th" class="${lang === 'th' ? 'is-active' : ''}">TH</button>
       <button type="button" data-lang="en" class="${lang === 'en' ? 'is-active' : ''}">EN</button>
     </div>
+  `;
+}
+
+function groupMarkup(title, links, activePage) {
+  if (!links.length) {
+    return '';
+  }
+  return `
+    <section class="drawer-group">
+      <h2 class="drawer-group-title">${title}</h2>
+      ${links
+        .map(
+          (link) =>
+            `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+        )
+        .join('')}
+    </section>
   `;
 }
 
@@ -50,36 +68,43 @@ export async function initCommandNavbar(activePage) {
     personnel: null
   }));
 
-  // RBAC: menu nodes for admin-only pages are never rendered for normal users.
   const isAdmin = personnel?.role === 'admin';
   const isAuthed = Boolean(session);
-  const links = [
-    { href: './index.html', page: 'home', label: t('nav.home') },
-    { href: './announcements.html', page: 'announcements', label: t('nav.announcements') },
-    { href: './directory.html', page: 'directory', label: t('nav.directory') },
+
+  const personnelLinks = [{ href: './index.html', page: 'home', label: t('nav.home') }];
+  if (isAuthed) {
+    personnelLinks.push({ href: './directory.html', page: 'directory', label: t('nav.directory') });
+    personnelLinks.push({ href: './units.html', page: 'units', label: t('nav.units') });
+  } else {
+    personnelLinks.push({ href: './directory.html', page: 'directory', label: t('nav.directory') });
+  }
+
+  const operationsLinks = [{ href: './announcements.html', page: 'announcements', label: t('nav.announcements') }];
+  if (isAdmin) {
+    operationsLinks.push({ href: './announce-create.html', page: 'announce-create', label: t('nav.createAnnouncement') });
+  }
+
+  const archiveLinks = [
     { href: './lore.html', page: 'lore', label: t('nav.lore') },
     { href: './documents.html', page: 'documents', label: t('nav.documents') }
   ];
 
-  if (isAuthed) {
-    links.push({ href: './units.html', page: 'units', label: t('nav.units') });
-  }
-  links.push({ href: './tickets.html', page: 'tickets', label: t('nav.tickets') });
+  const supportLinks = [{ href: './tickets.html', page: 'tickets', label: t('nav.tickets') }];
+
+  const commandLinks = [];
   if (isAdmin) {
-    links.push({ href: './announce-create.html', page: 'announce-create', label: t('nav.createAnnouncement') });
-    links.push({ href: './admin.html', page: 'admin', label: t('nav.adminPage') });
+    commandLinks.push({ href: './admin.html', page: 'admin', label: t('nav.adminPage') });
   }
   if (isAuthed) {
-    links.push({ href: './settings.html', page: 'settings', label: t('nav.settings') });
-    links.push({ href: './logs.html', page: 'logs', label: t('nav.logs') });
+    commandLinks.push({ href: './settings.html', page: 'settings', label: t('nav.settings') });
+    commandLinks.push({ href: './logs.html', page: 'logs', label: t('nav.logs') });
   }
 
-  drawer.innerHTML = `${links
-    .map(
-      (link) =>
-        `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
-    )
-    .join('')}
+  drawer.innerHTML = `${groupMarkup(t('nav.group.personnel'), personnelLinks, activePage)}
+    ${groupMarkup(t('nav.group.operations'), operationsLinks, activePage)}
+    ${groupMarkup(t('nav.group.archive'), archiveLinks, activePage)}
+    ${groupMarkup(t('nav.group.support'), supportLinks, activePage)}
+    ${groupMarkup(t('nav.group.command'), commandLinks, activePage)}
     <button class="linkish" type="button" id="sign-out-control"${isAuthed ? '' : ' hidden'}>${t('nav.signOut')}</button>`;
 
   const setOpen = (open) => {
@@ -106,7 +131,7 @@ export async function initCommandNavbar(activePage) {
   if (isAuthed) {
     signOutControl.addEventListener('click', () => {
       signOutSession().catch((error) => {
-        window.alert(error.message);
+        showStatus(error.message, true);
       });
     });
   }

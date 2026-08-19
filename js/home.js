@@ -1,7 +1,7 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
-import { PENCIL_ICON, PLUS_ICON, escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js';
+import { PENCIL_ICON, PLUS_ICON, escapeHtml, initialsFromName, optionMarkup, showStatus, withOverlay } from './ui.js';
 import { updatePersonnelRecord, uploadPersonnelAvatar } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
@@ -190,7 +190,7 @@ requireAuthenticatedPersonnel()
     }
     actorRole = result.personnel.role;
     try {
-      unitBoard = await fetchUnitBoard();
+      unitBoard = await withOverlay(() => fetchUnitBoard(), t('notice.loading'));
     } catch {
       unitBoard = { units: [], ranks: [] };
     }

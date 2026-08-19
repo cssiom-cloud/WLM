@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
-import { escapeHtml, showToast } from './ui.js';
+import { confirmNotice, escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: CRUD goes through js/content-service.js (command_documents table).
 import { deleteDocument, fetchDocuments, saveDocument } from './content-service.js';
@@ -195,7 +195,7 @@ document.querySelector('#docs-content').addEventListener('click', async (event) 
     renderEditor('edit');
   }
   if (event.target.id === 'doc-delete') {
-    if (!window.confirm(t('common.confirmDelete'))) {
+    if (!(await confirmNotice(t('common.confirmDelete')))) {
       return;
     }
     try {

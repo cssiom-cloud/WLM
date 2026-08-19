@@ -254,6 +254,8 @@ export function ensureLocalStation() {
         content: '',
         max_capacity: 40,
         head_user_id: null,
+        logo_url: null,
+        logo_link: null,
         created_at: new Date().toISOString()
       }))
     );
@@ -899,8 +901,24 @@ export async function localSaveUnit(unitId, payload) {
   if ('head_user_id' in payload && actor.role !== 'admin') {
     delete payload.head_user_id;
   }
+  Object.keys(payload).forEach((key) => {
+    if (payload[key] === undefined) {
+      delete payload[key];
+    }
+  });
   Object.assign(unit, payload);
   writeJson(STORAGE_UNITS, units);
+}
+
+export async function localUploadUnitLogo(unitId, file) {
+  const dataUrl = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result || ''));
+    reader.onerror = () => reject(new Error('Logo file could not be read.'));
+    reader.readAsDataURL(file);
+  });
+  await localSaveUnit(unitId, { logo_url: dataUrl });
+  return dataUrl;
 }
 
 export async function localSaveUnitRank(entry) {

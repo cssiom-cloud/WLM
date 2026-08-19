@@ -113,7 +113,6 @@ readCurrentPersonnel()
     actor = result?.personnel || null;
     configureGuestForm();
     if (isGuest()) {
-      showStatus(t('tickets.guestOnlyForgot'));
       renderTickets();
       return;
     }

@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
-import { escapeHtml, showToast } from './ui.js';
+import { confirmNotice, escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: all reads and writes go through js/announcement-service.js
 import {
@@ -181,14 +181,20 @@ document.querySelector('#announcement-list').addEventListener('click', async (ev
 
   try {
     if (closeButton) {
-      if (!isAdmin() || !window.confirm(t('ann.confirmClose'))) {
+      if (!isAdmin()) {
+        return;
+      }
+      if (!(await confirmNotice(t('ann.confirmClose')))) {
         return;
       }
       const result = await closeAnnouncement(closeButton.getAttribute('data-close-id'));
       const awarded = Number(result?.awarded || 0);
       showToast(awarded > 0 ? t('ann.closedWithHonor') : t('ann.closedOk'), 'success');
     } else if (deleteButton) {
-      if (!isAdmin() || !window.confirm(t('ann.confirmDelete'))) {
+      if (!isAdmin()) {
+        return;
+      }
+      if (!(await confirmNotice(t('ann.confirmDelete')))) {
         return;
       }
       await deleteAnnouncement(deleteButton.getAttribute('data-delete-id'));

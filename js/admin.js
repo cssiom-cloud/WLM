@@ -9,7 +9,7 @@ import {
   RANK_STRUCTURE,
   formatPersonnelName
 } from './domain.js';
-import { escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js';
+import { confirmNotice, escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js';
 import {
   fetchPersonnelRoster,
   uniqueAgencyValues,
@@ -344,7 +344,10 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
       showStatus('Admin role removed.');
     }
     if (action === 'delete-user') {
-      if (!window.confirm(t('admin.confirmDeleteUser'))) {
+      if (!isAdmin()) {
+        return;
+      }
+      if (!(await confirmNotice(t('admin.confirmDeleteUser')))) {
         return;
       }
       await deletePersonnelAccount(personnelId);

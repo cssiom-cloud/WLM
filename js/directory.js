@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { biographyParagraphs, formatPersonnelName, rankSortOrder } from './domain.js';
-import { escapeHtml, initialsFromName, showToast } from './ui.js';
+import { escapeHtml, initialsFromName, showToast, withOverlay } from './ui.js';
 import { t } from './i18n.js';
 // Supabase fetch logic lives in these two services.
 // fetchPersonnelRoster() -> supabase.from('oc_personnel').select('*') sorted by rank
@@ -228,17 +228,20 @@ bootCommandShell('directory');
 renderSkeletons();
 
 // INJECT POINT: the two calls below are where data leaves Supabase and enters the UI.
-Promise.all([
-  fetchPersonnelRoster(),
-  fetchSettingsMap().catch(() => ({})),
-  fetchUnitBoard().catch(() => ({ units: [], ranks: [] }))
-])
+withOverlay(
+  () =>
+    Promise.all([
+      fetchPersonnelRoster(),
+      fetchSettingsMap().catch(() => ({})),
+      fetchUnitBoard().catch(() => ({ units: [], ranks: [] }))
+    ]),
+  t('notice.loading')
+)
   .then(([records, settings, board]) => {
     rosterCache = records;
     settingsMap = settings;
     unitBoard = board;
     renderDirectory('');
-    showToast(`${records.length} ${t('dir.loaded')}`, 'success');
   })
   .catch((error) => {
     document.querySelector('#directory-grid').innerHTML = '';

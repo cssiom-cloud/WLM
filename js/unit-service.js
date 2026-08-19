@@ -10,7 +10,8 @@ import {
   localDeleteUnitRank,
   localSetUnitAnnouncements,
   localSetUnitHead,
-  localSetUnitMemberRank
+  localSetUnitMemberRank,
+  localUploadUnitLogo
 } from './local-station.js';
 
 export async function fetchUnitBoard() {
@@ -148,6 +149,27 @@ export async function setUnitAnnouncements(unitId, announcementIds) {
   if (error) {
     throw error;
   }
+}
+
+export async function uploadUnitLogo(unitId, file) {
+  if (isLocalTestMode()) {
+    return localUploadUnitLogo(unitId, file);
+  }
+
+  const extension = String(file.name.split('.').pop() || 'jpg').toLowerCase();
+  const objectPath = `${unitId}/logo.${extension}`;
+  const { error: uploadError } = await supabaseClient.storage.from('unit_logos').upload(objectPath, file, {
+    upsert: true,
+    cacheControl: '3600',
+    contentType: file.type || 'image/jpeg'
+  });
+  if (uploadError) {
+    throw uploadError;
+  }
+  const { data } = supabaseClient.storage.from('unit_logos').getPublicUrl(objectPath);
+  const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
+  await saveUnitDetails(unitId, { logo_url: publicUrl });
+  return publicUrl;
 }
 
 export async function setUnitMemberRank(userId, rankId) {

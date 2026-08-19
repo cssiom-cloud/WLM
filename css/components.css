@@ -778,7 +778,57 @@
 
 .unit-board {
   display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
   gap: 1rem;
+}
+
+.unit-card-link {
+  display: grid;
+  gap: 0.7rem;
+  color: inherit;
+}
+
+.unit-card-link:hover {
+  border-color: var(--accent);
+}
+
+.unit-logo {
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.unit-logo-lg {
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.unit-page-hero {
+  display: flex;
+  gap: 1.1rem;
+  align-items: flex-start;
+  margin-bottom: 1.2rem;
+}
+
+.unit-briefing {
+  white-space: pre-wrap;
+  line-height: 1.7;
+  color: var(--text);
+  margin: 1rem 0 1.4rem;
+}
+
+.unit-logo-fallback {
+  display: grid;
+  place-items: center;
+  font-weight: 700;
+  letter-spacing: 0.06em;
 }
 
 .unit-card {

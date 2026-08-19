@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
-import { escapeHtml, showToast } from './ui.js';
+import { confirmNotice, escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: CRUD goes through js/content-service.js (lore_entries table).
 import { deleteLoreEntry, fetchLoreEntries, saveLoreEntry } from './content-service.js';
@@ -202,7 +202,7 @@ document.querySelector('main').addEventListener('click', async (event) => {
       }
       return;
     }
-    if (!window.confirm(t('common.confirmDelete'))) {
+    if (!(await confirmNotice(t('common.confirmDelete')))) {
       return;
     }
     await deleteLoreEntry(deleteButton.getAttribute('data-lore-delete'));
