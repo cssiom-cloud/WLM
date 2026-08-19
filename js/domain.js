@@ -6,6 +6,33 @@ export const RACES = ['Human', 'Neko', 'Elf', 'Demon'];
 
 export const GENDERS = ['Male', 'Female'];
 
+export const TICKET_CATEGORIES = [
+  { id: 'forgot_password', en: 'Forgot password', th: 'ลืมรหัสผ่าน' },
+  { id: 'bug', en: 'Bug report', th: 'แจ้งบัค' },
+  { id: 'missing_rank', en: 'Missing rank', th: 'ยศหาย' },
+  { id: 'other', en: 'Other', th: 'อื่นๆ' }
+];
+
+export const COMMAND_UNITS = [
+  { code: 'QLD', name: "(QLD) The Queen's Lion Divisions", sort_order: 1 },
+  { code: 'NMRS', name: '(NMRS) NAVAL MEDICAL AND RESCUE SERVICE', sort_order: 2 },
+  { code: '9TH Sub', name: '(9TH Sub) 9TH SUBMARINE FLEET', sort_order: 3 },
+  { code: '220TH HR', name: '(220TH HR) 220TH HEAVY RECON ROYAL MARINES', sort_order: 4 },
+  { code: 'SAWA', name: '(SAWA) ANTI SUBMARINE WARFARE AND UNDER WARTER ATTACKING', sort_order: 5 },
+  { code: 'NCD +', name: '(NCD +) NAVAL COMBAT DIVISION PLUS', sort_order: 6 },
+  { code: 'SLAA', name: '(SLAA) SEA LION AIR ARMS', sort_order: 7 },
+  { code: 'SLMF', name: '(SLMF) SUPPORT LION MARINES FLEET', sort_order: 8 },
+  { code: 'RFA', name: '(RFA) WLR LOGISTICS FLEET AUXILIARY', sort_order: 9 },
+  { code: '11TH', name: '(11TH) WLR 11TH Rapier Lion division', sort_order: 10 },
+  { code: 'SNS', name: '(SNS) SPECIAL NEPTUNE SERVICES', sort_order: 11 },
+  { code: 'ANMF', name: '(ANMF) ANTI NAVAL MINE FLEET', sort_order: 12 },
+  { code: 'EWD', name: '(EWD) ELECTRONICS WARFARE DIVISION', sort_order: 13 },
+  { code: '6TH FGF', name: '(6TH FGF) WLR 6TH frigate fleet division', sort_order: 14 },
+  { code: 'CSGF', name: '(CSGF) CARRIER STRIKE GROUP FLEET', sort_order: 15 },
+  { code: 'NDS', name: '(NDS) NAVAL DOCKYARD SERVICS', sort_order: 16 },
+  { code: 'ACP', name: '(ACP) COMBAT PARATROOPSER', sort_order: 17 }
+];
+
 export const RANK_STRUCTURE = [
   { rankTitle: 'Admiral of the Fleet', natoGrade: 'OF-10', sortOrder: 1 },
   { rankTitle: 'Admiral', natoGrade: 'OF-9', sortOrder: 2 },

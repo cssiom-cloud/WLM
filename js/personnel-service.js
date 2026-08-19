@@ -1,7 +1,12 @@
 import { isLocalTestMode } from './config.js';
 import { supabaseClient } from './supabase-client.js';
 import { comparePersonnelByRank } from './domain.js';
-import { localFetchRoster, localUpdatePersonnel, localUploadAvatar } from './local-station.js';
+import {
+  localDeletePersonnelAccount,
+  localFetchRoster,
+  localUpdatePersonnel,
+  localUploadAvatar
+} from './local-station.js';
 
 export async function fetchPersonnelRoster() {
   if (isLocalTestMode()) {
@@ -55,6 +60,17 @@ export async function uploadPersonnelAvatar(userId, file) {
   const { data } = supabaseClient.storage.from('oc_avatars').getPublicUrl(objectPath);
   const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
   return updatePersonnelRecord(userId, { avatar_url: publicUrl });
+}
+
+export async function deletePersonnelAccount(userId) {
+  if (isLocalTestMode()) {
+    return localDeletePersonnelAccount(userId);
+  }
+
+  const { error } = await supabaseClient.rpc('delete_personnel_account', { p_user_id: userId });
+  if (error) {
+    throw error;
+  }
 }
 
 export function uniqueAgencyValues(records) {

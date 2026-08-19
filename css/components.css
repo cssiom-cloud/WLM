@@ -767,6 +767,248 @@
   resize: vertical;
 }
 
+/* ---------- Units & tickets ---------- */
+
+.page-lead {
+  max-width: 46rem;
+  color: var(--text-muted);
+  margin: 0 0 1.2rem;
+  line-height: 1.6;
+}
+
+.unit-board {
+  display: grid;
+  gap: 1rem;
+}
+
+.unit-card {
+  padding: 1.2rem 1.3rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--glass-bg, var(--bg-elevated));
+  backdrop-filter: blur(var(--glass-blur, 18px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
+  box-shadow: var(--shadow-layered, var(--shadow));
+}
+
+.unit-card-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: flex-start;
+}
+
+.unit-code {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.unit-card h2 {
+  margin: 0.15rem 0 0;
+  font-size: 1.05rem;
+}
+
+.unit-head-meta {
+  text-align: right;
+  color: var(--text-muted);
+  font-size: 0.88rem;
+}
+
+.unit-content {
+  margin: 0.8rem 0;
+  color: var(--text-muted);
+  line-height: 1.6;
+  white-space: pre-wrap;
+}
+
+.unit-content.is-empty,
+.unit-announcements {
+  margin: 0.6rem 0;
+}
+
+.unit-announcements {
+  padding-left: 1.2rem;
+}
+
+.unit-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin-top: 0.8rem;
+}
+
+.unit-status {
+  display: inline-flex;
+  align-items: center;
+  min-height: 32px;
+  padding: 0.2rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  font-size: 0.82rem;
+  font-weight: 600;
+}
+
+.unit-status.is-member {
+  color: #1f6b3a;
+  background: rgba(50, 160, 90, 0.12);
+  border-color: rgba(50, 160, 90, 0.35);
+}
+
+.unit-status.is-pending {
+  color: #8a5a00;
+  background: rgba(210, 160, 60, 0.16);
+  border-color: rgba(230, 190, 110, 0.35);
+}
+
+.unit-status.is-full {
+  color: var(--text-muted);
+}
+
+.unit-manage {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--border);
+  display: grid;
+  gap: 1.1rem;
+}
+
+.unit-manage h3 {
+  font-size: 0.95rem;
+  margin: 0 0 0.5rem;
+}
+
+.unit-manage label,
+.ticket-form label,
+.ticket-admin label {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+  font-size: 0.92rem;
+}
+
+.unit-rank-list,
+.unit-app-list,
+.unit-member-list {
+  list-style: none;
+  margin: 0 0 0.7rem;
+  padding: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.unit-rank-row,
+.unit-app-row,
+.unit-member-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto auto;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.unit-rank-order {
+  max-width: 5rem;
+}
+
+.check-list {
+  display: grid;
+  gap: 0.35rem;
+  margin-bottom: 0.7rem;
+}
+
+.check-row {
+  display: flex;
+  gap: 0.45rem;
+  align-items: center;
+}
+
+.ticket-form {
+  margin-bottom: 1.6rem;
+}
+
+.ticket-section h2 {
+  font-size: 1.1rem;
+  margin-bottom: 0.8rem;
+}
+
+.ticket-list {
+  display: grid;
+  gap: 0.9rem;
+}
+
+.ticket-card {
+  padding: 1rem 1.1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.ticket-card header {
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  align-items: flex-start;
+}
+
+.ticket-card h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.ticket-meta,
+.ticket-reply {
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
+.ticket-admin {
+  margin-top: 0.8rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--border);
+}
+
+.profile-edit-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.7rem;
+  text-align: left;
+  margin: 0.85rem 0;
+}
+
+.profile-edit-fields label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.88rem;
+}
+
+.profile-unit,
+.profile-facts {
+  margin-top: 0.4rem;
+  color: var(--text-muted);
+  font-size: 0.92rem;
+}
+
+.honor-chip-remove {
+  margin-left: 0.25rem;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-weight: 700;
+}
+
+.honor-editor {
+  margin: 0.4rem 0 0.6rem;
+}
+
+.editor-label {
+  margin: 0;
+  font-size: 0.92rem;
+}
+
 @media (max-width: 768px) {
   .personnel-grid {
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -783,6 +1025,25 @@
   }
 
   .announcement-list {
+    grid-template-columns: 1fr;
+  }
+
+  .unit-card-head,
+  .ticket-card header {
+    flex-direction: column;
+  }
+
+  .unit-head-meta {
+    text-align: left;
+  }
+
+  .unit-rank-row,
+  .unit-app-row,
+  .unit-member-row {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-edit-fields {
     grid-template-columns: 1fr;
   }
 

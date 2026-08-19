@@ -1,12 +1,23 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
-import { biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
-import { PENCIL_ICON, PLUS_ICON, escapeHtml, initialsFromName, showStatus } from './ui.js';
+import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
+import { PENCIL_ICON, PLUS_ICON, escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js';
 import { updatePersonnelRecord, uploadPersonnelAvatar } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
+import { fetchUnitBoard } from './unit-service.js';
+import { t } from './i18n.js';
 
 let actorRole = 'user';
+let unitBoard = { units: [], ranks: [] };
+
+function unitNameFor(record) {
+  return unitBoard.units.find((unit) => unit.id === record.unit_id)?.name || record.wlc_agency || '';
+}
+
+function unitRankFor(record) {
+  return unitBoard.ranks.find((rank) => rank.id === record.unit_rank_id)?.title || '';
+}
 
 function renderAvatar(record) {
   const name = formatPersonnelName(record);
@@ -51,6 +62,14 @@ function renderHome(personnel, editing = false) {
             <label class="visually-hidden" for="edit-name">Name</label>
             <input id="edit-name" class="text-field profile-edit-name" type="text" value="${escapeHtml(name)}">
             <p class="profile-rank">${escapeHtml(personnel.military_rank || '')}</p>
+            <div class="profile-edit-fields">
+              <label>${escapeHtml(t('home.age'))}
+                <input id="edit-age" class="text-field" type="number" min="17" value="${escapeHtml(personnel.age ?? '')}">
+              </label>
+              <label>${escapeHtml(t('home.gender'))}
+                <select id="edit-gender" class="select-field">${optionMarkup(GENDERS, personnel.gender || '')}</select>
+              </label>
+            </div>
             <label class="visually-hidden" for="edit-bio">Bio</label>
             <textarea id="edit-bio" class="text-field profile-edit-bio" rows="6">${escapeHtml(bioText(personnel))}</textarea>
             <button class="btn btn-primary" id="save-profile" type="button">Save</button>
@@ -58,6 +77,14 @@ function renderHome(personnel, editing = false) {
           : `
             <h1 class="profile-name">${escapeHtml(name)}</h1>
             <p class="profile-rank">${escapeHtml(personnel.military_rank || '')}</p>
+            ${
+              unitNameFor(personnel)
+                ? `<p class="profile-unit">${escapeHtml(t('home.unit'))}: ${escapeHtml(unitNameFor(personnel))}${
+                    unitRankFor(personnel) ? ` · ${escapeHtml(unitRankFor(personnel))}` : ''
+                  }</p>`
+                : ''
+            }
+            <p class="profile-facts">${escapeHtml(t('home.age'))}: ${escapeHtml(personnel.age ?? '-')} · ${escapeHtml(t('home.gender'))}: ${escapeHtml(personnel.gender || '-')}</p>
             ${
               Array.isArray(personnel.honor_ranks) && personnel.honor_ranks.length
                 ? `<div class="medal-row profile-honor">${personnel.honor_ranks
@@ -123,16 +150,24 @@ function renderHome(personnel, editing = false) {
   if (saveButton) {
     saveButton.addEventListener('click', async () => {
       const parsed = parsePersonnelName(document.querySelector('#edit-name').value);
+      const ageValue = String(document.querySelector('#edit-age').value || '').trim();
+      const age = ageValue === '' ? null : Number(ageValue);
+      if (age != null && (!Number.isFinite(age) || age < 17)) {
+        showStatus('Age must be 17 or older.', true);
+        return;
+      }
       try {
         const updated = await updatePersonnelRecord(personnel.id, {
           ...parsed,
-          biography: document.querySelector('#edit-bio').value
+          biography: document.querySelector('#edit-bio').value,
+          age,
+          gender: document.querySelector('#edit-gender').value || null
         });
         await writeActivityLog({
           userId: personnel.id,
           roleSnapshot: actorRole,
           actionType: 'profile_update',
-          details: 'Updated name and biography'
+          details: 'Updated name, biography, age, and gender'
         });
         renderHome(updated, false);
         showStatus('Profile saved.');
@@ -149,11 +184,16 @@ function renderHome(personnel, editing = false) {
 bootCommandShell('home');
 
 requireAuthenticatedPersonnel()
-  .then((result) => {
+  .then(async (result) => {
     if (!result) {
       return;
     }
     actorRole = result.personnel.role;
+    try {
+      unitBoard = await fetchUnitBoard();
+    } catch {
+      unitBoard = { units: [], ranks: [] };
+    }
     renderHome(result.personnel, false);
   })
   .catch((error) => {

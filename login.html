@@ -31,6 +31,7 @@
             <label>Email
               <input id="auth-email" class="text-field" type="email" required autocomplete="username">
             </label>
+            <p id="signup-email-hint" class="auth-hint" hidden data-i18n="auth.emailHint">Use a real personal email. Addresses such as test@gmail.com are not accepted.</p>
             <label>Password
               <input id="auth-password" class="text-field" type="password" required autocomplete="current-password">
             </label>
@@ -38,6 +39,9 @@
           </form>
           <p class="auth-switch">
             <button id="auth-toggle" type="button">Create an account</button>
+          </p>
+          <p class="auth-switch">
+            <a href="./tickets.html" data-i18n="nav.tickets">Contact Admin</a>
           </p>
           <div id="local-test-notes" class="local-test-notes" hidden></div>
         </section>

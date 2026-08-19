@@ -83,9 +83,39 @@ export async function signUpWithEmail(email, password) {
 
   const { data, error } = await supabaseClient.auth.signUp({ email, password });
   if (error) {
-    throw error;
+    throw clarifySignupError(error);
   }
   return data;
+}
+
+function clarifySignupError(error) {
+  const message = String(error?.message || '');
+  const code = String(error?.code || error?.name || '');
+  const alreadyRegistered =
+    code === 'user_already_exists' ||
+    /already registered/i.test(message) ||
+    /users_email_partial_key/i.test(message) ||
+    /database error saving new user/i.test(message);
+
+  if (alreadyRegistered) {
+    return new Error('This email is already registered. Sign in instead.');
+  }
+
+  if (code === 'over_email_send_rate_limit' || /rate limit/i.test(message)) {
+    return new Error('Too many confirmation emails were sent. Sign in if the account already exists, or try again in about an hour.');
+  }
+
+  if (
+    code === 'email_address_invalid' ||
+    /email address .* is invalid/i.test(message) ||
+    /example and test domains/i.test(message)
+  ) {
+    return new Error(
+      'Use a real personal email address. Addresses such as test@gmail.com are not accepted.'
+    );
+  }
+
+  return error;
 }
 
 export async function signOutSession() {

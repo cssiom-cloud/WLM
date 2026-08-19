@@ -1,3 +1,5 @@
+import { COMMAND_UNITS } from './domain.js';
+
 const STORAGE_ACCOUNTS = 'wlr-local-accounts';
 const STORAGE_PERSONNEL = 'wlr-local-personnel';
 const STORAGE_SESSION = 'wlr-local-session';
@@ -7,6 +9,11 @@ const STORAGE_ANNOUNCEMENTS = 'wlr-local-announcements';
 const STORAGE_SIGNUPS = 'wlr-local-signups';
 const STORAGE_LORE = 'wlr-local-lore';
 const STORAGE_DOCS = 'wlr-local-documents';
+const STORAGE_UNITS = 'wlr-local-units';
+const STORAGE_UNIT_RANKS = 'wlr-local-unit-ranks';
+const STORAGE_UNIT_LINKS = 'wlr-local-unit-links';
+const STORAGE_UNIT_APPS = 'wlr-local-unit-apps';
+const STORAGE_TICKETS = 'wlr-local-tickets';
 
 export const LOCAL_TEST_ACCOUNTS = [
   { email: 'admin@local.test', password: 'admin' },
@@ -236,6 +243,33 @@ export function ensureLocalStation() {
       }
     ]);
   }
+  if (!window.localStorage.getItem(STORAGE_UNITS)) {
+    writeJson(
+      STORAGE_UNITS,
+      COMMAND_UNITS.map((unit, index) => ({
+        id: `40000000-0000-4000-8000-${String(index + 1).padStart(12, '0')}`,
+        code: unit.code,
+        name: unit.name,
+        sort_order: unit.sort_order,
+        content: '',
+        max_capacity: 40,
+        head_user_id: null,
+        created_at: new Date().toISOString()
+      }))
+    );
+  }
+  if (!window.localStorage.getItem(STORAGE_UNIT_RANKS)) {
+    writeJson(STORAGE_UNIT_RANKS, []);
+  }
+  if (!window.localStorage.getItem(STORAGE_UNIT_LINKS)) {
+    writeJson(STORAGE_UNIT_LINKS, []);
+  }
+  if (!window.localStorage.getItem(STORAGE_UNIT_APPS)) {
+    writeJson(STORAGE_UNIT_APPS, []);
+  }
+  if (!window.localStorage.getItem(STORAGE_TICKETS)) {
+    writeJson(STORAGE_TICKETS, []);
+  }
   if (!window.localStorage.getItem(STORAGE_SIGNUPS)) {
     writeJson(STORAGE_SIGNUPS, [
       {
@@ -267,6 +301,11 @@ export function resetLocalStation() {
   window.localStorage.removeItem(STORAGE_SIGNUPS);
   window.localStorage.removeItem(STORAGE_LORE);
   window.localStorage.removeItem(STORAGE_DOCS);
+  window.localStorage.removeItem(STORAGE_UNITS);
+  window.localStorage.removeItem(STORAGE_UNIT_RANKS);
+  window.localStorage.removeItem(STORAGE_UNIT_LINKS);
+  window.localStorage.removeItem(STORAGE_UNIT_APPS);
+  window.localStorage.removeItem(STORAGE_TICKETS);
   ensureLocalStation();
 }
 
@@ -393,6 +432,15 @@ export async function localUpdatePersonnel(personnelId, payload) {
     delete payload.honor_ranks;
     delete payload.medals;
     delete payload.completed_missions;
+    delete payload.nationality;
+    delete payload.race;
+    delete payload.religion;
+    delete payload.wlc_agency;
+    delete payload.training_course;
+    delete payload.military_branch;
+    delete payload.organization_role;
+    delete payload.unit_id;
+    delete payload.unit_rank_id;
   } else {
     delete payload.email;
     delete payload.id;
@@ -673,6 +721,348 @@ export async function localSaveDocument(doc) {
 
 export async function localDeleteDocument(documentId) {
   writeJson(STORAGE_DOCS, documentRows().filter((row) => row.id !== documentId));
+}
+
+async function localActor() {
+  const session = await localReadSession();
+  const rows = personnelRows();
+  return rows.find((row) => row.id === session?.user?.id) || null;
+}
+
+function unitRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_UNITS, []);
+}
+
+function unitRankRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_UNIT_RANKS, []);
+}
+
+function unitLinkRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_UNIT_LINKS, []);
+}
+
+function unitAppRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_UNIT_APPS, []);
+}
+
+function ticketRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_TICKETS, []);
+}
+
+function canManageUnit(actor, unitId) {
+  if (!actor) {
+    return false;
+  }
+  if (actor.role === 'admin') {
+    return true;
+  }
+  const unit = unitRows().find((row) => row.id === unitId);
+  return unit?.head_user_id === actor.id;
+}
+
+export async function localFetchUnitBoard() {
+  const announcements = announcementRows().map((row) => ({ id: row.id, title: row.title }));
+  const personnel = personnelRows().map((row) => ({
+    id: row.id,
+    first_name: row.first_name,
+    middle_name: row.middle_name,
+    last_name: row.last_name,
+    role: row.role,
+    unit_id: row.unit_id || null,
+    unit_rank_id: row.unit_rank_id || null,
+    honor_ranks: row.honor_ranks || []
+  }));
+  return {
+    units: clone(unitRows()).sort((a, b) => a.sort_order - b.sort_order),
+    ranks: clone(unitRankRows()),
+    links: clone(unitLinkRows()),
+    applications: clone(unitAppRows()),
+    personnel,
+    announcements
+  };
+}
+
+export async function localApplyToUnit(unitId) {
+  const actor = await localActor();
+  if (!actor) {
+    throw new Error('Sign in is required.');
+  }
+  if (actor.unit_id) {
+    throw new Error('You already belong to a unit.');
+  }
+  const apps = unitAppRows();
+  if (apps.some((row) => row.user_id === actor.id && row.status === 'pending')) {
+    throw new Error('You already have a pending unit application.');
+  }
+  const unit = unitRows().find((row) => row.id === unitId);
+  if (!unit) {
+    throw new Error('Unit was not found.');
+  }
+  const memberCount = personnelRows().filter((row) => row.unit_id === unitId).length;
+  if (memberCount >= unit.max_capacity) {
+    throw new Error('Unit is at full capacity.');
+  }
+  const existing = apps.findIndex((row) => row.unit_id === unitId && row.user_id === actor.id);
+  const entry = {
+    id: existing >= 0 ? apps[existing].id : window.crypto.randomUUID(),
+    unit_id: unitId,
+    user_id: actor.id,
+    status: 'pending',
+    created_at: new Date().toISOString(),
+    reviewed_at: null,
+    reviewed_by: null
+  };
+  if (existing >= 0) {
+    apps[existing] = entry;
+  } else {
+    apps.push(entry);
+  }
+  writeJson(STORAGE_UNIT_APPS, apps);
+  return entry.id;
+}
+
+export async function localReviewUnitApplication(applicationId, approve) {
+  const actor = await localActor();
+  const apps = unitAppRows();
+  const rec = apps.find((row) => row.id === applicationId);
+  if (!rec) {
+    throw new Error('Application was not found.');
+  }
+  if (rec.status !== 'pending') {
+    throw new Error('Application is no longer pending.');
+  }
+  if (!canManageUnit(actor, rec.unit_id)) {
+    throw new Error('Only the unit head or a command administrator can review applications.');
+  }
+  const people = personnelRows();
+  const person = people.find((row) => row.id === rec.user_id);
+  const unit = unitRows().find((row) => row.id === rec.unit_id);
+  if (approve) {
+    if (person?.unit_id) {
+      throw new Error('This personnel already belongs to a unit.');
+    }
+    const memberCount = people.filter((row) => row.unit_id === rec.unit_id).length;
+    if (memberCount >= unit.max_capacity) {
+      throw new Error('Unit is at full capacity.');
+    }
+    person.unit_id = rec.unit_id;
+    person.unit_rank_id = null;
+    person.wlc_agency = unit.name;
+    savePersonnel(people);
+    rec.status = 'approved';
+  } else {
+    rec.status = 'rejected';
+  }
+  rec.reviewed_at = new Date().toISOString();
+  rec.reviewed_by = actor.id;
+  writeJson(STORAGE_UNIT_APPS, apps);
+}
+
+export async function localSetUnitHead(unitId, userId) {
+  const actor = await localActor();
+  if (actor?.role !== 'admin') {
+    throw new Error('Only command administrators can appoint unit heads.');
+  }
+  const units = unitRows();
+  const unit = units.find((row) => row.id === unitId);
+  if (!unit) {
+    throw new Error('Unit was not found.');
+  }
+  unit.head_user_id = userId;
+  writeJson(STORAGE_UNITS, units);
+  if (userId) {
+    const people = personnelRows();
+    const person = people.find((row) => row.id === userId);
+    if (person) {
+      person.unit_id = unitId;
+      person.wlc_agency = unit.name;
+      savePersonnel(people);
+    }
+  }
+}
+
+export async function localSaveUnit(unitId, payload) {
+  const actor = await localActor();
+  if (!canManageUnit(actor, unitId)) {
+    throw new Error('Unit update is not permitted.');
+  }
+  const units = unitRows();
+  const unit = units.find((row) => row.id === unitId);
+  if (!unit) {
+    throw new Error('Unit was not found.');
+  }
+  if ('head_user_id' in payload && actor.role !== 'admin') {
+    delete payload.head_user_id;
+  }
+  Object.assign(unit, payload);
+  writeJson(STORAGE_UNITS, units);
+}
+
+export async function localSaveUnitRank(entry) {
+  const actor = await localActor();
+  if (!canManageUnit(actor, entry.unit_id)) {
+    throw new Error('Unit rank update is not permitted.');
+  }
+  const ranks = unitRankRows();
+  if (entry.id) {
+    const current = ranks.find((row) => row.id === entry.id);
+    if (!current) {
+      throw new Error('Unit rank was not found.');
+    }
+    current.title = entry.title;
+    current.sort_order = entry.sort_order;
+  } else {
+    ranks.push({
+      id: window.crypto.randomUUID(),
+      unit_id: entry.unit_id,
+      title: entry.title,
+      sort_order: entry.sort_order ?? 0
+    });
+  }
+  writeJson(STORAGE_UNIT_RANKS, ranks);
+}
+
+export async function localDeleteUnitRank(rankId) {
+  const ranks = unitRankRows();
+  const current = ranks.find((row) => row.id === rankId);
+  if (!current) {
+    return;
+  }
+  const actor = await localActor();
+  if (!canManageUnit(actor, current.unit_id)) {
+    throw new Error('Unit rank update is not permitted.');
+  }
+  writeJson(STORAGE_UNIT_RANKS, ranks.filter((row) => row.id !== rankId));
+  const people = personnelRows();
+  people.forEach((person) => {
+    if (person.unit_rank_id === rankId) {
+      person.unit_rank_id = null;
+    }
+  });
+  savePersonnel(people);
+}
+
+export async function localSetUnitAnnouncements(unitId, announcementIds) {
+  const actor = await localActor();
+  if (!canManageUnit(actor, unitId)) {
+    throw new Error('Unit update is not permitted.');
+  }
+  const others = unitLinkRows().filter((row) => row.unit_id !== unitId);
+  writeJson(
+    STORAGE_UNIT_LINKS,
+    others.concat(announcementIds.map((announcementId) => ({ unit_id: unitId, announcement_id: announcementId })))
+  );
+}
+
+export async function localSetUnitMemberRank(userId, rankId) {
+  const people = personnelRows();
+  const person = people.find((row) => row.id === userId);
+  if (!person?.unit_id) {
+    throw new Error('This personnel is not assigned to a unit.');
+  }
+  const actor = await localActor();
+  if (!canManageUnit(actor, person.unit_id)) {
+    throw new Error('Only the unit head or a command administrator can assign unit ranks.');
+  }
+  person.unit_rank_id = rankId;
+  savePersonnel(people);
+}
+
+export async function localRemoveUnitMember(userId) {
+  const people = personnelRows();
+  const person = people.find((row) => row.id === userId);
+  if (!person?.unit_id) {
+    throw new Error('This personnel is not assigned to a unit.');
+  }
+  const actor = await localActor();
+  if (!canManageUnit(actor, person.unit_id)) {
+    throw new Error('Only the unit head or a command administrator can remove members.');
+  }
+  const units = unitRows();
+  units.forEach((unit) => {
+    if (unit.head_user_id === userId) {
+      unit.head_user_id = null;
+    }
+  });
+  writeJson(STORAGE_UNITS, units);
+  person.unit_id = null;
+  person.unit_rank_id = null;
+  person.wlc_agency = null;
+  savePersonnel(people);
+}
+
+export async function localDeletePersonnelAccount(userId) {
+  const actor = await localActor();
+  if (actor?.role !== 'admin') {
+    throw new Error('Only command administrators can delete personnel.');
+  }
+  if (userId === actor.id) {
+    throw new Error('You cannot delete your own account.');
+  }
+  const people = personnelRows();
+  const target = people.find((row) => row.id === userId);
+  if (!target) {
+    throw new Error('Personnel was not found.');
+  }
+  if (target.role === 'admin' && people.filter((row) => row.role === 'admin').length <= 1) {
+    throw new Error('The last administrator cannot be deleted.');
+  }
+  await localWriteLog({
+    userId: actor.id,
+    roleSnapshot: 'admin',
+    actionType: 'personnel_delete',
+    details: `Deleted personnel record ${userId}`
+  });
+  savePersonnel(people.filter((row) => row.id !== userId));
+  writeJson(
+    STORAGE_ACCOUNTS,
+    accounts().filter((row) => row.id !== userId)
+  );
+}
+
+export async function localFetchTickets(isAdmin, userId) {
+  const rows = ticketRows()
+    .slice()
+    .sort((a, b) => String(b.created_at).localeCompare(String(a.created_at)));
+  if (isAdmin) {
+    return clone(rows);
+  }
+  if (!userId) {
+    return [];
+  }
+  return clone(rows.filter((row) => row.user_id === userId));
+}
+
+export async function localCreateTicket({ userId, category, customTopic, body, contactEmail }) {
+  const rows = ticketRows();
+  rows.unshift({
+    id: window.crypto.randomUUID(),
+    user_id: userId || null,
+    category,
+    custom_topic: customTopic,
+    body,
+    contact_email: contactEmail || null,
+    status: 'open',
+    admin_reply: null,
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString()
+  });
+  writeJson(STORAGE_TICKETS, rows);
+}
+
+export async function localUpdateTicket(ticketId, payload) {
+  const rows = ticketRows();
+  const row = rows.find((item) => item.id === ticketId);
+  if (!row) {
+    throw new Error('Ticket was not found.');
+  }
+  Object.assign(row, payload, { updated_at: new Date().toISOString() });
+  writeJson(STORAGE_TICKETS, rows);
 }
 
 export function localSystemStatus() {

@@ -13,10 +13,12 @@ import { escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js'
 import {
   fetchPersonnelRoster,
   uniqueAgencyValues,
-  updatePersonnelRecord
+  updatePersonnelRecord,
+  deletePersonnelAccount
 } from './personnel-service.js';
 import { isLocalTestMode } from './config.js';
 import { writeActivityLog } from './command-services.js';
+import { t } from './i18n.js';
 
 let currentAdmin = null;
 let rosterCache = [];
@@ -30,6 +32,7 @@ let filterState = {
   branch: ''
 };
 let editingRecord = null;
+let editingHonorRanks = [];
 
 function recordMatchesFilters(record) {
   if (filterState.rank && record.military_rank !== filterState.rank) {
@@ -128,12 +131,17 @@ function actionButtons(record) {
   const deleteAdmin = record.role === 'admin'
     ? `<button class="btn btn-danger" type="button" data-action="delete-admin" data-id="${escapeHtml(record.id)}">Delete Admin</button>`
     : '';
+  const deleteUser =
+    currentAdmin && record.id === currentAdmin.id
+      ? ''
+      : `<button class="btn btn-danger" type="button" data-action="delete-user" data-id="${escapeHtml(record.id)}">${escapeHtml(t('admin.deleteUser'))}</button>`;
 
   return `
     <div class="btn-row">
       <button class="btn" type="button" data-action="edit" data-id="${escapeHtml(record.id)}">Edit</button>
       ${addAdmin}
       ${deleteAdmin}
+      ${deleteUser}
     </div>
   `;
 }
@@ -172,10 +180,27 @@ function fillSelect(select, values, selected) {
   select.innerHTML = optionMarkup(values, selected || '');
 }
 
+function renderHonorEditor() {
+  const root = document.querySelector('#honor-ranks-editor');
+  if (!root) {
+    return;
+  }
+  root.innerHTML = editingHonorRanks.length
+    ? editingHonorRanks
+        .map(
+          (rank, index) =>
+            `<span class="honor-chip">${escapeHtml(rank)} <button class="honor-chip-remove" type="button" data-honor-remove="${index}" aria-label="${escapeHtml(t('common.delete'))}">x</button></span>`
+        )
+        .join('')
+    : `<span class="empty-log">${escapeHtml(t('dir.noRecord'))}</span>`;
+}
+
 function openEditor(record) {
   editingRecord = record;
+  editingHonorRanks = Array.isArray(record.honor_ranks) ? [...record.honor_ranks] : [];
   const modal = document.querySelector('#edit-modal');
   modal.classList.add('is-open');
+  renderHonorEditor();
   document.querySelector('#edit-email').value = record.email || '';
   document.querySelector('#edit-first-name').value = record.first_name || '';
   document.querySelector('#edit-middle-name').value = record.middle_name || '';
@@ -235,7 +260,8 @@ async function persistEditor(event) {
     military_branch: nullable(document.querySelector('#edit-branch').value),
     organization_role: nullable(document.querySelector('#edit-org-role').value),
     military_rank: nullable(document.querySelector('#edit-rank').value) || 'Lieutenant',
-    avatar_url: nullable(document.querySelector('#edit-avatar-url').value)
+    avatar_url: nullable(document.querySelector('#edit-avatar-url').value),
+    honor_ranks: editingHonorRanks
   };
 
   try {
@@ -317,6 +343,16 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
       await changeAdminRole(personnelId, 'user');
       showStatus('Admin role removed.');
     }
+    if (action === 'delete-user') {
+      if (!window.confirm(t('admin.confirmDeleteUser'))) {
+        return;
+      }
+      await deletePersonnelAccount(personnelId);
+      rosterCache = await fetchPersonnelRoster();
+      renderFilterPanel();
+      renderTable();
+      showStatus(t('admin.deletedUser'));
+    }
   } catch (error) {
     showStatus(error.message, true);
   }
@@ -324,3 +360,29 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
 
 document.querySelector('#edit-form').addEventListener('submit', persistEditor);
 document.querySelector('#edit-cancel').addEventListener('click', closeEditor);
+
+document.querySelector('#honor-add').addEventListener('click', () => {
+  const input = document.querySelector('#edit-honor-new');
+  const title = String(input.value || '').trim();
+  if (!title) {
+    showStatus(t('admin.honorRequired'), true);
+    return;
+  }
+  if (!editingHonorRanks.includes(title)) {
+    editingHonorRanks.push(title);
+  }
+  input.value = '';
+  renderHonorEditor();
+});
+
+document.querySelector('#honor-ranks-editor').addEventListener('click', (event) => {
+  const button = event.target.closest('[data-honor-remove]');
+  if (!button) {
+    return;
+  }
+  const index = Number(button.getAttribute('data-honor-remove'));
+  if (Number.isInteger(index)) {
+    editingHonorRanks.splice(index, 1);
+    renderHonorEditor();
+  }
+});

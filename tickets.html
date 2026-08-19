@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Support Tickets</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=units-tickets">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="tickets.kicker">Support</p>
+            <h1 class="page-title" data-i18n="tickets.title">Contact Command</h1>
+          </div>
+        </div>
+        <p class="page-lead" data-i18n="tickets.lead">Use this desk for forgotten passwords, bug reports, missing ranks, and other command requests.</p>
+        <p id="status-banner" class="status-banner" role="status"></p>
+
+        <form id="ticket-form" class="announce-form-card ticket-form" data-aos="fade-up">
+          <label>
+            <span data-i18n="tickets.category">Category</span>
+            <select id="ticket-category" class="select-field" required></select>
+          </label>
+          <label id="ticket-email-wrap" hidden>
+            <span data-i18n="tickets.email">Account email</span>
+            <input id="ticket-email" class="text-field" type="email" maxlength="120">
+          </label>
+          <label>
+            <span data-i18n="tickets.topic">Topic</span>
+            <input id="ticket-topic" class="text-field" type="text" maxlength="120" required>
+          </label>
+          <label>
+            <span data-i18n="tickets.body">Details</span>
+            <textarea id="ticket-body" class="text-field" rows="5" required></textarea>
+          </label>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit" data-i18n="tickets.submit">Send ticket</button>
+          </div>
+        </form>
+
+        <section class="ticket-section">
+          <h2 data-i18n="tickets.listTitle">Tickets</h2>
+          <div id="ticket-list" class="ticket-list"></div>
+          <p id="ticket-empty" class="empty-log" hidden data-i18n="tickets.empty">No tickets yet.</p>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/tickets.js"></script>
+  </body>
+</html>

@@ -10,6 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=units-tickets">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -105,6 +106,14 @@
           <label class="full">Avatar URL
             <input id="edit-avatar-url" class="text-field" type="url">
           </label>
+          <div class="full">
+            <p class="editor-label" data-i18n="admin.honorRanks">Special ranks</p>
+            <div id="honor-ranks-editor" class="medal-row honor-editor"></div>
+            <div class="btn-row">
+              <input id="edit-honor-new" class="text-field" type="text" maxlength="80">
+              <button id="honor-add" class="btn" type="button" data-i18n="admin.addHonor">Add special rank</button>
+            </div>
+          </div>
           <div class="full btn-row">
             <button class="btn btn-primary" type="submit">Save</button>
             <button id="edit-cancel" class="btn" type="button">Cancel</button>

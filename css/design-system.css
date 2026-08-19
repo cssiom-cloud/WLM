@@ -733,12 +733,24 @@ body.is-local-test .page-shell {
   text-align: center;
 }
 
+.auth-switch a {
+  color: var(--accent);
+  text-decoration: none;
+}
+
 .auth-switch button {
   border: 0;
   background: transparent;
   color: var(--accent);
   cursor: pointer;
   padding: 0.4rem;
+}
+
+.auth-hint {
+  margin: 0.35rem 0 0.85rem;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+  line-height: 1.45;
 }
 
 .modal-backdrop {

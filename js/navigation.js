@@ -61,6 +61,10 @@ export async function initCommandNavbar(activePage) {
     { href: './documents.html', page: 'documents', label: t('nav.documents') }
   ];
 
+  if (isAuthed) {
+    links.push({ href: './units.html', page: 'units', label: t('nav.units') });
+  }
+  links.push({ href: './tickets.html', page: 'tickets', label: t('nav.tickets') });
   if (isAdmin) {
     links.push({ href: './announce-create.html', page: 'announce-create', label: t('nav.createAnnouncement') });
     links.push({ href: './admin.html', page: 'admin', label: t('nav.adminPage') });

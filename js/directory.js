@@ -9,12 +9,22 @@ import { t } from './i18n.js';
 import { fetchPersonnelRoster } from './personnel-service.js';
 import { fetchSettingsMap } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
+import { fetchUnitBoard } from './unit-service.js';
 
 const SKELETON_COUNT = 8;
 
 let rosterCache = [];
 let settingsMap = {};
 let lastQuery = '';
+let unitBoard = { units: [], ranks: [] };
+
+function unitNameFor(record) {
+  return unitBoard.units.find((unit) => unit.id === record.unit_id)?.name || record.wlc_agency || '';
+}
+
+function unitRankFor(record) {
+  return unitBoard.ranks.find((rank) => rank.id === record.unit_rank_id)?.title || '';
+}
 
 /* ---------- Badges ---------- */
 
@@ -68,7 +78,7 @@ function cardMarkup(record, index) {
     <article class="personnel-card" data-aos="fade-up" data-aos-delay="${Math.min(index * 40, 240)}">
       ${avatarMarkup(record)}
       <h2>${escapeHtml(name)}</h2>
-      <p class="card-sub">${escapeHtml(record.wlc_agency || record.organization_role || '')}</p>
+      <p class="card-sub">${escapeHtml(unitNameFor(record) || record.organization_role || '')}</p>
       <div class="card-badges">
         ${rankBadge(record.military_rank)}
         ${branchBadge(record.military_branch)}
@@ -107,6 +117,8 @@ function matchesQuery(record, query) {
     record.military_rank,
     record.military_branch,
     record.wlc_agency,
+    unitNameFor(record),
+    unitRankFor(record),
     ...(Array.isArray(record.honor_ranks) ? record.honor_ranks : [])
   ]
     .join(' ')
@@ -196,6 +208,8 @@ function openProfileModal(record) {
       ${history.paragraphService ? `<p>${escapeHtml(history.paragraphService)}</p>` : ''}
     </div>
     <dl class="profile-meta">
+      <div><dt>${escapeHtml(t('dir.unit'))}</dt><dd>${escapeHtml(unitNameFor(record) || '-')}</dd></div>
+      <div><dt>${escapeHtml(t('dir.unitRank'))}</dt><dd>${escapeHtml(unitRankFor(record) || '-')}</dd></div>
       <div><dt>Agency</dt><dd>${escapeHtml(record.wlc_agency || '-')}</dd></div>
       <div><dt>Organization role</dt><dd>${escapeHtml(record.organization_role || '-')}</dd></div>
       <div><dt>Nationality</dt><dd>${escapeHtml(record.nationality || '-')}</dd></div>
@@ -214,10 +228,15 @@ bootCommandShell('directory');
 renderSkeletons();
 
 // INJECT POINT: the two calls below are where data leaves Supabase and enters the UI.
-Promise.all([fetchPersonnelRoster(), fetchSettingsMap().catch(() => ({}))])
-  .then(([records, settings]) => {
+Promise.all([
+  fetchPersonnelRoster(),
+  fetchSettingsMap().catch(() => ({})),
+  fetchUnitBoard().catch(() => ({ units: [], ranks: [] }))
+])
+  .then(([records, settings, board]) => {
     rosterCache = records;
     settingsMap = settings;
+    unitBoard = board;
     renderDirectory('');
     showToast(`${records.length} ${t('dir.loaded')}`, 'success');
   })

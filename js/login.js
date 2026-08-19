@@ -10,14 +10,21 @@ function syncAuthMode() {
   const submit = document.querySelector('#auth-submit');
   const toggle = document.querySelector('#auth-toggle');
   const title = document.querySelector('#auth-title');
+  const hint = document.querySelector('#signup-email-hint');
   if (mode === 'signup') {
     title.textContent = 'Create account';
     submit.textContent = 'Sign Up';
     toggle.textContent = 'Already registered? Sign In';
+    if (hint) {
+      hint.hidden = false;
+    }
   } else {
     title.textContent = 'Sign In';
     submit.textContent = 'Sign In';
     toggle.textContent = 'Create an account';
+    if (hint) {
+      hint.hidden = true;
+    }
   }
 }
 
@@ -76,8 +83,14 @@ document.querySelector('#auth-toggle').addEventListener('click', () => {
 
 document.querySelector('#auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();
+  const submit = document.querySelector('#auth-submit');
   const email = document.querySelector('#auth-email').value.trim();
   const password = document.querySelector('#auth-password').value;
+
+  if (submit.disabled) {
+    return;
+  }
+  submit.disabled = true;
 
   try {
     if (mode === 'signup') {
@@ -86,7 +99,9 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
         window.location.replace('./index.html');
         return;
       }
-      showStatus('Account created. Confirm the email if required, then Sign In.');
+      showStatus('Account created. Sign In with the same email and password.');
+      mode = 'signin';
+      syncAuthMode();
       return;
     }
 
@@ -94,5 +109,7 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
     window.location.replace('./index.html');
   } catch (error) {
     showStatus(error.message, true);
+  } finally {
+    submit.disabled = false;
   }
 });
