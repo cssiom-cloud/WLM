@@ -4,7 +4,7 @@
 create schema if not exists private;
 
 revoke all on schema private from public;
-grant usage on schema private to postgres, service_role;
+grant usage on schema private to postgres, service_role, supabase_auth_admin;
 
 do $$
 begin
@@ -112,7 +112,8 @@ set search_path = public
 as $$
 begin
   insert into public.oc_personnel (id, email, role, military_rank)
-  values (new.id, new.email, 'user', 'Lieutenant');
+  values (new.id, new.email, 'user', 'Lieutenant')
+  on conflict (id) do nothing;
   return new;
 end;
 $$;
@@ -158,7 +159,9 @@ begin
     raise exception 'Email must be changed through Auth.';
   end if;
 
-  if not private.is_command_admin() then
+  -- SQL Editor / service role have no JWT. Allow bootstrap of the first admin.
+  -- Client API updates still require an authenticated command admin.
+  if auth.uid() is not null and not private.is_command_admin() then
     if new.military_rank is distinct from old.military_rank then
       raise exception 'military_rank is restricted.';
     end if;
