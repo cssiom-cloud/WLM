@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Settings</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker">Account</p>
+            <h1 class="page-title">Settings</h1>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <section class="settings-list">
+          <article class="settings-row" data-aos="fade-up">
+            <h2>Theme Customization</h2>
+            <div class="settings-actions">
+              <button id="add-theme" class="btn" type="button">+</button>
+              <span>Create a personal color tone</span>
+            </div>
+            <div id="theme-picker" class="theme-picker" hidden>
+              <canvas id="color-wheel" class="color-wheel" width="220" height="220"></canvas>
+              <div class="settings-actions">
+                <span id="accent-preview" class="accent-preview"></span>
+                <label>Hex
+                  <input id="accent-hex" class="text-field" type="text" maxlength="7" placeholder="#1E4E8C">
+                </label>
+                <button id="save-theme" class="btn btn-primary" type="button">Save</button>
+              </div>
+            </div>
+          </article>
+          <article class="settings-row" data-aos="fade-up">
+            <h2>Privacy Settings</h2>
+            <label class="switch">
+              <input id="bio-public" type="checkbox" checked>
+              <span class="switch-track"></span>
+              <span>Allow others to view my biography</span>
+            </label>
+          </article>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/settings.js"></script>
+  </body>
+</html>

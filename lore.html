@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Lore Archive</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="lore.kicker">Archive</p>
+            <h1 class="page-title" data-i18n="lore.title">Lore &amp; Asset Archive</h1>
+          </div>
+          <button id="lore-add" class="btn btn-primary" type="button" hidden>Add New Topic</button>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+
+        <section class="lore-section" data-aos="fade-up">
+          <h2>Historical Timeline</h2>
+          <div id="lore-timeline"></div>
+        </section>
+
+        <section class="lore-section" data-aos="fade-up">
+          <h2>Geopolitical Structure</h2>
+          <div id="lore-geopolitics"></div>
+        </section>
+
+        <section class="lore-section" data-aos="fade-up">
+          <h2>Naval Specs</h2>
+          <div id="lore-naval"></div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Admin-only editor modal: opened by Add New Topic / Edit -->
+    <div id="lore-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="lore-modal-title">
+      <div class="modal-card">
+        <h2 id="lore-modal-title">Lore Entry</h2>
+        <form id="lore-form" class="announce-form-card lore-form">
+          <label>Category
+            <select id="lore-category" class="select-field">
+              <option value="timeline">Historical Timeline</option>
+              <option value="geopolitics">Geopolitical Structure</option>
+              <option value="naval">Naval Specs</option>
+            </select>
+          </label>
+          <label>Title
+            <input id="lore-title" class="text-field" type="text" required maxlength="120">
+          </label>
+          <label id="lore-meta1-label">Meta
+            <input id="lore-meta1" class="text-field" type="text" maxlength="120">
+          </label>
+          <label id="lore-meta2-label" hidden>Complement
+            <input id="lore-meta2" class="text-field" type="text" maxlength="60">
+          </label>
+          <label>Details
+            <textarea id="lore-body" class="text-field" rows="4"></textarea>
+          </label>
+          <label>Order
+            <input id="lore-order" class="text-field" type="number" min="0" max="999" value="0">
+          </label>
+          <div class="btn-row">
+            <button class="btn btn-primary" type="submit" data-i18n="common.save">Save</button>
+            <button id="lore-cancel" class="btn" type="button" data-i18n="common.cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/lore.js"></script>
+  </body>
+</html>

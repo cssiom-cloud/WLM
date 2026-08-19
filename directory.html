@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Personnel Directory</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="dir.kicker">Personnel</p>
+            <h1 class="page-title" data-i18n="dir.title">Personnel Directory</h1>
+          </div>
+          <div class="search-wrap">
+            <label class="visually-hidden" for="directory-search">Search personnel</label>
+            <input id="directory-search" class="search-field" type="search" data-i18n-placeholder="dir.search" placeholder="Search name, rank, branch">
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+
+        <!-- Gallery grid. Skeleton cards are rendered here first, then replaced by data. -->
+        <section id="directory-grid" class="personnel-grid" aria-busy="true" aria-label="Personnel gallery"></section>
+        <p id="directory-empty" class="empty-log" data-i18n="dir.empty" hidden>No personnel matched the search.</p>
+      </main>
+    </div>
+
+    <!-- Full profile modal (opened from each card) -->
+    <div id="profile-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <div class="modal-card">
+        <div class="toolbar-row">
+          <h2 id="profile-modal-title">View Profile</h2>
+          <button id="profile-modal-close" class="btn" type="button">Close</button>
+        </div>
+        <div id="profile-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Toast stack is created by js/ui.js (aria-live region) -->
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/directory.js"></script>
+  </body>
+</html>

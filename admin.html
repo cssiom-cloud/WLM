@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W.L.R Admin Page</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker">Command</p>
+            <h1 class="page-title">Admin Page</h1>
+          </div>
+          <div class="filter-anchor">
+            <button id="filter-toggle" class="btn" type="button">Filter</button>
+            <div id="filter-panel" class="filter-panel"></div>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <div class="table-wrap">
+          <table class="personnel-table">
+            <thead>
+              <tr>
+                <th>Name</th>
+                <th>Rank</th>
+                <th>Branch</th>
+                <th>Race</th>
+                <th>Gender</th>
+                <th>Agency</th>
+                <th>Nationality</th>
+                <th>Age</th>
+                <th>Role</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody id="personnel-table-body"></tbody>
+          </table>
+        </div>
+      </main>
+    </div>
+
+    <div id="edit-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="edit-title">
+      <div class="modal-card">
+        <h2 id="edit-title">Edit</h2>
+        <form id="edit-form" class="form-grid" style="margin-top: 1rem;">
+          <label class="full">Email
+            <input id="edit-email" class="text-field" type="email" readonly>
+          </label>
+          <label>First name
+            <input id="edit-first-name" class="text-field" type="text">
+          </label>
+          <label>Middle name
+            <input id="edit-middle-name" class="text-field" type="text">
+          </label>
+          <label>Last name
+            <input id="edit-last-name" class="text-field" type="text">
+          </label>
+          <label>Age
+            <input id="edit-age" class="text-field" type="number" min="17">
+          </label>
+          <label>Nationality
+            <select id="edit-nationality" class="select-field"></select>
+          </label>
+          <label>Gender
+            <select id="edit-gender" class="select-field"></select>
+          </label>
+          <label>Race
+            <select id="edit-race" class="select-field"></select>
+          </label>
+          <label>Religion
+            <input id="edit-religion" class="text-field" type="text">
+          </label>
+          <label>Agency
+            <input id="edit-agency" class="text-field" type="text">
+          </label>
+          <label>Training course
+            <input id="edit-course" class="text-field" type="text">
+          </label>
+          <label>Branch
+            <select id="edit-branch" class="select-field"></select>
+          </label>
+          <label>Organization role
+            <input id="edit-org-role" class="text-field" type="text">
+          </label>
+          <label>Rank
+            <select id="edit-rank" class="select-field"></select>
+          </label>
+          <label class="full">Avatar URL
+            <input id="edit-avatar-url" class="text-field" type="url">
+          </label>
+          <div class="full btn-row">
+            <button class="btn btn-primary" type="submit">Save</button>
+            <button id="edit-cancel" class="btn" type="button">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/admin.js"></script>
+  </body>
+</html>

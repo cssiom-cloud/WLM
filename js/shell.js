@@ -1,0 +1,52 @@
+import { isLocalTestMode } from './config.js';
+import { applyAccent, applyStoredAccent, initThemeToggle } from './theme.js';
+import { initCommandNavbar } from './navigation.js';
+import { initVisualEffects } from './effects.js';
+import { readCurrentPersonnel } from './session.js';
+import { fetchOwnSettings } from './command-services.js';
+import { applyTranslations, getLang } from './i18n.js';
+
+export function bootCommandShell(activePage) {
+  document.body.dataset.page = activePage || 'auth';
+  document.documentElement.lang = getLang();
+  applyTranslations();
+  initThemeToggle();
+  applyStoredAccent();
+  initVisualEffects();
+  if (isLocalTestMode()) {
+    document.body.classList.add('is-local-test');
+    if (!document.querySelector('.local-test-banner')) {
+      const banner = document.createElement('div');
+      banner.className = 'local-test-banner';
+      banner.textContent = 'Local test mode. Data stays in this browser until you connect Supabase.';
+      document.body.appendChild(banner);
+    }
+  }
+  hydrateRemoteAccent();
+  return initCommandNavbar(activePage);
+}
+
+async function hydrateRemoteAccent() {
+  try {
+    const { session, personnel } = await readCurrentPersonnel();
+    if (!session || !personnel) {
+      return;
+    }
+    const settings = await fetchOwnSettings(personnel.id);
+    if (settings?.theme_accent) {
+      applyAccent(settings.theme_accent);
+    }
+  } catch {
+    return;
+  }
+}
+
+export function initAos() {
+  if (window.AOS) {
+    window.AOS.init({
+      duration: 650,
+      once: true,
+      offset: 40
+    });
+  }
+}

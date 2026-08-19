@@ -1,0 +1,134 @@
+:root {
+  --motion: cubic-bezier(0.4, 0, 0.2, 1);
+  --glass-bg: rgba(255, 255, 255, 0.64);
+  --glass-blur: 18px;
+  --shadow-layered:
+    0 1px 2px rgba(16, 24, 40, 0.04),
+    0 8px 18px rgba(16, 24, 40, 0.06),
+    0 22px 44px rgba(16, 24, 40, 0.08);
+}
+
+[data-theme="dark"] {
+  --glass-bg: rgba(28, 28, 28, 0.62);
+  --shadow-layered:
+    0 1px 2px rgba(0, 0, 0, 0.45),
+    0 10px 24px rgba(0, 0, 0, 0.32),
+    0 0 36px rgba(138, 144, 255, 0.14);
+}
+
+.fx-grid-canvas {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  transform: translate3d(0, 0, 0);
+  will-change: transform;
+}
+
+.page-shell {
+  position: relative;
+  z-index: 1;
+  transition: transform 0.45s var(--motion);
+}
+
+.command-navbar,
+.command-drawer,
+.filter-panel,
+.auth-card,
+.profile-panel,
+.roster-row,
+.table-wrap,
+.modal-card,
+.theme-toggle,
+.status-banner,
+.settings-row,
+.status-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  -webkit-backdrop-filter: blur(var(--glass-blur));
+  box-shadow: var(--shadow-layered);
+}
+
+.command-navbar {
+  background: color-mix(in srgb, var(--glass-bg) 88%, transparent);
+}
+
+.personnel-table th {
+  background: color-mix(in srgb, var(--bg-muted) 78%, transparent);
+}
+
+.btn,
+.hamburger,
+.search-field,
+.select-field,
+.text-field,
+.command-drawer a,
+.command-drawer button.linkish {
+  transition:
+    background-color 0.28s var(--motion),
+    border-color 0.28s var(--motion),
+    color 0.28s var(--motion),
+    box-shadow 0.28s var(--motion),
+    transform 0.28s var(--motion),
+    opacity 0.28s var(--motion);
+}
+
+.btn:hover,
+.theme-toggle:hover {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-layered);
+}
+
+.btn:active,
+.theme-toggle:active {
+  transform: translateY(0);
+}
+
+.command-drawer {
+  transition: transform 0.32s var(--motion);
+}
+
+.profile-panel {
+  padding: 2rem 1.5rem 1.75rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.roster-row {
+  transform-style: preserve-3d;
+  will-change: transform;
+}
+
+.tilt-enabled {
+  transform-origin: center center;
+}
+
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  .profile-panel,
+  .roster-row {
+    transform: none !important;
+    will-change: auto;
+  }
+
+  .btn:hover,
+  .theme-toggle:hover {
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .fx-grid-canvas,
+  .page-shell,
+  .profile-panel,
+  .roster-row,
+  .btn,
+  .theme-toggle,
+  .avatar-action,
+  .command-drawer {
+    transition: none !important;
+    transform: none !important;
+    will-change: auto;
+  }
+}

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Create Announcement</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="create.kicker">Command</p>
+            <h1 class="page-title" data-i18n="create.title">Announcement Creation Room</h1>
+          </div>
+          <a class="btn" href="./announcements.html" data-i18n="create.back">Back to Announcements</a>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <section class="announce-form-card" data-aos="fade-up">
+          <form id="announce-form">
+            <label for="announce-title"><span data-i18n="create.titleLabel">Title</span>
+              <input id="announce-title" class="text-field" type="text" required maxlength="120">
+            </label>
+            <label for="announce-content"><span data-i18n="create.contentLabel">Content</span>
+              <textarea id="announce-content" class="text-field" rows="7" required></textarea>
+            </label>
+            <label for="announce-capacity"><span data-i18n="create.capacityLabel">Max Capacity</span>
+              <input id="announce-capacity" class="text-field" type="number" min="1" max="500" required>
+            </label>
+            <label for="announce-image"><span data-i18n="create.imageLabel">Cover Image</span>
+              <input id="announce-image" class="text-field" type="file" accept="image/*">
+            </label>
+            <img id="announce-image-preview" class="announce-image-preview" alt="" hidden>
+            <div class="btn-row">
+              <button class="btn btn-primary" type="submit" data-i18n="create.publish">Publish Announcement</button>
+              <button class="btn" type="reset" data-i18n="create.clear">Clear</button>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/announce-create.js"></script>
+  </body>
+</html>

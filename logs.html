@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT System Logs</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker">Operations</p>
+            <h1 class="page-title">System Logs</h1>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <section class="status-grid" data-aos="fade-up">
+          <article class="status-card">
+            <p class="page-kicker">Ping / Latency</p>
+            <strong id="ping-value">Measuring</strong>
+          </article>
+          <article class="status-card">
+            <p class="page-kicker">Storage remaining / Limit</p>
+            <strong id="storage-value">Measuring</strong>
+            <p id="storage-used"></p>
+          </article>
+        </section>
+        <div class="log-tabs">
+          <button class="btn is-active" type="button" data-log-tab="user">Normal User Logs</button>
+          <button class="btn" id="tab-admin" type="button" data-log-tab="admin">Admin Activity Logs</button>
+        </div>
+        <section id="user-log-panel"></section>
+        <section id="admin-log-panel" hidden></section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/logs.js"></script>
+  </body>
+</html>

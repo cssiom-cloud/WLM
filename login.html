@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W.L.R Sign In</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <section class="auth-card" data-aos="fade-up">
+          <p class="page-kicker">Authentication</p>
+          <h1 id="auth-title" class="page-title">Sign In</h1>
+          <p id="status-banner" class="status-banner" role="status"></p>
+          <form id="auth-form">
+            <label>Email
+              <input id="auth-email" class="text-field" type="email" required autocomplete="username">
+            </label>
+            <label>Password
+              <input id="auth-password" class="text-field" type="password" required autocomplete="current-password">
+            </label>
+            <button id="auth-submit" class="btn btn-primary" type="submit">Sign In</button>
+          </form>
+          <p class="auth-switch">
+            <button id="auth-toggle" type="button">Create an account</button>
+          </p>
+          <div id="local-test-notes" class="local-test-notes" hidden></div>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/login.js"></script>
+  </body>
+</html>

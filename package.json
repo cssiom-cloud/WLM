@@ -1,0 +1,7 @@
+{
+  "name": "wlr-command-personnel",
+  "private": true,
+  "scripts": {
+    "start": "node scripts/local-server.cjs"
+  }
+}
