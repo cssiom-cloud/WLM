@@ -867,6 +867,91 @@
   font-size: 0.88rem;
 }
 
+.unit-card-link .unit-head-meta,
+.unit-page-hero .unit-head-meta {
+  text-align: left;
+}
+
+.unit-card-link .unit-content {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  white-space: normal;
+  min-height: 3.6em;
+}
+
+.unit-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.45rem;
+  margin-bottom: 1.1rem;
+}
+
+.unit-tab {
+  padding: 0.45rem 0.85rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--bg-elevated);
+  color: inherit;
+  font-size: 0.88rem;
+  font-weight: 600;
+}
+
+.unit-tab.is-active {
+  background: var(--accent);
+  color: #ffffff;
+  border-color: var(--accent);
+}
+
+[data-theme="dark"] .unit-tab.is-active {
+  color: #16161c;
+}
+
+.unit-roster-list {
+  list-style: none;
+  margin: 0.6rem 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.unit-roster-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) minmax(0, 1fr);
+  gap: 0.6rem;
+  align-items: center;
+  padding: 0.55rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.unit-roster-row.is-header {
+  border: 0;
+  padding: 0 0.7rem;
+  color: var(--text-muted);
+  font-size: 0.78rem;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.unit-roster-row.is-head {
+  border-color: var(--accent);
+}
+
+.unit-head-badge {
+  display: inline-flex;
+  margin-left: 0.45rem;
+  padding: 0.08rem 0.5rem;
+  border-radius: 999px;
+  border: 1px solid var(--accent);
+  color: var(--accent);
+  font-size: 0.72rem;
+  font-weight: 700;
+  vertical-align: middle;
+}
+
 .unit-content {
   margin: 0.8rem 0;
   color: var(--text-muted);
@@ -919,9 +1004,7 @@
 }
 
 .unit-manage {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px solid var(--border);
+  margin-top: 0.4rem;
   display: grid;
   gap: 1.1rem;
 }
@@ -1089,7 +1172,8 @@
 
   .unit-rank-row,
   .unit-app-row,
-  .unit-member-row {
+  .unit-member-row,
+  .unit-roster-row {
     grid-template-columns: 1fr;
   }
 

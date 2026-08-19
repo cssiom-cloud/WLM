@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
-import { confirmNotice, escapeHtml, showToast } from './ui.js';
+import { confirmNotice, escapeHtml, showToast, upgradeSelects } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: CRUD goes through js/content-service.js (lore_entries table).
 import { deleteLoreEntry, fetchLoreEntries, saveLoreEntry } from './content-service.js';
@@ -146,6 +146,7 @@ Promise.all([
       addButton.textContent = t('lore.addTopic');
     }
     renderAll();
+    upgradeSelects();
   })
   .catch((error) => {
     showToast(error.message, 'error', 6000);

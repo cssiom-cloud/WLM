@@ -5,15 +5,13 @@ import { initVisualEffects } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
 import { fetchOwnSettings } from './command-services.js';
 import { applyTranslations, getLang, t } from './i18n.js';
-import { hideLoading, installCrestIcon, showLoading, showStatus, watchChoiceSelects } from './ui.js';
+import { installCrestIcon, showStatus, upgradeSelects } from './ui.js';
 
 export function bootCommandShell(activePage) {
   document.body.dataset.page = activePage || 'auth';
   document.documentElement.lang = getLang();
   applyTranslations();
   installCrestIcon();
-  watchChoiceSelects();
-  showLoading(t('notice.loading'));
   initThemeToggle();
   applyStoredAccent();
   initVisualEffects();
@@ -27,8 +25,9 @@ export function bootCommandShell(activePage) {
     }
   }
   hydrateRemoteAccent();
-  const ready = initCommandNavbar(activePage);
-  Promise.resolve(ready).finally(() => hideLoading());
+  const ready = Promise.resolve(initCommandNavbar(activePage)).finally(() => {
+    upgradeSelects();
+  });
   if (!window.__wlrNetworkBound) {
     window.__wlrNetworkBound = true;
     window.addEventListener('offline', () => showStatus(t('notice.offline'), true));

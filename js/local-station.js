@@ -775,6 +775,7 @@ export async function localFetchUnitBoard() {
     middle_name: row.middle_name,
     last_name: row.last_name,
     role: row.role,
+    military_rank: row.military_rank || '',
     unit_id: row.unit_id || null,
     unit_rank_id: row.unit_rank_id || null,
     honor_ranks: row.honor_ranks || []

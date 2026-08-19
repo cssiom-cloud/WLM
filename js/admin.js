@@ -9,7 +9,7 @@ import {
   RANK_STRUCTURE,
   formatPersonnelName
 } from './domain.js';
-import { confirmNotice, escapeHtml, initialsFromName, optionMarkup, showStatus } from './ui.js';
+import { confirmNotice, escapeHtml, initialsFromName, optionMarkup, showStatus, upgradeSelects } from './ui.js';
 import {
   fetchPersonnelRoster,
   uniqueAgencyValues,
@@ -122,6 +122,7 @@ function renderFilterPanel() {
       renderTable();
     });
   });
+  upgradeSelects(panel);
 }
 
 function actionButtons(record) {
@@ -220,6 +221,7 @@ function openEditor(record) {
     RANK_STRUCTURE.map((item) => item.rankTitle),
     record.military_rank
   );
+  upgradeSelects(modal);
 }
 
 function closeEditor() {

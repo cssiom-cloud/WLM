@@ -1,7 +1,7 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
 import { TICKET_CATEGORIES, formatPersonnelName } from './domain.js';
-import { escapeHtml, showStatus } from './ui.js';
+import { escapeHtml, showStatus, upgradeSelects } from './ui.js';
 import { getLang, t } from './i18n.js';
 import { createTicket, fetchTickets, updateTicket } from './ticket-service.js';
 import { fetchPersonnelRoster } from './personnel-service.js';
@@ -32,6 +32,7 @@ function fillCategorySelect() {
   select.innerHTML = options
     .map((item) => `<option value="${escapeHtml(item.id)}">${escapeHtml(categoryLabel(item.id))}</option>`)
     .join('');
+  upgradeSelects(select.parentElement || document);
 }
 
 function configureGuestForm() {
@@ -93,6 +94,7 @@ function renderTickets() {
       `;
     })
     .join('');
+  upgradeSelects(list);
   initAos();
 }
 

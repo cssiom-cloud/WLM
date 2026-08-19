@@ -3,9 +3,10 @@ import { t } from './i18n.js';
 export const CREST_SRC = './assets/1.jpg';
 
 let hideTimer = null;
-let loadingCount = 0;
+let safetyTimer = null;
 let noticeResolver = null;
-let choiceObserverBound = false;
+let loadingArmedAt = 0;
+let overlayGeneration = 0;
 
 export function escapeHtml(value) {
   return String(value ?? '')
@@ -48,7 +49,12 @@ function noticeRoot() {
     if (event.target !== root) {
       return;
     }
-    if (root.dataset.mode === 'loading') {
+    const mode = root.dataset.mode;
+    if (mode === 'loading' && Date.now() - loadingArmedAt < 1200) {
+      return;
+    }
+    if (mode === 'loading') {
+      hideLoading();
       return;
     }
     settleNotice(undefined);
@@ -67,17 +73,17 @@ function clearHideTimer() {
 function settleNotice(result) {
   const resolve = noticeResolver;
   noticeResolver = null;
-  if (loadingCount > 0) {
-    renderNotice({ mode: 'loading', message: t('notice.loading') });
-  } else {
-    hideNotice();
-  }
+  hideNotice();
   if (resolve) {
     resolve(result);
   }
 }
 
 function renderNotice({ mode, message, kind = 'info', options = [], value = '' }) {
+  if (mode !== 'loading' && safetyTimer) {
+    window.clearTimeout(safetyTimer);
+    safetyTimer = null;
+  }
   const root = noticeRoot();
   const status = root.querySelector('#wlr-notice-status');
   const choices = root.querySelector('.wlr-notice-choices');
@@ -89,7 +95,7 @@ function renderNotice({ mode, message, kind = 'info', options = [], value = '' }
   root.classList.toggle('is-success', kind === 'success');
   status.textContent = message || '';
   choices.hidden = mode !== 'choice';
-  actions.hidden = mode !== 'confirm';
+  actions.hidden = mode !== 'confirm' && mode !== 'loading';
 
   if (mode === 'choice') {
     choices.innerHTML = options
@@ -111,45 +117,68 @@ function renderNotice({ mode, message, kind = 'info', options = [], value = '' }
     actions.querySelector('[data-notice-ok]').addEventListener('click', () => settleNotice(true));
     actions.querySelector('[data-notice-cancel]').addEventListener('click', () => settleNotice(false));
   }
+
+  if (mode === 'loading') {
+    actions.innerHTML = `<button class="btn" type="button" data-notice-dismiss>${escapeHtml(t('notice.dismiss'))}</button>`;
+    actions.querySelector('[data-notice-dismiss]').addEventListener('click', () => hideLoading());
+  }
 }
 
 export function hideNotice() {
   clearHideTimer();
+  if (safetyTimer) {
+    window.clearTimeout(safetyTimer);
+    safetyTimer = null;
+  }
   const root = document.querySelector('#wlr-notice');
   if (!root) {
     return;
   }
-  if (loadingCount > 0) {
-    return;
-  }
   root.hidden = true;
   root.dataset.mode = '';
+  root.classList.remove('is-loading', 'is-error', 'is-success');
 }
 
 export function showLoading(message) {
-  loadingCount += 1;
   clearHideTimer();
+  loadingArmedAt = Date.now();
   renderNotice({ mode: 'loading', message: message || t('notice.loading') });
+  if (safetyTimer) {
+    window.clearTimeout(safetyTimer);
+  }
+  safetyTimer = window.setTimeout(() => {
+    const root = document.querySelector('#wlr-notice');
+    if (root?.dataset.mode === 'loading') {
+      hideNotice();
+    }
+  }, 8000);
 }
 
 export function hideLoading() {
-  loadingCount = Math.max(0, loadingCount - 1);
-  if (loadingCount === 0) {
-    hideNotice();
+  const root = document.querySelector('#wlr-notice');
+  if (!root || root.dataset.mode !== 'loading') {
+    return;
   }
+  hideNotice();
 }
 
 export async function withOverlay(work, loadingMessage) {
+  const generation = ++overlayGeneration;
   let shown = false;
+  let finished = false;
   const timer = window.setTimeout(() => {
+    if (finished || generation !== overlayGeneration) {
+      return;
+    }
     shown = true;
     showLoading(loadingMessage || t('notice.loading'));
-  }, 280);
+  }, 400);
   try {
     return await work();
   } finally {
+    finished = true;
     window.clearTimeout(timer);
-    if (shown) {
+    if (shown && generation === overlayGeneration) {
       hideLoading();
     }
   }
@@ -241,16 +270,6 @@ function wrapSelect(select) {
 
 export function upgradeSelects(root = document) {
   root.querySelectorAll('select.select-field').forEach(wrapSelect);
-}
-
-export function watchChoiceSelects() {
-  upgradeSelects();
-  if (choiceObserverBound || !document.body) {
-    return;
-  }
-  choiceObserverBound = true;
-  const observer = new MutationObserver(() => upgradeSelects());
-  observer.observe(document.body, { childList: true, subtree: true });
 }
 
 export function installCrestIcon() {
