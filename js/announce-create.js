@@ -26,6 +26,17 @@ requireCommandAdmin()
 
 const imageInput = document.querySelector('#announce-image');
 const imagePreview = document.querySelector('#announce-image-preview');
+const honorEnabledInput = document.querySelector('#announce-honor-enabled');
+const honorTitleInput = document.querySelector('#announce-honor-title');
+
+function syncHonorTitleField() {
+  honorTitleInput.disabled = !honorEnabledInput.checked;
+  if (!honorEnabledInput.checked) {
+    honorTitleInput.value = '';
+  }
+}
+
+honorEnabledInput.addEventListener('change', syncHonorTitleField);
 
 imageInput.addEventListener('change', () => {
   const file = imageInput.files?.[0];
@@ -39,6 +50,8 @@ imageInput.addEventListener('change', () => {
 
 document.querySelector('#announce-form').addEventListener('reset', () => {
   imagePreview.hidden = true;
+  honorEnabledInput.checked = false;
+  syncHonorTitleField();
 });
 
 document.querySelector('#announce-form').addEventListener('submit', async (event) => {
@@ -51,26 +64,40 @@ document.querySelector('#announce-form').addEventListener('submit', async (event
   const content = document.querySelector('#announce-content').value.trim();
   const maxCapacity = Number(document.querySelector('#announce-capacity').value);
   const imageFile = imageInput.files?.[0] || null;
+  const awardHonorEnabled = honorEnabledInput.checked;
+  const honorRankTitle = honorTitleInput.value.trim();
 
   if (!title || !content || !Number.isInteger(maxCapacity) || maxCapacity < 1) {
     showToast(t('create.invalid'), 'error');
     return;
   }
 
+  if (awardHonorEnabled && !honorRankTitle) {
+    showToast(t('create.honorRequired'), 'error');
+    return;
+  }
+
   try {
-    await createAnnouncement({
+    const created = await createAnnouncement({
       title,
       content,
       maxCapacity,
       createdBy: currentAdmin.id,
-      imageFile
+      imageFile,
+      awardHonorEnabled,
+      honorRankTitle: awardHonorEnabled ? honorRankTitle : null
     });
 
     // DISCORD WEBHOOK INJECT POINT:
     // Proxy through Edge Function notify-discord so the webhook URL stays server-side.
     if (supabaseClient) {
       const { error: notifyError } = await supabaseClient.functions.invoke('notify-discord', {
-        body: { title, content, maxCapacity }
+        body: {
+          title,
+          content,
+          maxCapacity,
+          imageUrl: created?.image_url || ''
+        }
       });
       if (notifyError) {
         console.warn('Discord notify failed', notifyError.message);

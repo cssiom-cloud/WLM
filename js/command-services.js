@@ -96,7 +96,7 @@ export function isUserLog(actionType) {
 }
 
 export function isAdminLog(actionType) {
-  return ['rank_update', 'admin_grant', 'admin_revoke', 'personnel_edit', 'personnel_delete'].includes(actionType);
+  return ['rank_update', 'admin_grant', 'admin_revoke', 'personnel_edit', 'personnel_delete', 'announcement_close'].includes(actionType);
 }
 
 export async function measureCommandStatus() {

@@ -198,8 +198,8 @@ begin
 end;
 $$;
 
-revoke all on function public.command_system_status() from public;
-grant execute on function public.command_system_status() to anon, authenticated;
+revoke all on function public.command_system_status() from public, anon;
+grant execute on function public.command_system_status() to authenticated;
 
 grant select on public.user_settings to anon, authenticated;
 grant insert, update on public.user_settings to authenticated;

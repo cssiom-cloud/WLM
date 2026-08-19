@@ -5,7 +5,8 @@ import {
   localDeleteAnnouncement,
   localFetchAnnouncements,
   localJoinAnnouncement,
-  localLeaveAnnouncement
+  localLeaveAnnouncement,
+  localCloseAnnouncement
 } from './local-station.js';
 
 // Returns announcements with { signed_count, is_signed } computed per record.
@@ -72,19 +73,62 @@ function fileToDataUrl(file) {
 }
 
 // SUPABASE INJECT POINT: insert into public.announcements (RLS allows admins only).
-export async function createAnnouncement({ title, content, maxCapacity, createdBy, imageFile }) {
+export async function createAnnouncement({
+  title,
+  content,
+  maxCapacity,
+  createdBy,
+  imageFile,
+  awardHonorEnabled = false,
+  honorRankTitle = null
+}) {
+  const honorPayload = {
+    award_honor_enabled: Boolean(awardHonorEnabled),
+    honor_rank_title: awardHonorEnabled ? String(honorRankTitle || '').trim() || null : null
+  };
+
   if (isLocalTestMode()) {
     const imageUrl = imageFile ? await fileToDataUrl(imageFile) : null;
-    return localCreateAnnouncement({ title, content, maxCapacity, createdBy, imageUrl });
+    return localCreateAnnouncement({
+      title,
+      content,
+      maxCapacity,
+      createdBy,
+      imageUrl,
+      ...honorPayload
+    });
   }
 
   const imageUrl = imageFile ? await uploadCoverImage(imageFile) : null;
 
   const { data, error } = await supabaseClient
     .from('announcements')
-    .insert({ title, content, max_capacity: maxCapacity, created_by: createdBy, image_url: imageUrl })
+    .insert({
+      title,
+      content,
+      max_capacity: maxCapacity,
+      created_by: createdBy,
+      image_url: imageUrl,
+      ...honorPayload
+    })
     .select()
     .single();
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+// SUPABASE INJECT POINT: admin-only RPC close_announcement sets ended_at
+// and optionally awards honor_ranks to remaining signups.
+export async function closeAnnouncement(announcementId) {
+  if (isLocalTestMode()) {
+    return localCloseAnnouncement(announcementId);
+  }
+
+  const { data, error } = await supabaseClient.rpc('close_announcement', {
+    p_announcement_id: announcementId
+  });
   if (error) {
     throw error;
   }

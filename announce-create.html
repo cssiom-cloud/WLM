@@ -47,6 +47,14 @@
               <input id="announce-image" class="text-field" type="file" accept="image/*">
             </label>
             <img id="announce-image-preview" class="announce-image-preview" alt="" hidden>
+            <label class="announce-honor-toggle" for="announce-honor-enabled">
+              <input id="announce-honor-enabled" type="checkbox">
+              <span data-i18n="create.honorToggle">Award a special rank when this event is closed</span>
+            </label>
+            <label for="announce-honor-title"><span data-i18n="create.honorTitleLabel">Special rank name</span>
+              <input id="announce-honor-title" class="text-field" type="text" maxlength="80" disabled>
+            </label>
+            <p class="form-hint" data-i18n="create.honorHint">Personnel who remain signed up when an administrator closes the announcement receive this rank. Leave this off if the event should not award a rank.</p>
             <div class="btn-row">
               <button class="btn btn-primary" type="submit" data-i18n="create.publish">Publish Announcement</button>
               <button class="btn" type="reset" data-i18n="create.clear">Clear</button>

@@ -58,6 +58,13 @@ function renderHome(personnel, editing = false) {
           : `
             <h1 class="profile-name">${escapeHtml(name)}</h1>
             <p class="profile-rank">${escapeHtml(personnel.military_rank || '')}</p>
+            ${
+              Array.isArray(personnel.honor_ranks) && personnel.honor_ranks.length
+                ? `<div class="medal-row profile-honor">${personnel.honor_ranks
+                    .map((rank) => `<span class="honor-chip">${escapeHtml(rank)}</span>`)
+                    .join('')}</div>`
+                : ''
+            }
             <div class="profile-history">
               <p>${escapeHtml(history.paragraphIdentity)}</p>
               ${history.paragraphService ? `<p>${escapeHtml(history.paragraphService)}</p>` : ''}

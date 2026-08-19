@@ -31,7 +31,7 @@ Deno.serve(async (req) => {
     return json({ error: "Discord webhook is not configured" }, 500);
   }
 
-  let payload: { title?: string; content?: string; maxCapacity?: number };
+  let payload: { title?: string; content?: string; maxCapacity?: number; imageUrl?: string };
   try {
     payload = await req.json();
   } catch {
@@ -41,6 +41,7 @@ Deno.serve(async (req) => {
   const title = String(payload.title || "").trim();
   const content = String(payload.content || "").trim();
   const maxCapacity = Number(payload.maxCapacity);
+  const imageUrl = String(payload.imageUrl || "").trim();
 
   if (!title || !content) {
     return json({ error: "title and content are required" }, 400);
@@ -50,18 +51,22 @@ Deno.serve(async (req) => {
     ? `\nCapacity: ${maxCapacity}`
     : "";
 
+  const embed: Record<string, unknown> = {
+    title,
+    description: `${content}${capacityLine}`,
+    color: 0x2b4c7e
+  };
+
+  if (/^https?:\/\//i.test(imageUrl)) {
+    embed.image = { url: imageUrl };
+  }
+
   const discordResponse = await fetch(webhookUrl, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({
       username: "WHITE LION REGIMENT",
-      embeds: [
-        {
-          title,
-          description: `${content}${capacityLine}`,
-          color: 0x2b4c7e
-        }
-      ]
+      embeds: [embed]
     })
   });
 

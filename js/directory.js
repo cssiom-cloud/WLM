@@ -47,6 +47,11 @@ function rankBadge(rank) {
   return `<span class="badge badge-rank-${rankTier(rank)}">${escapeHtml(rank)}</span>`;
 }
 
+function honorChips(record) {
+  const ranks = Array.isArray(record.honor_ranks) ? record.honor_ranks : [];
+  return ranks.map((rank) => `<span class="honor-chip">${escapeHtml(rank)}</span>`).join('');
+}
+
 /* ---------- Card rendering ---------- */
 
 function avatarMarkup(record, className = 'card-avatar') {
@@ -67,6 +72,7 @@ function cardMarkup(record, index) {
       <div class="card-badges">
         ${rankBadge(record.military_rank)}
         ${branchBadge(record.military_branch)}
+        ${honorChips(record)}
       </div>
       <button class="btn" type="button" data-view-id="${escapeHtml(record.id)}" aria-label="View profile of ${escapeHtml(name)}">
         ${t('dir.view')}
@@ -100,7 +106,8 @@ function matchesQuery(record, query) {
     formatPersonnelName(record),
     record.military_rank,
     record.military_branch,
-    record.wlc_agency
+    record.wlc_agency,
+    ...(Array.isArray(record.honor_ranks) ? record.honor_ranks : [])
   ]
     .join(' ')
     .toLowerCase();
@@ -126,6 +133,7 @@ function renderDirectory(query = '') {
 function serviceRecordMarkup(record) {
   const missions = Array.isArray(record.completed_missions) ? record.completed_missions : [];
   const medals = Array.isArray(record.medals) ? record.medals : [];
+  const honorRanks = Array.isArray(record.honor_ranks) ? record.honor_ranks : [];
 
   const missionList = missions.length
     ? `<ol class="mission-timeline">${missions
@@ -139,10 +147,18 @@ function serviceRecordMarkup(record) {
         .join('')}</div>`
     : `<p class="empty-log">${t('dir.noRecord')}</p>`;
 
+  const honorList = honorRanks.length
+    ? `<div class="medal-row">${honorRanks
+        .map((rank) => `<span class="honor-chip">${escapeHtml(rank)}</span>`)
+        .join('')}</div>`
+    : `<p class="empty-log">${t('dir.noRecord')}</p>`;
+
   return `
     <section class="service-record">
       <h3>${t('dir.record')}</h3>
       <p class="service-course"><strong>${t('dir.trainingCourse')}:</strong> ${escapeHtml(record.training_course || '-')}</p>
+      <h4>${t('dir.honorRanks')}</h4>
+      ${honorList}
       <h4>${t('dir.missions')}</h4>
       ${missionList}
       <h4>${t('dir.medals')}</h4>
@@ -171,6 +187,7 @@ function openProfileModal(record) {
         <div class="card-badges">
           ${rankBadge(record.military_rank)}
           ${branchBadge(record.military_branch)}
+          ${honorChips(record)}
         </div>
       </div>
     </div>

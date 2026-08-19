@@ -4,6 +4,7 @@ import { escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: all reads and writes go through js/announcement-service.js
 import {
+  closeAnnouncement,
   deleteAnnouncement,
   fetchAnnouncementBoard,
   joinAnnouncement,
@@ -44,7 +45,14 @@ function coverMarkup(item) {
   return `<div class="announcement-cover announcement-cover-fallback" aria-hidden="true">${escapeHtml(initial)}</div>`;
 }
 
+function isClosed(item) {
+  return Boolean(item.ended_at);
+}
+
 function signupControl(item) {
+  if (isClosed(item)) {
+    return `<button class="btn" type="button" disabled>${t('ann.closed')}</button>`;
+  }
   if (!currentUser) {
     return `<a class="btn" href="./login.html">${t('ann.signin')}</a>`;
   }
@@ -57,12 +65,36 @@ function signupControl(item) {
   return `<button class="btn btn-primary" type="button" data-join-id="${escapeHtml(item.id)}">${t('ann.join')}</button>`;
 }
 
-// Admin-only UI: the Delete button node is rendered only when role === 'admin'.
-function deleteControl(item) {
+function statusBadge(item) {
+  if (isClosed(item)) {
+    return `<span class="badge badge-capacity-closed">${t('ann.closed')}</span>`;
+  }
+  if (item.signed_count >= item.max_capacity) {
+    return `<span class="badge badge-capacity-full">${t('ann.full')}</span>`;
+  }
+  return `<span class="badge badge-capacity-open">${t('ann.open')}</span>`;
+}
+
+// Admin-only UI: Close and Delete are rendered only when role === 'admin'.
+function adminControls(item) {
   if (!isAdmin()) {
     return '';
   }
-  return `<button class="btn btn-danger" type="button" data-delete-id="${escapeHtml(item.id)}">${t('ann.delete')}</button>`;
+  const closeButton = isClosed(item)
+    ? ''
+    : `<button class="btn" type="button" data-close-id="${escapeHtml(item.id)}">${t('ann.close')}</button>`;
+  return `
+    ${closeButton}
+    <button class="btn btn-danger" type="button" data-delete-id="${escapeHtml(item.id)}">${t('ann.delete')}</button>
+  `;
+}
+
+function honorNote(item) {
+  if (!item.award_honor_enabled || !item.honor_rank_title) {
+    return '';
+  }
+  const label = isClosed(item) ? t('ann.honorAwarded') : t('ann.honorPending');
+  return `<p class="announcement-honor">${escapeHtml(label)}: <strong>${escapeHtml(item.honor_rank_title)}</strong></p>`;
 }
 
 function announcementCard(item, index) {
@@ -73,13 +105,10 @@ function announcementCard(item, index) {
       ${coverMarkup(item)}
       <div class="announcement-head">
         <h2>${escapeHtml(item.title)}</h2>
-        ${
-          isFull
-            ? `<span class="badge badge-capacity-full">${t('ann.full')}</span>`
-            : `<span class="badge badge-capacity-open">${t('ann.open')}</span>`
-        }
+        ${statusBadge(item)}
       </div>
       <p class="announcement-content">${escapeHtml(item.content)}</p>
+      ${honorNote(item)}
       <p class="announcement-date">${escapeHtml(new Date(item.created_at).toLocaleString())}</p>
       <div class="capacity-tracker" role="group" aria-label="Registration tracker">
         <div class="capacity-line">
@@ -92,7 +121,7 @@ function announcementCard(item, index) {
       </div>
       <div class="announcement-actions">
         ${signupControl(item)}
-        ${deleteControl(item)}
+        ${adminControls(item)}
       </div>
     </article>
   `;
@@ -134,12 +163,20 @@ document.querySelector('#announcement-list').addEventListener('click', async (ev
   const joinButton = event.target.closest('[data-join-id]');
   const leaveButton = event.target.closest('[data-leave-id]');
   const deleteButton = event.target.closest('[data-delete-id]');
-  if (!joinButton && !leaveButton && !deleteButton) {
+  const closeButton = event.target.closest('[data-close-id]');
+  if (!joinButton && !leaveButton && !deleteButton && !closeButton) {
     return;
   }
 
   try {
-    if (deleteButton) {
+    if (closeButton) {
+      if (!isAdmin() || !window.confirm(t('ann.confirmClose'))) {
+        return;
+      }
+      const result = await closeAnnouncement(closeButton.getAttribute('data-close-id'));
+      const awarded = Number(result?.awarded || 0);
+      showToast(awarded > 0 ? t('ann.closedWithHonor') : t('ann.closedOk'), 'success');
+    } else if (deleteButton) {
       if (!isAdmin() || !window.confirm(t('ann.confirmDelete'))) {
         return;
       }

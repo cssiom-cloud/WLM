@@ -354,6 +354,24 @@
   border-color: rgba(110, 200, 150, 0.35);
 }
 
+.badge-capacity-closed {
+  color: #5d4a1f;
+  background: #f4ead2;
+  border-color: #e4d4a8;
+}
+
+[data-theme="dark"] .badge-capacity-closed {
+  color: #e8d7a2;
+  background: rgba(180, 150, 60, 0.16);
+  border-color: rgba(210, 180, 90, 0.35);
+}
+
+.announcement-honor {
+  margin: 0;
+  font-size: 0.86rem;
+  color: var(--text-muted);
+}
+
 .capacity-tracker {
   display: grid;
   gap: 0.4rem;
@@ -471,6 +489,24 @@
   border: 1px solid var(--border);
 }
 
+.announce-honor-toggle {
+  display: flex !important;
+  align-items: flex-start;
+  gap: 0.55rem;
+  grid-template-columns: none;
+}
+
+.announce-honor-toggle input {
+  margin-top: 0.2rem;
+}
+
+.form-hint {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
 /* ---------- Service record & achievements ---------- */
 
 .service-record {
@@ -527,6 +563,29 @@
   color: #f0cf8a;
   background: rgba(210, 160, 60, 0.16);
   border-color: rgba(230, 190, 110, 0.35);
+}
+
+.honor-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.28rem 0.7rem;
+  border-radius: 999px;
+  border: 1px solid #c9d4ea;
+  background: #eef3fb;
+  color: #2b4c7e;
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .honor-chip {
+  color: #c5d6f2;
+  background: rgba(70, 110, 180, 0.18);
+  border-color: rgba(140, 170, 220, 0.35);
+}
+
+.profile-honor {
+  justify-content: center;
+  margin-top: 0.55rem;
 }
 
 /* ---------- Lore & asset archive ---------- */

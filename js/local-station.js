@@ -52,7 +52,8 @@ function seedPersonnel() {
       military_rank: 'Captain',
       biography: 'Command administrator assigned to Test Agency Alpha. Responsible for personnel records and rank control.',
       completed_missions: ['Operation Silent Tide', 'Fleet Escort Exercise', 'Harbor Defense Drill'],
-      medals: ['Meritorious Service Medal', 'Fleet Command Ribbon']
+      medals: ['Meritorious Service Medal', 'Fleet Command Ribbon'],
+      honor_ranks: []
     },
     {
       id: '00000000-0000-4000-8000-000000000002',
@@ -74,7 +75,8 @@ function seedPersonnel() {
       military_rank: 'Lieutenant',
       biography: 'Commissioned officer of the Marines. Training course completed under Test Agency Bravo.',
       completed_missions: ['Amphibious Landing Exercise'],
-      medals: ['Basic Training Honor']
+      medals: ['Basic Training Honor'],
+      honor_ranks: []
     },
     {
       id: '00000000-0000-4000-8000-000000000003',
@@ -96,7 +98,8 @@ function seedPersonnel() {
       military_rank: 'Admiral',
       biography: 'Senior Navy command. Assigned to Test Agency Alpha.',
       completed_missions: ['Operation Silent Tide', 'Northern Blockade', 'Joint Fleet Review'],
-      medals: ['Distinguished Command Cross', 'Long Service Medal']
+      medals: ['Distinguished Command Cross', 'Long Service Medal'],
+      honor_ranks: []
     },
     {
       id: '00000000-0000-4000-8000-000000000004',
@@ -118,7 +121,8 @@ function seedPersonnel() {
       military_rank: 'Sergeant',
       biography: 'Marine sergeant attached to Test Agency Bravo.',
       completed_missions: ['Coastal Patrol Rotation'],
-      medals: ['Marksmanship Badge']
+      medals: ['Marksmanship Badge'],
+      honor_ranks: []
     },
     {
       id: '00000000-0000-4000-8000-000000000005',
@@ -140,7 +144,8 @@ function seedPersonnel() {
       military_rank: 'Naval academy student',
       biography: 'Naval academy student. Age 17. Assigned to Test Agency Alpha.',
       completed_missions: [],
-      medals: []
+      medals: [],
+      honor_ranks: []
     }
   ];
 }
@@ -337,7 +342,8 @@ export async function localSignUp(email, password) {
     military_rank: 'Lieutenant',
     biography: '',
     completed_missions: [],
-    medals: []
+    medals: [],
+    honor_ranks: []
   });
   savePersonnel(rows);
 
@@ -384,6 +390,9 @@ export async function localUpdatePersonnel(personnelId, payload) {
     delete payload.role;
     delete payload.email;
     delete payload.id;
+    delete payload.honor_ranks;
+    delete payload.medals;
+    delete payload.completed_missions;
   } else {
     delete payload.email;
     delete payload.id;
@@ -483,7 +492,15 @@ export async function localFetchAnnouncements() {
   return { announcements: clone(announcements), signups: clone(signupRows()) };
 }
 
-export async function localCreateAnnouncement({ title, content, maxCapacity, createdBy, imageUrl = null }) {
+export async function localCreateAnnouncement({
+  title,
+  content,
+  maxCapacity,
+  createdBy,
+  imageUrl = null,
+  award_honor_enabled = false,
+  honor_rank_title = null
+}) {
   const rows = announcementRows();
   const entry = {
     id: window.crypto.randomUUID(),
@@ -492,6 +509,9 @@ export async function localCreateAnnouncement({ title, content, maxCapacity, cre
     max_capacity: maxCapacity,
     created_by: createdBy,
     image_url: imageUrl,
+    award_honor_enabled: Boolean(award_honor_enabled),
+    honor_rank_title: honor_rank_title || null,
+    ended_at: null,
     created_at: new Date().toISOString()
   };
   rows.unshift(entry);
@@ -519,6 +539,9 @@ export async function localJoinAnnouncement(announcementId, userId) {
   if (!announcement) {
     throw new Error('Announcement was not found.');
   }
+  if (announcement.ended_at) {
+    throw new Error('Announcement is closed.');
+  }
   const currentCount = signups.filter((row) => row.announcement_id === announcementId).length;
   if (currentCount >= announcement.max_capacity) {
     throw new Error('Announcement is at full capacity.');
@@ -528,10 +551,68 @@ export async function localJoinAnnouncement(announcementId, userId) {
 }
 
 export async function localLeaveAnnouncement(announcementId, userId) {
+  const announcement = announcementRows().find((row) => row.id === announcementId);
+  if (announcement?.ended_at) {
+    throw new Error('Announcement is closed.');
+  }
   const signups = signupRows().filter(
     (row) => !(row.announcement_id === announcementId && row.user_id === userId)
   );
   writeJson(STORAGE_SIGNUPS, signups);
+}
+
+export async function localCloseAnnouncement(announcementId) {
+  const session = await localReadSession();
+  const rows = personnelRows();
+  const actor = rows.find((row) => row.id === session?.user?.id);
+  if (actor?.role !== 'admin') {
+    throw new Error('Only command administrators can close announcements.');
+  }
+
+  const announcements = announcementRows();
+  const rec = announcements.find((row) => row.id === announcementId);
+  if (!rec) {
+    throw new Error('Announcement was not found.');
+  }
+  if (rec.ended_at) {
+    throw new Error('Announcement is already closed.');
+  }
+
+  rec.ended_at = new Date().toISOString();
+  writeJson(STORAGE_ANNOUNCEMENTS, announcements);
+
+  let awarded = 0;
+  const honorTitle = String(rec.honor_rank_title || '').trim();
+  if (rec.award_honor_enabled && honorTitle) {
+    const remaining = signupRows().filter((row) => row.announcement_id === announcementId);
+    remaining.forEach((signup) => {
+      const person = rows.find((row) => row.id === signup.user_id);
+      if (!person) {
+        return;
+      }
+      person.honor_ranks = Array.isArray(person.honor_ranks) ? person.honor_ranks : [];
+      if (!person.honor_ranks.includes(honorTitle)) {
+        person.honor_ranks.push(honorTitle);
+      }
+      person.completed_missions = Array.isArray(person.completed_missions) ? person.completed_missions : [];
+      if (!person.completed_missions.includes(rec.title)) {
+        person.completed_missions.push(rec.title);
+      }
+      awarded += 1;
+    });
+    savePersonnel(rows);
+  }
+
+  await localWriteLog({
+    userId: actor.id,
+    roleSnapshot: 'admin',
+    actionType: 'announcement_close',
+    details: rec.award_honor_enabled && honorTitle
+      ? `Closed announcement ${rec.title} and awarded honor rank ${honorTitle} to ${awarded} personnel`
+      : `Closed announcement ${rec.title}`
+  });
+
+  return { awarded, honor_rank_title: honorTitle || null };
 }
 
 function loreRows() {

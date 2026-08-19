@@ -168,6 +168,15 @@ begin
     if new.role is distinct from old.role then
       raise exception 'role is restricted.';
     end if;
+    if new.honor_ranks is distinct from old.honor_ranks then
+      raise exception 'honor_ranks is restricted.';
+    end if;
+    if new.medals is distinct from old.medals then
+      raise exception 'medals is restricted.';
+    end if;
+    if new.completed_missions is distinct from old.completed_missions then
+      raise exception 'completed_missions is restricted.';
+    end if;
   end if;
 
   return new;
