@@ -101,7 +101,7 @@ function announcementCard(item, index) {
   const percent = Math.min(100, Math.round((item.signed_count / item.max_capacity) * 100));
   const isFull = item.signed_count >= item.max_capacity;
   return `
-    <article class="announcement-card" data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}">
+    <article class="announcement-card"${window.AOS ? ` data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}"` : ''}>
       ${coverMarkup(item)}
       <div class="announcement-head">
         <h2>${escapeHtml(item.title)}</h2>
@@ -133,7 +133,12 @@ function renderBoard() {
   list.setAttribute('aria-busy', 'false');
   list.innerHTML = boardCache.map(announcementCard).join('');
   empty.hidden = boardCache.length > 0;
-  initAos();
+  if (window.AOS) {
+    window.requestAnimationFrame(() => {
+      initAos();
+      window.AOS.refreshHard?.();
+    });
+  }
 }
 
 async function reloadBoard() {
@@ -155,7 +160,13 @@ readCurrentPersonnel()
     await reloadBoard();
   })
   .catch((error) => {
-    document.querySelector('#announcement-list').innerHTML = '';
+    const list = document.querySelector('#announcement-list');
+    const empty = document.querySelector('#announcement-empty');
+    list.innerHTML = '';
+    list.setAttribute('aria-busy', 'false');
+    if (empty) {
+      empty.hidden = false;
+    }
     showToast(error.message, 'error', 6000);
   });
 

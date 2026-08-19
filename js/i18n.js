@@ -158,16 +158,28 @@ export function getLang() {
 
 export function t(key) {
   const lang = getLang();
-  return DICTIONARY[lang][key] ?? DICTIONARY.en[key] ?? key;
+  return DICTIONARY[lang]?.[key] ?? DICTIONARY.en[key] ?? key;
+}
+
+function translatedText(key) {
+  const lang = getLang();
+  return DICTIONARY[lang]?.[key] ?? DICTIONARY.en[key];
 }
 
 // Static HTML opts in with data-i18n / data-i18n-placeholder attributes.
+// If a key is missing (stale cached dictionary), keep the markup fallback.
 export function applyTranslations(root = document) {
   root.querySelectorAll('[data-i18n]').forEach((element) => {
-    element.textContent = t(element.getAttribute('data-i18n'));
+    const translated = translatedText(element.getAttribute('data-i18n'));
+    if (translated) {
+      element.textContent = translated;
+    }
   });
   root.querySelectorAll('[data-i18n-placeholder]').forEach((element) => {
-    element.setAttribute('placeholder', t(element.getAttribute('data-i18n-placeholder')));
+    const translated = translatedText(element.getAttribute('data-i18n-placeholder'));
+    if (translated) {
+      element.setAttribute('placeholder', translated);
+    }
   });
 }
 

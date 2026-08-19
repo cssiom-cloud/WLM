@@ -427,9 +427,10 @@
 
 .announcement-cover {
   width: calc(100% + 2.5rem);
-  height: 150px;
+  height: 190px;
   margin: -1.25rem -1.25rem 0;
   object-fit: cover;
+  object-position: center top;
   border-radius: var(--radius) var(--radius) 0 0;
   border-bottom: 1px solid var(--border);
 }
@@ -489,15 +490,18 @@
   border: 1px solid var(--border);
 }
 
-.announce-honor-toggle {
-  display: flex !important;
-  align-items: flex-start;
+.announce-form-card label.announce-honor-toggle {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
   gap: 0.55rem;
-  grid-template-columns: none;
 }
 
 .announce-honor-toggle input {
-  margin-top: 0.2rem;
+  width: 1.05rem;
+  height: 1.05rem;
+  flex: 0 0 auto;
+  margin: 0;
 }
 
 .form-hint {
