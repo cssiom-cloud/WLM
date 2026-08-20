@@ -102,7 +102,6 @@ export async function initCommandNavbar(activePage) {
   if (isAdmin) {
     commandLinks.push({ href: './admin.html', page: 'admin', label: t('nav.adminPage') });
     commandLinks.push({ href: './accounts.html', page: 'accounts', label: t('nav.accounts') });
-    commandLinks.push({ href: './backup.html', page: 'backup', label: t('nav.backup') });
   }
   if (isAuthed) {
     commandLinks.push({ href: './settings.html', page: 'settings', label: t('nav.settings') });
