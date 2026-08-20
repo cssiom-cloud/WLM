@@ -1,15 +1,22 @@
 import { bootCommandShell, initAos } from './shell.js';
-import { RANK_STRUCTURE, biographyParagraphs, formatPersonnelName, rankSortOrder } from './domain.js';
-import { escapeHtml, initialsFromName, showToast, withOverlay } from './ui.js';
+import {
+  MILITARY_BRANCHES,
+  RANK_STRUCTURE,
+  biographyParagraphs,
+  formatPersonnelName,
+  rankSortOrder
+} from './domain.js';
+import { escapeHtml, initialsFromName, optionMarkup, showToast, upgradeSelects, withOverlay } from './ui.js';
 import { t } from './i18n.js';
 // Supabase fetch logic lives in these two services.
 // fetchPersonnelRoster() -> supabase.from('oc_personnel').select('*') sorted by rank
 // fetchSettingsMap()     -> supabase.from('user_settings').select('*') for bio privacy
 // Both fall back to local test data automatically when js/config.js has no keys.
-import { fetchPersonnelRoster } from './personnel-service.js';
+import { fetchPersonnelRoster, updatePersonnelRecord } from './personnel-service.js';
 import { fetchSettingsMap } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
 import { fetchUnitBoard } from './unit-service.js';
+import { readCurrentPersonnel } from './session.js';
 
 const SKELETON_COUNT = 8;
 const SKILL_KEYS = ['tactical', 'engineering', 'combat', 'command', 'logistics', 'discipline'];
@@ -21,11 +28,24 @@ const RIBBON_PALETTES = [
   ['#6b4e16', '#f0e2b4', '#6b4e16']
 ];
 
+const RIBBON_PRESETS = [
+  'Meritorious Service Medal',
+  'Fleet Command Ribbon',
+  'Distinguished Command Cross',
+  'Long Service Medal',
+  'Marksmanship Badge',
+  'Basic Training Honor'
+];
+const TIMELINE_KINDS = ['training', 'promotion', 'mission', 'current', 'other'];
+
 let rosterCache = [];
 let settingsMap = {};
 let lastQuery = '';
 let unitBoard = { units: [], ranks: [] };
 let openProfileId = null;
+let viewerIsAdmin = false;
+let draftMedals = [];
+let draftTimeline = [];
 
 function unitNameFor(record) {
   return unitBoard.units.find((unit) => unit.id === record.unit_id)?.name || record.wlc_agency || '';
@@ -202,8 +222,7 @@ function dossierSkills(record) {
   const combatUnit = /MARINE|COMBAT|STRIKE|SUBMARINE|NEPTUNE|RAPIER|PARATROOP|HEAVY RECON/i.test(unit);
   const engineerUnit = /DOCKYARD|ELECTRONIC|MEDICAL|LOGISTIC|SUPPORT|AUXILIARY/i.test(unit);
   const trained = Boolean(record.training_course);
-
-  return {
+  const derived = {
     tactical: clampScore(rankScore * 0.68 + missions * 8 + (record.military_branch === 'Navy' ? 10 : 5)),
     engineering: clampScore(42 + (trained ? 16 : 0) + (engineerUnit ? 20 : 6) + medals * 4),
     combat: clampScore(36 + missions * 12 + (record.military_branch === 'Marines' ? 16 : 6) + (combatUnit ? 14 : 0)),
@@ -211,6 +230,14 @@ function dossierSkills(record) {
     logistics: clampScore(38 + (engineerUnit ? 18 : 7) + (record.organization_role ? 10 : 0) + medals * 3),
     discipline: clampScore(44 + medals * 9 + honors * 8 + (trained ? 8 : 0))
   };
+  const stored = record.service_skills && typeof record.service_skills === 'object' ? record.service_skills : {};
+  SKILL_KEYS.forEach((key) => {
+    const value = Number(stored[key]);
+    if (Number.isFinite(value)) {
+      derived[key] = clampScore(value);
+    }
+  });
+  return derived;
 }
 
 function skillRadarMarkup(record) {
@@ -277,19 +304,37 @@ function skillRadarMarkup(record) {
 
 /* ---------- Timeline, medals, assignment ---------- */
 
+function normalizeTimeline(entry) {
+  return {
+    date: String(entry?.date || '').trim(),
+    title: String(entry?.title || '').trim(),
+    description: String(entry?.description || entry?.detail || '').trim(),
+    kind: TIMELINE_KINDS.includes(entry?.kind) ? entry.kind : 'other'
+  };
+}
+
 function dossierTimeline(record) {
+  const stored = Array.isArray(record.service_timeline)
+    ? record.service_timeline.map(normalizeTimeline).filter((entry) => entry.title)
+    : [];
+  if (stored.length) {
+    return stored.map((entry) => ({
+      ...entry,
+      detail: [entry.date, t(`dir.kind.${entry.kind}`)].filter(Boolean).join(' · ')
+    }));
+  }
   const events = [];
   if (record.training_course) {
-    events.push({ kind: 'training', title: record.training_course, detail: t('dir.trainingCourse') });
+    events.push({ kind: 'training', title: record.training_course, detail: t('dir.trainingCourse'), description: '' });
   }
   (Array.isArray(record.honor_ranks) ? record.honor_ranks : []).forEach((rank) => {
-    events.push({ kind: 'promotion', title: rank, detail: t('dir.honorRanks') });
+    events.push({ kind: 'promotion', title: rank, detail: t('dir.honorRanks'), description: '' });
   });
   (Array.isArray(record.completed_missions) ? record.completed_missions : []).forEach((mission) => {
-    events.push({ kind: 'mission', title: mission, detail: t('dir.missions') });
+    events.push({ kind: 'mission', title: mission, detail: t('dir.missions'), description: '' });
   });
   if (record.military_rank) {
-    events.push({ kind: 'current', title: record.military_rank, detail: t('dir.currentPost') });
+    events.push({ kind: 'current', title: record.military_rank, detail: t('dir.currentPost'), description: '' });
   }
   return events;
 }
@@ -307,6 +352,7 @@ function timelineMarkup(record) {
             <li class="dossier-event dossier-event-${event.kind}">
               <p class="dossier-event-kind">${escapeHtml(event.detail)}</p>
               <h4>${escapeHtml(event.title)}</h4>
+              ${event.description ? `<p>${escapeHtml(event.description)}</p>` : ''}
             </li>
           `
         )
@@ -382,10 +428,210 @@ function bannerStyle(record) {
   return `background-image: url("${safe}")`;
 }
 
+function storedTimeline(record) {
+  return Array.isArray(record.service_timeline)
+    ? record.service_timeline.map(normalizeTimeline).filter((entry) => entry.title)
+    : [];
+}
+
+function renderDraftMedals() {
+  const root = document.querySelector('#dossier-medal-list');
+  if (!root) {
+    return;
+  }
+  root.innerHTML = draftMedals.length
+    ? draftMedals
+        .map((name, index) => {
+          const [left, center, right] = ribbonPalette(name);
+          return `
+            <li class="dossier-ribbon-edit">
+              <span class="dossier-ribbon-bar" aria-hidden="true" style="background: linear-gradient(90deg, ${left} 0 28%, ${center} 28% 72%, ${right} 72% 100%)"></span>
+              <span>${escapeHtml(name)}</span>
+              <button class="btn btn-inline" type="button" data-medal-remove="${index}">${escapeHtml(t('common.delete'))}</button>
+            </li>
+          `;
+        })
+        .join('')
+    : `<p class="empty-log">${escapeHtml(t('dir.noRecord'))}</p>`;
+}
+
+function renderDraftTimeline() {
+  const root = document.querySelector('#dossier-timeline-list');
+  if (!root) {
+    return;
+  }
+  root.innerHTML = draftTimeline.length
+    ? draftTimeline
+        .map(
+          (entry, index) => `
+            <li class="dossier-timeline-edit">
+              <strong>${escapeHtml(entry.title)}</strong>
+              <span>${escapeHtml([entry.date, t(`dir.kind.${entry.kind}`)].filter(Boolean).join(' · '))}</span>
+              ${entry.description ? `<p>${escapeHtml(entry.description)}</p>` : ''}
+              <button class="btn btn-inline" type="button" data-timeline-remove="${index}">${escapeHtml(t('common.delete'))}</button>
+            </li>
+          `
+        )
+        .join('')
+    : `<p class="empty-log">${escapeHtml(t('dir.timelineEmpty'))}</p>`;
+}
+
+function closeDossierEditor() {
+  document.querySelector('#dossier-edit-modal').classList.remove('is-open');
+}
+
+function openDossierEditor(record) {
+  if (!viewerIsAdmin) {
+    return;
+  }
+  const skills = dossierSkills(record);
+  draftMedals = Array.isArray(record.medals) ? [...record.medals] : [];
+  draftTimeline = storedTimeline(record);
+  const form = document.querySelector('#dossier-edit-form');
+  form.innerHTML = `
+    <label>
+      ${escapeHtml(t('units.serviceRank'))}
+      <select id="dossier-edit-rank" class="select-field">${optionMarkup(
+        RANK_STRUCTURE.map((item) => item.rankTitle),
+        record.military_rank || ''
+      )}</select>
+    </label>
+    <label>
+      Branch
+      <select id="dossier-edit-branch" class="select-field">${optionMarkup(MILITARY_BRANCHES, record.military_branch || '')}</select>
+    </label>
+    <div class="full">
+      <p class="editor-label">${escapeHtml(t('dir.ribbons'))}</p>
+      <div class="dossier-preset-grid" role="list">
+        ${RIBBON_PRESETS.map((name) => {
+          const [left, center, right] = ribbonPalette(name);
+          return `
+            <button class="dossier-preset" type="button" data-medal-preset="${escapeHtml(name)}" title="${escapeHtml(name)}">
+              <span class="dossier-ribbon-bar" aria-hidden="true" style="background: linear-gradient(90deg, ${left} 0 28%, ${center} 28% 72%, ${right} 72% 100%)"></span>
+              <span>${escapeHtml(name)}</span>
+            </button>
+          `;
+        }).join('')}
+      </div>
+      <div class="btn-row dossier-add-row">
+        <input id="dossier-medal-name" class="text-field" type="text" maxlength="80" placeholder="${escapeHtml(t('dir.medalName'))}">
+        <button class="btn" type="button" data-medal-add>${escapeHtml(t('dir.addMedal'))}</button>
+      </div>
+      <ul id="dossier-medal-list" class="dossier-edit-list"></ul>
+    </div>
+    <div class="full">
+      <p class="editor-label">${escapeHtml(t('dir.timeline'))}</p>
+      <div class="dossier-timeline-fields">
+        <label>${escapeHtml(t('dir.timelineDate'))}
+          <input id="dossier-event-date" class="text-field" type="date">
+        </label>
+        <label>${escapeHtml(t('dir.timelineKind'))}
+          <select id="dossier-event-kind" class="select-field">
+            ${TIMELINE_KINDS.map((kind) => `<option value="${kind}">${escapeHtml(t(`dir.kind.${kind}`))}</option>`).join('')}
+          </select>
+        </label>
+        <label class="full">${escapeHtml(t('dir.timelineTitle'))}
+          <input id="dossier-event-title" class="text-field" type="text" maxlength="120">
+        </label>
+        <label class="full">${escapeHtml(t('dir.timelineDetail'))}
+          <input id="dossier-event-detail" class="text-field" type="text" maxlength="200">
+        </label>
+      </div>
+      <button class="btn" type="button" data-timeline-add>${escapeHtml(t('dir.addTimeline'))}</button>
+      <ul id="dossier-timeline-list" class="dossier-edit-list"></ul>
+    </div>
+    <div class="full">
+      <p class="editor-label">${escapeHtml(t('dir.skills'))}</p>
+      <div class="dossier-skill-grid">
+        ${SKILL_KEYS.map(
+          (key) => `
+            <label>${escapeHtml(t(`dir.skill.${key}`))}
+              <input id="dossier-skill-${key}" class="text-field" type="number" min="0" max="100" value="${skills[key]}">
+            </label>
+          `
+        ).join('')}
+      </div>
+    </div>
+    <div class="full btn-row">
+      <button class="btn btn-primary" type="submit">${escapeHtml(t('common.save'))}</button>
+      <button class="btn" type="button" data-dossier-edit-close>${escapeHtml(t('common.cancel'))}</button>
+    </div>
+  `;
+  renderDraftMedals();
+  renderDraftTimeline();
+  upgradeSelects(form);
+  document.querySelector('#dossier-edit-modal').classList.add('is-open');
+}
+
+function addDraftMedal(name) {
+  const title = String(name || '').trim();
+  if (!title) {
+    showToast(t('dir.medalName'), 'error');
+    return;
+  }
+  if (!draftMedals.includes(title)) {
+    draftMedals.push(title);
+  }
+  const input = document.querySelector('#dossier-medal-name');
+  if (input) {
+    input.value = '';
+  }
+  renderDraftMedals();
+}
+
+function addDraftTimeline() {
+  const title = String(document.querySelector('#dossier-event-title')?.value || '').trim();
+  if (!title) {
+    showToast(t('dir.timelineTitle'), 'error');
+    return;
+  }
+  draftTimeline.push({
+    date: String(document.querySelector('#dossier-event-date')?.value || '').trim(),
+    kind: document.querySelector('#dossier-event-kind')?.value || 'other',
+    title,
+    description: String(document.querySelector('#dossier-event-detail')?.value || '').trim()
+  });
+  document.querySelector('#dossier-event-title').value = '';
+  document.querySelector('#dossier-event-detail').value = '';
+  renderDraftTimeline();
+}
+
+async function persistDossierEditor(event) {
+  event.preventDefault();
+  const record = rosterCache.find((item) => item.id === openProfileId);
+  if (!record || !viewerIsAdmin) {
+    return;
+  }
+  const skills = {};
+  SKILL_KEYS.forEach((key) => {
+    skills[key] = clampScore(Number(document.querySelector(`#dossier-skill-${key}`)?.value));
+  });
+  try {
+    const updated = await updatePersonnelRecord(record.id, {
+      military_rank: document.querySelector('#dossier-edit-rank').value || 'Lieutenant',
+      military_branch: document.querySelector('#dossier-edit-branch').value || null,
+      medals: draftMedals,
+      service_skills: skills,
+      service_timeline: draftTimeline
+    });
+    const index = rosterCache.findIndex((item) => item.id === record.id);
+    if (index >= 0) {
+      rosterCache[index] = { ...rosterCache[index], ...updated };
+    }
+    closeDossierEditor();
+    openProfileModal(rosterCache[index] || { ...record, ...updated });
+    renderDirectory(lastQuery);
+    showToast(t('dir.editSaved'), 'success');
+  } catch (error) {
+    showToast(error.message, 'error', 6000);
+  }
+}
+
 /* ---------- Dossier modal ---------- */
 
 function closeProfileModal() {
   openProfileId = null;
+  closeDossierEditor();
   document.querySelector('#profile-modal').classList.remove('is-open');
 }
 
@@ -436,6 +682,11 @@ function openProfileModal(record) {
           </div>
         </div>
         <div class="dossier-actions">
+          ${
+            viewerIsAdmin
+              ? `<button class="btn btn-primary" type="button" data-dossier-edit>${escapeHtml(t('dir.edit'))}</button>`
+              : ''
+          }
           <button class="btn btn-primary btn-dossier-export" type="button" data-dossier-export>
             ${escapeHtml(t('dir.export'))}
           </button>
@@ -495,14 +746,16 @@ withOverlay(
     Promise.all([
       fetchPersonnelRoster(),
       fetchSettingsMap().catch(() => ({})),
-      fetchUnitBoard().catch(() => ({ units: [], ranks: [] }))
+      fetchUnitBoard().catch(() => ({ units: [], ranks: [] })),
+      readCurrentPersonnel().catch(() => ({ personnel: null }))
     ]),
   t('notice.loading')
 )
-  .then(([records, settings, board]) => {
+  .then(([records, settings, board, session]) => {
     rosterCache = records;
     settingsMap = settings;
     unitBoard = board;
+    viewerIsAdmin = session?.personnel?.role === 'admin';
     renderDirectory('');
   })
   .catch((error) => {
@@ -534,15 +787,60 @@ document.querySelector('#profile-modal').addEventListener('click', (event) => {
     closeProfileModal();
     return;
   }
+  if (event.target.closest('[data-dossier-edit]')) {
+    const record = rosterCache.find((item) => item.id === openProfileId);
+    if (record) {
+      openDossierEditor(record);
+    }
+    return;
+  }
   if (event.target.closest('[data-dossier-export]')) {
     exportDossier();
   }
 });
 
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    closeProfileModal();
+const editModal = document.querySelector('#dossier-edit-modal');
+editModal.addEventListener('click', (event) => {
+  if (event.target.id === 'dossier-edit-modal' || event.target.closest('[data-dossier-edit-close]')) {
+    closeDossierEditor();
+    return;
   }
+  const preset = event.target.closest('[data-medal-preset]');
+  if (preset) {
+    addDraftMedal(preset.getAttribute('data-medal-preset'));
+    return;
+  }
+  if (event.target.closest('[data-medal-add]')) {
+    addDraftMedal(document.querySelector('#dossier-medal-name')?.value);
+    return;
+  }
+  const medalRemove = event.target.closest('[data-medal-remove]');
+  if (medalRemove) {
+    draftMedals.splice(Number(medalRemove.getAttribute('data-medal-remove')), 1);
+    renderDraftMedals();
+    return;
+  }
+  if (event.target.closest('[data-timeline-add]')) {
+    addDraftTimeline();
+    return;
+  }
+  const timelineRemove = event.target.closest('[data-timeline-remove]');
+  if (timelineRemove) {
+    draftTimeline.splice(Number(timelineRemove.getAttribute('data-timeline-remove')), 1);
+    renderDraftTimeline();
+  }
+});
+document.querySelector('#dossier-edit-form').addEventListener('submit', persistDossierEditor);
+
+document.addEventListener('keydown', (event) => {
+  if (event.key !== 'Escape') {
+    return;
+  }
+  if (editModal.classList.contains('is-open')) {
+    closeDossierEditor();
+    return;
+  }
+  closeProfileModal();
 });
 
 window.addEventListener('afterprint', () => {

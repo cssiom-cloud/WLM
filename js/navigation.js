@@ -49,6 +49,7 @@ export async function initCommandNavbar(activePage) {
         <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
         <span class="clan-title">WHITE LION REGIMENT</span>
       </a>
+      <nav class="command-nav-desktop" aria-label="${t('nav.group.personnel')}"></nav>
       <div class="nav-actions">
         ${langSwitchMarkup()}
         <button class="hamburger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="command-drawer">
@@ -58,6 +59,7 @@ export async function initCommandNavbar(activePage) {
     </div>
     <button class="drawer-backdrop" type="button" aria-label="Close menu"></button>
     <nav class="command-drawer" id="command-drawer" hidden></nav>
+    <nav class="command-bottom-nav" aria-label="${t('nav.mobile')}"></nav>
   `;
 
   const drawer = header.querySelector('#command-drawer');
@@ -108,6 +110,33 @@ export async function initCommandNavbar(activePage) {
     ${groupMarkup(t('nav.group.command'), commandLinks, activePage)}
     <button class="linkish" type="button" id="sign-out-control"${isAuthed ? '' : ' hidden'}>${t('nav.signOut')}</button>`;
 
+  const desktopNav = header.querySelector('.command-nav-desktop');
+  const desktopLinks = [
+    ...personnelLinks,
+    operationsLinks[0],
+    archiveLinks[0]
+  ].filter(Boolean);
+  desktopNav.innerHTML = desktopLinks
+    .map(
+      (link) =>
+        `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+    )
+    .join('');
+
+  const bottomNav = header.querySelector('.command-bottom-nav');
+  const bottomLinks = [
+    { href: './index.html', page: 'home', label: t('nav.home') },
+    { href: './directory.html', page: 'directory', label: t('nav.directory') },
+    { href: './announcements.html', page: 'announcements', label: t('nav.announcements') }
+  ];
+  bottomNav.innerHTML = `${bottomLinks
+    .map(
+      (link) =>
+        `<a href="${link.href}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+    )
+    .join('')}
+    <button type="button" data-open-drawer>${t('nav.menu')}</button>`;
+
   const setOpen = (open) => {
     drawer.classList.toggle('is-open', open);
     backdrop.classList.toggle('is-open', open);
@@ -121,6 +150,9 @@ export async function initCommandNavbar(activePage) {
     setOpen(!drawer.classList.contains('is-open'));
   });
   backdrop.addEventListener('click', () => setOpen(false));
+  bottomNav.querySelector('[data-open-drawer]')?.addEventListener('click', () => {
+    setOpen(true);
+  });
 
   header.querySelectorAll('.lang-switch [data-lang]').forEach((button) => {
     button.addEventListener('click', () => {

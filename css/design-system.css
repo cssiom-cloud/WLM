@@ -168,6 +168,7 @@ p {
 .lang-switch button {
   border: 0;
   background: transparent;
+  min-height: 44px;
   padding: 0.5rem 0.7rem;
   font-size: 0.8rem;
   font-weight: 600;
@@ -315,6 +316,91 @@ p {
   display: block;
 }
 
+.command-nav-desktop {
+  display: none;
+  align-items: center;
+  gap: 0.15rem;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: none;
+}
+
+.command-nav-desktop::-webkit-scrollbar {
+  display: none;
+}
+
+.command-nav-desktop a {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0.45rem 0.75rem;
+  border-radius: 10px;
+  font-size: 0.86rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.command-nav-desktop a.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.command-bottom-nav {
+  display: none;
+}
+
+@media (max-width: 767px) {
+  body:not([data-page="auth"]) .command-bottom-nav {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 37;
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    min-height: 56px;
+    padding: 0.2rem 0.3rem calc(0.2rem + env(safe-area-inset-bottom));
+    border-top: 1px solid var(--border);
+    background: var(--glass-bg, var(--bg-elevated));
+    backdrop-filter: blur(var(--glass-blur, 18px));
+    -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
+  }
+
+  body:not([data-page="auth"]) .page-content {
+    padding-bottom: 6.5rem;
+  }
+
+  .command-bottom-nav a,
+  .command-bottom-nav button {
+    display: grid;
+    place-items: center;
+    min-height: 44px;
+    border: 0;
+    background: transparent;
+    color: var(--text-muted);
+    font-size: 0.72rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  .command-bottom-nav a.is-active {
+    color: var(--accent);
+  }
+}
+
+@media (min-width: 1025px) {
+  .command-nav-desktop {
+    display: flex;
+  }
+
+  .clan-title {
+    max-width: min(28vw, 280px);
+  }
+}
+
 .local-test-banner {
   position: fixed;
   top: var(--nav-height);
@@ -402,7 +488,7 @@ body.is-local-test .page-shell {
 }
 
 .btn {
-  min-height: 42px;
+  min-height: 44px;
   padding: 0.55rem 0.9rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -663,6 +749,7 @@ body.is-local-test .page-shell {
 
 .table-wrap {
   overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
   border: 1px solid var(--border);
   border-radius: var(--radius);
   background: var(--bg-elevated);
@@ -1014,12 +1101,9 @@ body.is-local-test .page-shell {
   }
 
   .status-grid,
-  .profile-meta {
-    grid-template-columns: 1fr;
-  }
-}
-
-  .form-grid {
+  .profile-meta,
+  .form-grid,
+  .dossier-assign {
     grid-template-columns: 1fr;
   }
 

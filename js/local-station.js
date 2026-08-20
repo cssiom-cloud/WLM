@@ -443,6 +443,8 @@ export async function localUpdatePersonnel(personnelId, payload) {
     delete payload.organization_role;
     delete payload.unit_id;
     delete payload.unit_rank_id;
+    delete payload.service_skills;
+    delete payload.service_timeline;
   } else {
     delete payload.email;
     delete payload.id;
