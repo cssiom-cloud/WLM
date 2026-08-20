@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=cover-top">
+    <link rel="stylesheet" href="./css/components.css?v=media-tools">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -46,6 +46,9 @@
             <label for="announce-image"><span data-i18n="create.imageLabel">Cover Image</span>
               <input id="announce-image" class="text-field" type="file" accept="image/*">
             </label>
+            <div class="image-edit-actions">
+              <button class="btn" id="announce-crop" type="button" data-i18n="create.cropImage">Crop / resize cover</button>
+            </div>
             <img id="announce-image-preview" class="announce-image-preview" alt="" hidden>
             <label class="announce-honor-toggle" for="announce-honor-enabled">
               <input id="announce-honor-enabled" type="checkbox">
@@ -56,7 +59,7 @@
             </label>
             <p class="form-hint" data-i18n="create.honorHint">Personnel who remain signed up when an administrator closes the announcement receive this rank. Leave this off if the event should not award a rank.</p>
             <div class="btn-row">
-              <button class="btn btn-primary" type="submit" data-i18n="create.publish">Publish Announcement</button>
+              <button class="btn btn-primary" id="announce-submit" type="submit" data-i18n="create.publish">Publish Announcement</button>
               <button class="btn" type="reset" data-i18n="create.clear">Clear</button>
             </div>
           </form>

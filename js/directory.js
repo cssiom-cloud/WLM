@@ -12,11 +12,12 @@ import { t } from './i18n.js';
 // fetchPersonnelRoster() -> supabase.from('oc_personnel').select('*') sorted by rank
 // fetchSettingsMap()     -> supabase.from('user_settings').select('*') for bio privacy
 // Both fall back to local test data automatically when js/config.js has no keys.
-import { fetchPersonnelRoster, updatePersonnelRecord } from './personnel-service.js';
+import { fetchPersonnelRoster, updatePersonnelRecord, uploadPersonnelImage } from './personnel-service.js';
 import { fetchSettingsMap } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { readCurrentPersonnel } from './session.js';
+import { openImageEditor } from './image-editor.js';
 
 const SKELETON_COUNT = 8;
 const SKILL_KEYS = ['tactical', 'engineering', 'combat', 'command', 'logistics', 'discipline'];
@@ -61,6 +62,14 @@ function natoGradeFor(rank) {
 
 function clampScore(value) {
   return Math.max(28, Math.min(98, Math.round(value)));
+}
+
+function clampSkill(value) {
+  const number = Number(value);
+  if (!Number.isFinite(number)) {
+    return 0;
+  }
+  return Math.max(0, Math.min(100, Math.round(number)));
 }
 
 /* ---------- Badges ---------- */
@@ -230,11 +239,11 @@ function dossierSkills(record) {
     logistics: clampScore(38 + (engineerUnit ? 18 : 7) + (record.organization_role ? 10 : 0) + medals * 3),
     discipline: clampScore(44 + medals * 9 + honors * 8 + (trained ? 8 : 0))
   };
-  const stored = record.service_skills && typeof record.service_skills === 'object' ? record.service_skills : {};
+  const stored = parseJsonObject(record.service_skills);
   SKILL_KEYS.forEach((key) => {
     const value = Number(stored[key]);
     if (Number.isFinite(value)) {
-      derived[key] = clampScore(value);
+      derived[key] = clampSkill(value);
     }
   });
   return derived;
@@ -313,30 +322,80 @@ function normalizeTimeline(entry) {
   };
 }
 
+function parseJsonObject(value) {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return {};
+    }
+  }
+  return parsed && typeof parsed === 'object' && !Array.isArray(parsed) ? parsed : {};
+}
+
+function parseTimeline(value) {
+  let parsed = value;
+  if (typeof parsed === 'string') {
+    try {
+      parsed = JSON.parse(parsed);
+    } catch {
+      return [];
+    }
+  }
+  if (!Array.isArray(parsed)) {
+    return [];
+  }
+  return parsed.map(normalizeTimeline).filter((entry) => entry.title);
+}
+
+function derivedTimeline(record) {
+  const events = [];
+  if (record.training_course) {
+    events.push({
+      date: '',
+      kind: 'training',
+      title: record.training_course,
+      description: '',
+      detail: t('dir.trainingCourse')
+    });
+  }
+  (Array.isArray(record.honor_ranks) ? record.honor_ranks : []).forEach((rank) => {
+    events.push({ date: '', kind: 'promotion', title: rank, description: '', detail: t('dir.honorRanks') });
+  });
+  (Array.isArray(record.completed_missions) ? record.completed_missions : []).forEach((mission) => {
+    events.push({ date: '', kind: 'mission', title: mission, description: '', detail: t('dir.missions') });
+  });
+  if (record.military_rank) {
+    events.push({
+      date: '',
+      kind: 'current',
+      title: record.military_rank,
+      description: '',
+      detail: t('dir.currentPost')
+    });
+  }
+  return events;
+}
+
 function dossierTimeline(record) {
-  const stored = Array.isArray(record.service_timeline)
-    ? record.service_timeline.map(normalizeTimeline).filter((entry) => entry.title)
-    : [];
+  const stored = parseTimeline(record.service_timeline);
   if (stored.length) {
     return stored.map((entry) => ({
       ...entry,
       detail: [entry.date, t(`dir.kind.${entry.kind}`)].filter(Boolean).join(' · ')
     }));
   }
-  const events = [];
-  if (record.training_course) {
-    events.push({ kind: 'training', title: record.training_course, detail: t('dir.trainingCourse'), description: '' });
+  return derivedTimeline(record);
+}
+
+function editorTimeline(record) {
+  const stored = parseTimeline(record.service_timeline);
+  const rows = stored.length ? stored : derivedTimeline(record).map(normalizeTimeline);
+  if (!rows.some((entry) => !entry.title)) {
+    rows.push({ date: '', kind: 'other', title: '', description: '' });
   }
-  (Array.isArray(record.honor_ranks) ? record.honor_ranks : []).forEach((rank) => {
-    events.push({ kind: 'promotion', title: rank, detail: t('dir.honorRanks'), description: '' });
-  });
-  (Array.isArray(record.completed_missions) ? record.completed_missions : []).forEach((mission) => {
-    events.push({ kind: 'mission', title: mission, detail: t('dir.missions'), description: '' });
-  });
-  if (record.military_rank) {
-    events.push({ kind: 'current', title: record.military_rank, detail: t('dir.currentPost'), description: '' });
-  }
-  return events;
+  return rows;
 }
 
 function timelineMarkup(record) {
@@ -429,9 +488,7 @@ function bannerStyle(record) {
 }
 
 function storedTimeline(record) {
-  return Array.isArray(record.service_timeline)
-    ? record.service_timeline.map(normalizeTimeline).filter((entry) => entry.title)
-    : [];
+  return editorTimeline(record);
 }
 
 function renderDraftMedals() {
@@ -455,25 +512,52 @@ function renderDraftMedals() {
     : `<p class="empty-log">${escapeHtml(t('dir.noRecord'))}</p>`;
 }
 
+function readDraftTimeline() {
+  return [...document.querySelectorAll('[data-timeline-row]')]
+    .map((row) =>
+      normalizeTimeline({
+        date: row.querySelector('[data-timeline-date]')?.value,
+        kind: row.querySelector('[data-timeline-kind]')?.value,
+        title: row.querySelector('[data-timeline-title]')?.value,
+        description: row.querySelector('[data-timeline-detail]')?.value
+      })
+    )
+    .filter((entry) => entry.title);
+}
+
 function renderDraftTimeline() {
   const root = document.querySelector('#dossier-timeline-list');
   if (!root) {
     return;
   }
-  root.innerHTML = draftTimeline.length
-    ? draftTimeline
-        .map(
-          (entry, index) => `
-            <li class="dossier-timeline-edit">
-              <strong>${escapeHtml(entry.title)}</strong>
-              <span>${escapeHtml([entry.date, t(`dir.kind.${entry.kind}`)].filter(Boolean).join(' · '))}</span>
-              ${entry.description ? `<p>${escapeHtml(entry.description)}</p>` : ''}
-              <button class="btn btn-inline" type="button" data-timeline-remove="${index}">${escapeHtml(t('common.delete'))}</button>
-            </li>
-          `
-        )
-        .join('')
-    : `<p class="empty-log">${escapeHtml(t('dir.timelineEmpty'))}</p>`;
+  root.innerHTML = draftTimeline
+    .map(
+      (entry, index) => `
+        <li class="dossier-timeline-edit" data-timeline-row="${index}">
+          <div class="dossier-timeline-fields">
+            <label>${escapeHtml(t('dir.timelineDate'))}
+              <input class="text-field" data-timeline-date type="text" maxlength="40" placeholder="YYYY-MM-DD" value="${escapeHtml(entry.date)}">
+            </label>
+            <label>${escapeHtml(t('dir.timelineKind'))}
+              <select class="select-field" data-timeline-kind>
+                ${TIMELINE_KINDS.map(
+                  (kind) =>
+                    `<option value="${kind}"${kind === entry.kind ? ' selected' : ''}>${escapeHtml(t(`dir.kind.${kind}`))}</option>`
+                ).join('')}
+              </select>
+            </label>
+            <label class="full">${escapeHtml(t('dir.timelineTitle'))}
+              <input class="text-field" data-timeline-title type="text" maxlength="120" value="${escapeHtml(entry.title)}">
+            </label>
+            <label class="full">${escapeHtml(t('dir.timelineDetail'))}
+              <textarea class="text-field" data-timeline-detail rows="2" maxlength="400">${escapeHtml(entry.description)}</textarea>
+            </label>
+          </div>
+          <button class="btn btn-inline" type="button" data-timeline-remove="${index}">${escapeHtml(t('common.delete'))}</button>
+        </li>
+      `
+    )
+    .join('');
 }
 
 function closeDossierEditor() {
@@ -486,9 +570,13 @@ function openDossierEditor(record) {
   }
   const skills = dossierSkills(record);
   draftMedals = Array.isArray(record.medals) ? [...record.medals] : [];
-  draftTimeline = storedTimeline(record);
+  draftTimeline = editorTimeline(record);
   const form = document.querySelector('#dossier-edit-form');
   form.innerHTML = `
+    <div class="full image-edit-actions">
+      <button class="btn" type="button" data-dossier-avatar>${escapeHtml(t('dir.avatar'))} · ${escapeHtml(t('img.crop'))}</button>
+      <button class="btn" type="button" data-dossier-cover>${escapeHtml(t('dir.cover'))} · ${escapeHtml(t('img.crop'))}</button>
+    </div>
     <label>
       ${escapeHtml(t('units.serviceRank'))}
       <select id="dossier-edit-rank" class="select-field">${optionMarkup(
@@ -521,24 +609,9 @@ function openDossierEditor(record) {
     </div>
     <div class="full">
       <p class="editor-label">${escapeHtml(t('dir.timeline'))}</p>
-      <div class="dossier-timeline-fields">
-        <label>${escapeHtml(t('dir.timelineDate'))}
-          <input id="dossier-event-date" class="text-field" type="date">
-        </label>
-        <label>${escapeHtml(t('dir.timelineKind'))}
-          <select id="dossier-event-kind" class="select-field">
-            ${TIMELINE_KINDS.map((kind) => `<option value="${kind}">${escapeHtml(t(`dir.kind.${kind}`))}</option>`).join('')}
-          </select>
-        </label>
-        <label class="full">${escapeHtml(t('dir.timelineTitle'))}
-          <input id="dossier-event-title" class="text-field" type="text" maxlength="120">
-        </label>
-        <label class="full">${escapeHtml(t('dir.timelineDetail'))}
-          <input id="dossier-event-detail" class="text-field" type="text" maxlength="200">
-        </label>
-      </div>
-      <button class="btn" type="button" data-timeline-add>${escapeHtml(t('dir.addTimeline'))}</button>
+      <p class="form-hint">${escapeHtml(t('dir.timelineHint'))}</p>
       <ul id="dossier-timeline-list" class="dossier-edit-list"></ul>
+      <button class="btn" type="button" data-timeline-add>${escapeHtml(t('dir.addTimeline'))}</button>
     </div>
     <div class="full">
       <p class="editor-label">${escapeHtml(t('dir.skills'))}</p>
@@ -580,20 +653,10 @@ function addDraftMedal(name) {
 }
 
 function addDraftTimeline() {
-  const title = String(document.querySelector('#dossier-event-title')?.value || '').trim();
-  if (!title) {
-    showToast(t('dir.timelineTitle'), 'error');
-    return;
-  }
-  draftTimeline.push({
-    date: String(document.querySelector('#dossier-event-date')?.value || '').trim(),
-    kind: document.querySelector('#dossier-event-kind')?.value || 'other',
-    title,
-    description: String(document.querySelector('#dossier-event-detail')?.value || '').trim()
-  });
-  document.querySelector('#dossier-event-title').value = '';
-  document.querySelector('#dossier-event-detail').value = '';
+  draftTimeline = readDraftTimeline();
+  draftTimeline.push({ date: '', kind: 'other', title: '', description: '' });
   renderDraftTimeline();
+  upgradeSelects(document.querySelector('#dossier-edit-form'));
 }
 
 async function persistDossierEditor(event) {
@@ -604,7 +667,7 @@ async function persistDossierEditor(event) {
   }
   const skills = {};
   SKILL_KEYS.forEach((key) => {
-    skills[key] = clampScore(Number(document.querySelector(`#dossier-skill-${key}`)?.value));
+    skills[key] = clampSkill(Number(document.querySelector(`#dossier-skill-${key}`)?.value));
   });
   try {
     const updated = await updatePersonnelRecord(record.id, {
@@ -612,7 +675,7 @@ async function persistDossierEditor(event) {
       military_branch: document.querySelector('#dossier-edit-branch').value || null,
       medals: draftMedals,
       service_skills: skills,
-      service_timeline: draftTimeline
+      service_timeline: readDraftTimeline()
     });
     const index = rosterCache.findIndex((item) => item.id === record.id);
     if (index >= 0) {
@@ -628,6 +691,27 @@ async function persistDossierEditor(event) {
 }
 
 /* ---------- Dossier modal ---------- */
+
+async function cropPersonnelImage(record, field, aspect) {
+  const source = field === 'cover_url' ? record.cover_url || record.banner_url : record.avatar_url;
+  const result = await openImageEditor({
+    source: source || null,
+    aspect,
+    filename: field === 'cover_url' ? 'cover.jpg' : 'avatar.jpg',
+    size: field === 'cover_url' ? 1280 : 768
+  });
+  if (!result?.file) {
+    return;
+  }
+  const updated = await uploadPersonnelImage(record.id, result.file, field);
+  const index = rosterCache.findIndex((item) => item.id === record.id);
+  if (index >= 0) {
+    rosterCache[index] = { ...rosterCache[index], ...updated };
+  }
+  openProfileModal(rosterCache[index] || { ...record, ...updated });
+  renderDirectory(lastQuery);
+  showToast(t('img.saved'), 'success');
+}
 
 function closeProfileModal() {
   openProfileId = null;
@@ -660,10 +744,21 @@ function openProfileModal(record) {
         style="${bannerStyle(record)}"
         role="img"
         aria-label="${escapeHtml(t('dir.coverLabel'))}"
-      ></div>
+      >${
+        viewerIsAdmin
+          ? `<button class="btn btn-inline dossier-banner-edit" type="button" data-dossier-cover>${escapeHtml(t('img.upload'))}</button>`
+          : ''
+      }</div>
       <header class="dossier-header">
         <div class="dossier-identity">
-          ${avatarMarkup(record, 'dossier-avatar')}
+          <div class="dossier-avatar-wrap">
+            ${avatarMarkup(record, 'dossier-avatar')}
+            ${
+              viewerIsAdmin
+                ? `<button class="btn btn-inline dossier-media-btn" type="button" data-dossier-avatar>${escapeHtml(t('img.crop'))}</button>`
+                : ''
+            }
+          </div>
           <div class="dossier-heading">
             <p class="page-kicker" id="profile-modal-title">${escapeHtml(t('dir.dossier'))}</p>
             <h2>${escapeHtml(name)}</h2>
@@ -699,7 +794,14 @@ function openProfileModal(record) {
           ${assignmentMarkup(record)}
         </div>
         <section class="dossier-panel" aria-labelledby="dossier-timeline-title">
-          <h3 id="dossier-timeline-title">${escapeHtml(t('dir.timeline'))}</h3>
+          <div class="dossier-panel-head">
+            <h3 id="dossier-timeline-title">${escapeHtml(t('dir.timeline'))}</h3>
+            ${
+              viewerIsAdmin
+                ? `<button class="btn btn-inline" type="button" data-dossier-edit>${escapeHtml(t('common.edit'))}</button>`
+                : ''
+            }
+          </div>
           ${timelineMarkup(record)}
         </section>
         <section class="dossier-panel" aria-labelledby="dossier-ribbon-title">
@@ -778,7 +880,7 @@ document.querySelector('#directory-grid').addEventListener('click', (event) => {
   }
 });
 
-document.querySelector('#profile-modal').addEventListener('click', (event) => {
+document.querySelector('#profile-modal').addEventListener('click', async (event) => {
   if (event.target.id === 'profile-modal') {
     closeProfileModal();
     return;
@@ -787,8 +889,16 @@ document.querySelector('#profile-modal').addEventListener('click', (event) => {
     closeProfileModal();
     return;
   }
+  const record = rosterCache.find((item) => item.id === openProfileId);
+  if (event.target.closest('[data-dossier-avatar]') && record) {
+    await cropPersonnelImage(record, 'avatar_url', '1:1');
+    return;
+  }
+  if (event.target.closest('[data-dossier-cover]') && record) {
+    await cropPersonnelImage(record, 'cover_url', '16:9');
+    return;
+  }
   if (event.target.closest('[data-dossier-edit]')) {
-    const record = rosterCache.find((item) => item.id === openProfileId);
     if (record) {
       openDossierEditor(record);
     }
@@ -800,9 +910,18 @@ document.querySelector('#profile-modal').addEventListener('click', (event) => {
 });
 
 const editModal = document.querySelector('#dossier-edit-modal');
-editModal.addEventListener('click', (event) => {
+editModal.addEventListener('click', async (event) => {
   if (event.target.id === 'dossier-edit-modal' || event.target.closest('[data-dossier-edit-close]')) {
     closeDossierEditor();
+    return;
+  }
+  const record = rosterCache.find((item) => item.id === openProfileId);
+  if (event.target.closest('[data-dossier-avatar]') && record) {
+    await cropPersonnelImage(record, 'avatar_url', '1:1');
+    return;
+  }
+  if (event.target.closest('[data-dossier-cover]') && record) {
+    await cropPersonnelImage(record, 'cover_url', '16:9');
     return;
   }
   const preset = event.target.closest('[data-medal-preset]');
@@ -826,8 +945,13 @@ editModal.addEventListener('click', (event) => {
   }
   const timelineRemove = event.target.closest('[data-timeline-remove]');
   if (timelineRemove) {
+    draftTimeline = readDraftTimeline();
     draftTimeline.splice(Number(timelineRemove.getAttribute('data-timeline-remove')), 1);
+    if (!draftTimeline.length) {
+      draftTimeline.push({ date: '', kind: 'other', title: '', description: '' });
+    }
     renderDraftTimeline();
+    upgradeSelects(document.querySelector('#dossier-edit-form'));
   }
 });
 document.querySelector('#dossier-edit-form').addEventListener('submit', persistDossierEditor);

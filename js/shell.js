@@ -6,12 +6,14 @@ import { readCurrentPersonnel } from './session.js';
 import { fetchOwnSettings } from './command-services.js';
 import { applyTranslations, getLang, t } from './i18n.js';
 import { installCrestIcon, showStatus, upgradeSelects } from './ui.js';
+import { bindImageEditorHost } from './image-editor.js';
 
 export function bootCommandShell(activePage) {
   document.body.dataset.page = activePage || 'auth';
   document.documentElement.lang = getLang();
   applyTranslations();
   installCrestIcon();
+  bindImageEditorHost();
   initThemeToggle();
   applyStoredAccent();
   initVisualEffects();

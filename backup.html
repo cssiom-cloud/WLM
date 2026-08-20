@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>W.L.R Home</title>
+    <title>WHITE LION REGIMENT Drive Backup</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -24,11 +24,26 @@
     <div class="page-shell">
       <header id="command-header"></header>
       <main class="page-content">
-        <p id="status-banner" class="status-banner" role="status"></p>
-        <div id="home-root"></div>
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="backup.kicker">Command</p>
+            <h1 class="page-title" data-i18n="backup.title">Google Drive migration</h1>
+          </div>
+        </div>
+        <section class="announce-form-card backup-card" data-aos="fade-up">
+          <p class="form-hint" data-i18n="backup.lead">Prepare a JSON pack of personnel, announcements, units, lore, documents, and image links. Download it now, then upload it to Google Drive when a client ID is configured.</p>
+          <p id="backup-client-note" class="form-hint"></p>
+          <ul id="backup-summary" class="backup-summary" hidden></ul>
+          <p id="backup-status" class="form-hint" hidden></p>
+          <div class="btn-row">
+            <button class="btn" type="button" data-backup-prepare>Prepare export</button>
+            <button class="btn btn-primary" type="button" data-backup-download>Download JSON</button>
+            <button class="btn" type="button" data-backup-drive>Upload to Google Drive</button>
+          </div>
+        </section>
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/home.js"></script>
+    <script type="module" src="./js/backup.js"></script>
   </body>
 </html>

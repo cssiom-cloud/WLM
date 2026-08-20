@@ -532,14 +532,19 @@ export async function localUpdateLoginCredentials(userId, { email, password }) {
   });
 }
 
-export async function localUploadAvatar(userId, file) {
+export async function localUploadPersonnelImage(userId, file, field = 'avatar_url') {
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result || ''));
-    reader.onerror = () => reject(new Error('Avatar file could not be read.'));
+    reader.onerror = () => reject(new Error('Image file could not be read.'));
     reader.readAsDataURL(file);
   });
-  return localUpdatePersonnel(userId, { avatar_url: dataUrl });
+  const safeField = field === 'cover_url' ? 'cover_url' : 'avatar_url';
+  return localUpdatePersonnel(userId, { [safeField]: dataUrl });
+}
+
+export async function localUploadAvatar(userId, file) {
+  return localUploadPersonnelImage(userId, file, 'avatar_url');
 }
 
 function settingsRows() {
@@ -646,6 +651,17 @@ export async function localCreateAnnouncement({
   rows.unshift(entry);
   writeJson(STORAGE_ANNOUNCEMENTS, rows);
   return clone(entry);
+}
+
+export async function localUpdateAnnouncement(announcementId, payload) {
+  const rows = announcementRows();
+  const index = rows.findIndex((row) => row.id === announcementId);
+  if (index === -1) {
+    throw new Error('Announcement was not found.');
+  }
+  rows[index] = { ...rows[index], ...payload };
+  writeJson(STORAGE_ANNOUNCEMENTS, rows);
+  return clone(rows[index]);
 }
 
 export async function localDeleteAnnouncement(announcementId) {

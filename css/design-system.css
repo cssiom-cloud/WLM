@@ -525,7 +525,6 @@ body.is-local-test .page-shell {
 .avatar-stage {
   position: relative;
   width: min(180px, 46vw);
-  aspect-ratio: 1;
   margin: 0 auto 1.25rem;
 }
 
@@ -533,7 +532,7 @@ body.is-local-test .page-shell {
   position: relative;
   z-index: 3;
   width: 100%;
-  height: 100%;
+  aspect-ratio: 1;
   overflow: hidden;
   border-radius: 50%;
 }

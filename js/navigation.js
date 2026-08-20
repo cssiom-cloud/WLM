@@ -4,6 +4,7 @@ import { showStatus } from './ui.js';
 
 let lastActivePage = '';
 let langListenerBound = false;
+let navGeneration = 0;
 
 function hamburgerIcon() {
   return '<span></span><span></span><span></span>';
@@ -38,6 +39,7 @@ function groupMarkup(title, links, activePage) {
 
 export async function initCommandNavbar(activePage) {
   lastActivePage = activePage;
+  const generation = ++navGeneration;
   const header = document.querySelector('#command-header');
   if (!header) {
     return;
@@ -69,6 +71,9 @@ export async function initCommandNavbar(activePage) {
     session: null,
     personnel: null
   }));
+  if (generation !== navGeneration) {
+    return;
+  }
 
   const isAdmin = personnel?.role === 'admin';
   const isAuthed = Boolean(session);
@@ -97,6 +102,7 @@ export async function initCommandNavbar(activePage) {
   if (isAdmin) {
     commandLinks.push({ href: './admin.html', page: 'admin', label: t('nav.adminPage') });
     commandLinks.push({ href: './accounts.html', page: 'accounts', label: t('nav.accounts') });
+    commandLinks.push({ href: './backup.html', page: 'backup', label: t('nav.backup') });
   }
   if (isAuthed) {
     commandLinks.push({ href: './settings.html', page: 'settings', label: t('nav.settings') });

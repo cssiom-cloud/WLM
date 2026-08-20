@@ -1,15 +1,18 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
-import { PENCIL_ICON, PLUS_ICON, escapeHtml, initialsFromName, optionMarkup, showStatus, upgradeSelects, withOverlay } from './ui.js';
+import { escapeHtml, initialsFromName, optionMarkup, showStatus, upgradeSelects, withOverlay } from './ui.js';
 import { updatePersonnelRecord, uploadPersonnelAvatar } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { t } from './i18n.js';
+import { openImageEditor } from './image-editor.js';
 
 let actorRole = 'user';
 let unitBoard = { units: [], ranks: [] };
+let currentPersonnel = null;
+let isEditing = false;
 
 function unitNameFor(record) {
   return unitBoard.units.find((unit) => unit.id === record.unit_id)?.name || record.wlc_agency || '';
@@ -36,6 +39,8 @@ function bioText(record) {
 }
 
 function renderHome(personnel, editing = false) {
+  currentPersonnel = personnel;
+  isEditing = editing;
   const name = formatPersonnelName(personnel) || 'Unassigned name';
   const history = biographyParagraphs(personnel, true);
   const root = document.querySelector('#home-root');
@@ -43,18 +48,18 @@ function renderHome(personnel, editing = false) {
   root.innerHTML = `
     <section class="profile-panel${editing ? ' is-editing' : ''}" data-aos="fade-up">
       <div class="avatar-stage${editing ? ' is-editing' : ''}" id="avatar-stage">
-        <button class="avatar-action avatar-plus" id="avatar-plus" type="button" title="Upload avatar">
-          ${PLUS_ICON}
-          <span class="visually-hidden">Upload avatar</span>
-        </button>
-        <button class="avatar-action avatar-pencil" id="avatar-pencil" type="button" title="Edit">
-          ${PENCIL_ICON}
-          <span class="visually-hidden">Edit</span>
-        </button>
         <div class="avatar-frame" id="avatar-frame">
           ${renderAvatar(personnel)}
         </div>
-        <input id="avatar-file" type="file" accept="image/*">
+        <div class="image-edit-actions">
+          <button class="btn" type="button" data-avatar-upload>${t('img.upload')}</button>
+          ${
+            personnel.avatar_url
+              ? `<button class="btn" type="button" data-avatar-crop>${t('img.crop')}</button>`
+              : ''
+          }
+          <button class="btn" type="button" id="avatar-pencil">${t('common.edit')}</button>
+        </div>
       </div>
       ${
         editing
@@ -103,14 +108,31 @@ function renderHome(personnel, editing = false) {
 
   const stage = document.querySelector('#avatar-stage');
   const pencil = document.querySelector('#avatar-pencil');
-  const plus = document.querySelector('#avatar-plus');
-  const fileInput = document.querySelector('#avatar-file');
 
-  document.querySelector('#avatar-frame').addEventListener('click', () => {
-    if (window.matchMedia('(hover: none), (pointer: coarse)').matches && !stage.classList.contains('is-editing')) {
-      stage.classList.toggle('is-armed');
+  async function applyAvatar(source) {
+    const result = await openImageEditor({
+      source: source || personnel.avatar_url || null,
+      aspect: '1:1',
+      filename: 'avatar.jpg',
+      size: 768
+    });
+    if (!result?.file) {
+      return;
     }
-  });
+    try {
+      const updated = await uploadPersonnelAvatar(personnel.id, result.file);
+      await writeActivityLog({
+        userId: personnel.id,
+        roleSnapshot: actorRole,
+        actionType: 'avatar_update',
+        details: 'Updated profile avatar'
+      });
+      renderHome(updated, isEditing);
+      showStatus(t('img.saved'));
+    } catch (error) {
+      showStatus(error.message, true);
+    }
+  }
 
   pencil.addEventListener('click', (event) => {
     event.preventDefault();
@@ -120,30 +142,11 @@ function renderHome(personnel, editing = false) {
     }
   });
 
-  plus.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    fileInput.click();
+  stage.querySelector('[data-avatar-upload]')?.addEventListener('click', () => {
+    applyAvatar(null);
   });
-
-  fileInput.addEventListener('change', async (event) => {
-    const file = event.target.files?.[0];
-    if (!file) {
-      return;
-    }
-    try {
-      const updated = await uploadPersonnelAvatar(personnel.id, file);
-      await writeActivityLog({
-        userId: personnel.id,
-        roleSnapshot: actorRole,
-        actionType: 'avatar_update',
-        details: 'Updated profile avatar'
-      });
-      renderHome(updated, true);
-      showStatus('Avatar uploaded.');
-    } catch (error) {
-      showStatus(error.message, true);
-    }
+  stage.querySelector('[data-avatar-crop]')?.addEventListener('click', () => {
+    applyAvatar(personnel.avatar_url);
   });
 
   const saveButton = document.querySelector('#save-profile');
@@ -170,7 +173,7 @@ function renderHome(personnel, editing = false) {
           details: 'Updated name, biography, age, and gender'
         });
         renderHome(updated, false);
-        showStatus('Profile saved.');
+        showStatus(t('common.save'));
       } catch (error) {
         showStatus(error.message, true);
       }
@@ -200,3 +203,9 @@ requireAuthenticatedPersonnel()
   .catch((error) => {
     showStatus(error.message, true);
   });
+
+window.addEventListener('wlr-lang-changed', () => {
+  if (currentPersonnel) {
+    renderHome(currentPersonnel, isEditing);
+  }
+});

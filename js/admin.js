@@ -14,11 +14,13 @@ import {
   fetchPersonnelRoster,
   uniqueAgencyValues,
   updatePersonnelRecord,
-  deletePersonnelAccount
+  deletePersonnelAccount,
+  uploadPersonnelImage
 } from './personnel-service.js';
 import { isLocalTestMode } from './config.js';
 import { writeActivityLog } from './command-services.js';
 import { t } from './i18n.js';
+import { openImageEditor } from './image-editor.js';
 
 let currentAdmin = null;
 let rosterCache = [];
@@ -365,6 +367,31 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
 
 document.querySelector('#edit-form').addEventListener('submit', persistEditor);
 document.querySelector('#edit-cancel').addEventListener('click', closeEditor);
+document.querySelector('#edit-avatar-crop')?.addEventListener('click', async () => {
+  if (!editingRecord) {
+    return;
+  }
+  const result = await openImageEditor({
+    source: editingRecord.avatar_url || document.querySelector('#edit-avatar-url').value || null,
+    aspect: '1:1',
+    filename: 'avatar.jpg',
+    size: 768
+  });
+  if (!result?.file) {
+    return;
+  }
+  try {
+    const updated = await uploadPersonnelImage(editingRecord.id, result.file, 'avatar_url');
+    editingRecord = { ...editingRecord, ...updated };
+    document.querySelector('#edit-avatar-url').value = updated.avatar_url || '';
+    rosterCache = await fetchPersonnelRoster();
+    renderFilterPanel();
+    renderTable();
+    showStatus(t('img.saved'));
+  } catch (error) {
+    showStatus(error.message, true);
+  }
+});
 
 document.querySelector('#honor-add').addEventListener('click', () => {
   const input = document.querySelector('#edit-honor-new');
@@ -378,6 +405,13 @@ document.querySelector('#honor-add').addEventListener('click', () => {
   }
   input.value = '';
   renderHonorEditor();
+});
+
+window.addEventListener('wlr-lang-changed', () => {
+  if (rosterCache.length) {
+    renderFilterPanel();
+    renderTable();
+  }
 });
 
 document.querySelector('#honor-ranks-editor').addEventListener('click', (event) => {

@@ -6,7 +6,8 @@ import {
   localFetchAnnouncements,
   localJoinAnnouncement,
   localLeaveAnnouncement,
-  localCloseAnnouncement
+  localCloseAnnouncement,
+  localUpdateAnnouncement
 } from './local-station.js';
 
 // Returns announcements with { signed_count, is_signed } computed per record.
@@ -45,14 +46,17 @@ export async function fetchAnnouncementBoard(currentUserId) {
 // SUPABASE STORAGE INJECT POINT: cover image goes to the public
 // 'announcement_covers' bucket (RLS allows admin uploads only), then the
 // public URL is stored on the announcement row as image_url.
-async function uploadCoverImage(imageFile) {
-  const extension = String(imageFile.name.split('.').pop() || 'jpg').toLowerCase();
-  const objectPath = `${window.crypto.randomUUID()}.${extension}`;
+async function uploadCoverImage(imageFile, announcementId) {
+  const extension = imageFile.type === 'image/png' ? 'png' : String(imageFile.name.split('.').pop() || 'jpg').toLowerCase();
+  const objectPath = announcementId
+    ? `${announcementId}/cover.${extension === 'png' ? 'png' : 'jpg'}`
+    : `${window.crypto.randomUUID()}.${extension === 'png' ? 'png' : 'jpg'}`;
 
   const { error } = await supabaseClient.storage
     .from('announcement_covers')
     .upload(objectPath, imageFile, {
       cacheControl: '3600',
+      upsert: Boolean(announcementId),
       contentType: imageFile.type || 'image/jpeg'
     });
   if (error) {
@@ -60,7 +64,7 @@ async function uploadCoverImage(imageFile) {
   }
 
   const { data } = supabaseClient.storage.from('announcement_covers').getPublicUrl(objectPath);
-  return data.publicUrl;
+  return `${data.publicUrl}?t=${Date.now()}`;
 }
 
 function fileToDataUrl(file) {
@@ -111,6 +115,51 @@ export async function createAnnouncement({
       image_url: imageUrl,
       ...honorPayload
     })
+    .select()
+    .single();
+  if (error) {
+    throw error;
+  }
+  return data;
+}
+
+function honorPayload({ awardHonorEnabled = false, honorRankTitle = null }) {
+  return {
+    award_honor_enabled: Boolean(awardHonorEnabled),
+    honor_rank_title: awardHonorEnabled ? String(honorRankTitle || '').trim() || null : null
+  };
+}
+
+export async function updateAnnouncement(announcementId, {
+  title,
+  content,
+  maxCapacity,
+  imageFile,
+  awardHonorEnabled = false,
+  honorRankTitle = null
+}) {
+  const payload = {
+    title,
+    content,
+    max_capacity: maxCapacity,
+    ...honorPayload({ awardHonorEnabled, honorRankTitle })
+  };
+
+  if (isLocalTestMode()) {
+    if (imageFile) {
+      payload.image_url = await fileToDataUrl(imageFile);
+    }
+    return localUpdateAnnouncement(announcementId, payload);
+  }
+
+  if (imageFile) {
+    payload.image_url = await uploadCoverImage(imageFile, announcementId);
+  }
+
+  const { data, error } = await supabaseClient
+    .from('announcements')
+    .update(payload)
+    .eq('id', announcementId)
     .select()
     .single();
   if (error) {

@@ -1,7 +1,8 @@
 export const WLR_COMMAND_CONFIG = {
   supabaseUrl: 'https://ltfiluaddwebijhbipdb.supabase.co',
   supabaseAnonKey: 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0ZmlsdWFkZHdlYmlqaGJpcGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjQwNDEsImV4cCI6MjEwMjY0MDA0MX0.9ba9eaFDA6IlyJNRZYrj5txZPffZC-OoJ5VK-RN4SMI',
-  forceLocalTest: false
+  forceLocalTest: false,
+  googleDriveClientId: ''
 };
 
 export function isLocalTestMode() {

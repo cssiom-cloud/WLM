@@ -85,6 +85,7 @@ function adminControls(item) {
     : `<button class="btn" type="button" data-close-id="${escapeHtml(item.id)}">${t('ann.close')}</button>`;
   return `
     ${closeButton}
+    <a class="btn" href="./announce-create.html?id=${encodeURIComponent(item.id)}">${t('ann.edit')}</a>
     <button class="btn btn-danger" type="button" data-delete-id="${escapeHtml(item.id)}">${t('ann.delete')}</button>
   `;
 }

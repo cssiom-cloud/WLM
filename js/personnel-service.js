@@ -7,7 +7,7 @@ import {
   localFetchRoster,
   localUpdateLoginCredentials,
   localUpdatePersonnel,
-  localUploadAvatar
+  localUploadPersonnelImage
 } from './local-station.js';
 
 export async function fetchPersonnelRoster() {
@@ -41,18 +41,20 @@ export async function updatePersonnelRecord(personnelId, payload) {
   return data;
 }
 
-export async function uploadPersonnelAvatar(userId, file) {
+export async function uploadPersonnelImage(userId, file, field = 'avatar_url') {
+  const safeField = field === 'cover_url' ? 'cover_url' : 'avatar_url';
   if (isLocalTestMode()) {
-    return localUploadAvatar(userId, file);
+    return localUploadPersonnelImage(userId, file, safeField);
   }
 
-  const extension = String(file.name.split('.').pop() || 'jpg').toLowerCase();
-  const objectPath = `${userId}/avatar.${extension}`;
+  const extension = file.type === 'image/png' ? 'png' : 'jpg';
+  const stem = safeField === 'cover_url' ? 'cover' : 'avatar';
+  const objectPath = `${userId}/${stem}.${extension}`;
 
   const { error: uploadError } = await supabaseClient.storage.from('oc_avatars').upload(objectPath, file, {
     upsert: true,
     cacheControl: '3600',
-    contentType: file.type || 'image/jpeg'
+    contentType: file.type || (extension === 'png' ? 'image/png' : 'image/jpeg')
   });
 
   if (uploadError) {
@@ -61,7 +63,11 @@ export async function uploadPersonnelAvatar(userId, file) {
 
   const { data } = supabaseClient.storage.from('oc_avatars').getPublicUrl(objectPath);
   const publicUrl = `${data.publicUrl}?t=${Date.now()}`;
-  return updatePersonnelRecord(userId, { avatar_url: publicUrl });
+  return updatePersonnelRecord(userId, { [safeField]: publicUrl });
+}
+
+export async function uploadPersonnelAvatar(userId, file) {
+  return uploadPersonnelImage(userId, file, 'avatar_url');
 }
 
 export async function deletePersonnelAccount(userId) {

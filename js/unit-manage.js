@@ -3,6 +3,7 @@ import { requireAuthenticatedPersonnel } from './session.js';
 import { formatPersonnelName } from './domain.js';
 import { confirmNotice, escapeHtml, showStatus, upgradeSelects, withOverlay } from './ui.js';
 import { t } from './i18n.js';
+import { openImageEditor, assignFileToInput } from './image-editor.js';
 import {
   deleteUnitRank,
   fetchUnitBoard,
@@ -167,6 +168,9 @@ function renderPage() {
         <label>${escapeHtml(t('units.logoUpload'))}
           <input class="text-field" data-logo-file type="file" accept="image/*">
         </label>
+        <div class="image-edit-actions">
+          <button class="btn" type="button" data-action="crop-logo" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('img.crop'))}</button>
+        </div>
         <button class="btn btn-primary" type="button" data-action="save-logo" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('common.save'))}</button>
       </section>
       <section>
@@ -258,6 +262,20 @@ document.querySelector('#unit-page').addEventListener('click', async (event) => 
   if (action === 'save-head') {
     const select = document.querySelector(`[data-head-select="${unitId}"]`);
     await mutate(() => setUnitHead(unitId, select.value || null), 'units.headSaved');
+    return;
+  }
+
+  if (action === 'crop-logo') {
+    const fileInput = document.querySelector('[data-logo-file]');
+    const result = await openImageEditor({
+      source: fileInput?.files?.[0] || currentUnit()?.logo_url || null,
+      aspect: '1:1',
+      filename: 'unit-logo.jpg',
+      size: 768
+    });
+    if (result?.file && fileInput) {
+      assignFileToInput(fileInput, result.file);
+    }
     return;
   }
 
