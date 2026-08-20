@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=crop-banner">
+    <link rel="stylesheet" href="./css/components.css?v=drive-setup">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -30,9 +30,23 @@
             <h1 class="page-title" data-i18n="backup.title">Google Drive migration</h1>
           </div>
         </div>
-        <section class="announce-form-card backup-card" data-aos="fade-up">
+        <section class="announce-form-card backup-card">
           <p class="form-hint" data-i18n="backup.lead">Prepare a JSON pack of personnel, announcements, units, lore, documents, and image links. Download it now, then upload it to Google Drive when a client ID is configured.</p>
           <p id="backup-client-note" class="form-hint"></p>
+          <div class="backup-origin-box">
+            <p class="editor-label" data-i18n="backup.originLabel">Authorized JavaScript origin</p>
+            <code id="backup-origin"></code>
+          </div>
+          <h2 class="backup-setup-title" data-i18n="backup.setupTitle">Prepare Google Drive (you do this once)</h2>
+          <ol class="backup-steps">
+            <li data-i18n="backup.step1">Open Google Cloud Console, then create or select a project.</li>
+            <li data-i18n="backup.step2">Enable the Google Drive API for that project.</li>
+            <li data-i18n="backup.step3">Set up the OAuth consent screen (External / Testing) and add your Google account as a tester.</li>
+            <li data-i18n="backup.step4">Create credentials → OAuth client ID → application type Web application.</li>
+            <li data-i18n="backup.step5">Under Authorized JavaScript origins, add the origin shown above. Add http://localhost if you test on this computer.</li>
+            <li data-i18n="backup.step6">Copy the Client ID into js/config.js as googleDriveClientId. Do not put a client secret on the website.</li>
+            <li data-i18n="backup.step7">This page only requests drive.file, so it can create a backup file in Drive. It cannot read the rest of your Drive.</li>
+          </ol>
           <ul id="backup-summary" class="backup-summary" hidden></ul>
           <p id="backup-status" class="form-hint" hidden></p>
           <div class="btn-row">

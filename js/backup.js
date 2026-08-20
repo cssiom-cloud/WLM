@@ -1,4 +1,4 @@
-import { bootCommandShell } from './shell.js';
+import { bootCommandShell, initAos } from './shell.js';
 import { requireCommandAdmin } from './session.js';
 import { showToast, withOverlay } from './ui.js';
 import { t } from './i18n.js';
@@ -37,15 +37,31 @@ function renderSummary(pack) {
 }
 
 function refreshCopy() {
-  document.querySelector('#backup-client-note').textContent = driveClientId()
-    ? t('backup.clientReady')
-    : t('backup.needClient');
-  document.querySelector('[data-backup-prepare]').textContent = t('backup.prepare');
-  document.querySelector('[data-backup-download]').textContent = t('backup.download');
-  document.querySelector('[data-backup-drive]').textContent = t('backup.upload');
+  const origin = document.querySelector('#backup-origin');
+  if (origin) {
+    origin.textContent = window.location.origin;
+  }
+  const note = document.querySelector('#backup-client-note');
+  if (note) {
+    note.textContent = driveClientId() ? t('backup.clientReady') : t('backup.needClient');
+  }
+  const prepare = document.querySelector('[data-backup-prepare]');
+  const download = document.querySelector('[data-backup-download]');
+  const drive = document.querySelector('[data-backup-drive]');
+  if (prepare) {
+    prepare.textContent = t('backup.prepare');
+  }
+  if (download) {
+    download.textContent = t('backup.download');
+  }
+  if (drive) {
+    drive.textContent = t('backup.upload');
+  }
 }
 
 bootCommandShell('backup');
+initAos();
+refreshCopy();
 
 requireCommandAdmin()
   .then((result) => {

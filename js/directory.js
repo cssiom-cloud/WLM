@@ -697,9 +697,10 @@ async function cropPersonnelImage(record, field, aspect) {
   const result = await openImageEditor({
     source: source || null,
     aspect,
-    previewMask: field === 'cover_url' ? 'rect' : 'rounded',
+    previewMask: field === 'cover_url' ? 'rect' : 'circle',
     filename: field === 'cover_url' ? 'cover.jpg' : 'avatar.jpg',
-    size: field === 'cover_url' ? 1280 : 768
+    size: field === 'cover_url' ? 1280 : 768,
+    autoPick: !source
   });
   if (!result?.file) {
     return;

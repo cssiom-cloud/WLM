@@ -1,7 +1,17 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
-import { escapeHtml, initialsFromName, optionMarkup, showStatus, upgradeSelects, withOverlay } from './ui.js';
+import {
+  BANNER_ICON,
+  PENCIL_ICON,
+  PLUS_ICON,
+  escapeHtml,
+  initialsFromName,
+  optionMarkup,
+  showStatus,
+  upgradeSelects,
+  withOverlay
+} from './ui.js';
 import { updatePersonnelRecord, uploadPersonnelAvatar, uploadPersonnelImage } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
@@ -46,6 +56,10 @@ function coverStyle(record) {
   return `--profile-cover: url("${cover.replaceAll('\\', '').replaceAll('"', '').replaceAll("'", '')}")`;
 }
 
+function isCoarsePointer() {
+  return window.matchMedia('(hover: none), (pointer: coarse)').matches;
+}
+
 function renderHome(personnel, editing = false) {
   currentPersonnel = personnel;
   isEditing = editing;
@@ -58,21 +72,25 @@ function renderHome(personnel, editing = false) {
       <div class="profile-hero">
         <div
           class="profile-banner${personnel.cover_url || personnel.banner_url ? ' has-image' : ''}"
+          id="profile-banner"
           style="${coverStyle(personnel)}"
-        ></div>
+        >
+          <button class="avatar-action profile-banner-edit" id="profile-banner-edit" type="button" title="${escapeHtml(t('home.editCover'))}">
+            ${BANNER_ICON}
+            <span class="visually-hidden">${escapeHtml(t('home.editCover'))}</span>
+          </button>
+        </div>
         <div class="avatar-stage${editing ? ' is-editing' : ''}" id="avatar-stage">
+          <button class="avatar-action avatar-plus" id="avatar-plus" type="button" title="${escapeHtml(t('home.uploadPhoto'))}">
+            ${PLUS_ICON}
+            <span class="visually-hidden">${escapeHtml(t('home.uploadPhoto'))}</span>
+          </button>
+          <button class="avatar-action avatar-pencil" id="avatar-pencil" type="button" title="${escapeHtml(t('home.editProfile'))}">
+            ${PENCIL_ICON}
+            <span class="visually-hidden">${escapeHtml(t('home.editProfile'))}</span>
+          </button>
           <div class="avatar-frame" id="avatar-frame">
             ${renderAvatar(personnel)}
-          </div>
-          <div class="image-edit-actions">
-            <button class="btn" type="button" data-avatar-upload>${t('img.upload')}</button>
-            ${
-              personnel.avatar_url
-                ? `<button class="btn" type="button" data-avatar-crop>${t('img.crop')}</button>`
-                : ''
-            }
-            <button class="btn" type="button" data-cover-crop>${t('dir.cover')}</button>
-            <button class="btn" type="button" id="avatar-pencil">${t('common.edit')}</button>
           </div>
         </div>
       </div>
@@ -123,15 +141,18 @@ function renderHome(personnel, editing = false) {
 
   const stage = document.querySelector('#avatar-stage');
   const pencil = document.querySelector('#avatar-pencil');
+  const plus = document.querySelector('#avatar-plus');
+  const banner = document.querySelector('#profile-banner');
+  const bannerEdit = document.querySelector('#profile-banner-edit');
 
-  async function applyAvatar(source) {
+  async function applyAvatar(source, autoPick = false) {
     const result = await openImageEditor({
-      source: source || personnel.avatar_url || null,
+      source: source || null,
       aspect: '1:1',
       previewMask: 'circle',
       filename: 'avatar.jpg',
       size: 768,
-      radius: 50
+      autoPick
     });
     if (!result?.file) {
       return;
@@ -151,27 +172,15 @@ function renderHome(personnel, editing = false) {
     }
   }
 
-  pencil.addEventListener('click', (event) => {
-    event.preventDefault();
-    event.stopPropagation();
-    if (!editing) {
-      renderHome(personnel, true);
-    }
-  });
-
-  stage.querySelector('[data-avatar-upload]')?.addEventListener('click', () => {
-    applyAvatar(null);
-  });
-  stage.querySelector('[data-avatar-crop]')?.addEventListener('click', () => {
-    applyAvatar(personnel.avatar_url);
-  });
-  stage.querySelector('[data-cover-crop]')?.addEventListener('click', async () => {
+  async function applyCover() {
+    const source = personnel.cover_url || personnel.banner_url || null;
     const result = await openImageEditor({
-      source: personnel.cover_url || personnel.banner_url || null,
+      source,
       aspect: '16:9',
       previewMask: 'rect',
       filename: 'cover.jpg',
-      size: 1280
+      size: 1280,
+      autoPick: !source
     });
     if (!result?.file) {
       return;
@@ -183,6 +192,38 @@ function renderHome(personnel, editing = false) {
     } catch (error) {
       showStatus(error.message, true);
     }
+  }
+
+  document.querySelector('#avatar-frame').addEventListener('click', () => {
+    if (isCoarsePointer() && !stage.classList.contains('is-editing')) {
+      stage.classList.toggle('is-armed');
+    }
+  });
+
+  pencil.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (!editing) {
+      renderHome(personnel, true);
+    }
+  });
+
+  plus.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    applyAvatar(personnel.avatar_url || null, !personnel.avatar_url);
+  });
+
+  bannerEdit.addEventListener('click', (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    applyCover();
+  });
+  banner.addEventListener('click', (event) => {
+    if (event.target.closest('.avatar-stage')) {
+      return;
+    }
+    applyCover();
   });
 
   const saveButton = document.querySelector('#save-profile');

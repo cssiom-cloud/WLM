@@ -36,6 +36,9 @@ export async function updatePersonnelRecord(personnelId, payload) {
     .single();
 
   if (error) {
+    if (String(error.message || '').includes('schema cache') || error.code === 'PGRST204') {
+      throw new Error('Database schema is still updating. Reload the page and try the banner again.');
+    }
     throw error;
   }
   return data;

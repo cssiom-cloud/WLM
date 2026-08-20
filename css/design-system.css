@@ -524,8 +524,10 @@ body.is-local-test .page-shell {
 
 .avatar-stage {
   position: relative;
+  display: block;
   width: min(180px, 46vw);
   margin: 0 auto 1.25rem;
+  overflow: visible;
 }
 
 .avatar-frame {
@@ -535,6 +537,9 @@ body.is-local-test .page-shell {
   aspect-ratio: 1;
   overflow: hidden;
   border-radius: 50%;
+  border: 3px solid var(--accent);
+  background: var(--bg-muted);
+  box-sizing: border-box;
 }
 
 .avatar-action {
@@ -569,6 +574,8 @@ body.is-local-test .page-shell {
   pointer-events: auto;
 }
 
+.avatar-stage:hover .avatar-plus,
+.avatar-stage.is-armed .avatar-plus,
 .avatar-stage.is-editing .avatar-plus {
   transform: translateX(-52px);
   opacity: 1;
@@ -586,20 +593,21 @@ body.is-local-test .page-shell {
 }
 
 .avatar-image {
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  object-position: center;
-  border-radius: 50%;
-  border: 3px solid var(--accent);
+  object-position: 50% 50%;
+  border: 0;
+  border-radius: 0;
   background: var(--bg-muted);
 }
 
 .avatar-placeholder {
   width: 100%;
   height: 100%;
-  border-radius: 50%;
-  border: 3px solid var(--accent);
+  border-radius: 0;
+  border: 0;
   background: var(--accent-soft);
   display: grid;
   place-items: center;
@@ -624,20 +632,29 @@ body.is-local-test .page-shell {
 .profile-hero {
   position: relative;
   margin: 0 -1.25rem 0.35rem;
+  overflow: visible;
 }
 
 .profile-banner {
+  position: relative;
   height: 148px;
+  cursor: pointer;
+}
+
+.profile-banner-edit {
+  left: auto;
+  right: 0.75rem;
+  bottom: auto;
+  top: 0.75rem;
+  z-index: 4;
+  transform: none;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .profile-hero .avatar-stage {
   margin-top: -72px;
   margin-bottom: 0.35rem;
-  gap: 0.95rem;
-}
-
-.profile-hero .image-edit-actions {
-  width: min(420px, 92vw);
 }
 
 .profile-name {

@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { escapeHtml } from './ui.js';
+import { escapeHtml, showStatus } from './ui.js';
 
 const ASPECTS = [
   { id: 'free', ratio: 0 },
@@ -39,11 +39,26 @@ function revokeObjectUrl() {
   }
 }
 
+function mediaWidth(media = image) {
+  return Math.max(1, media?.naturalWidth || media?.width || 1);
+}
+
+function mediaHeight(media = image) {
+  return Math.max(1, media?.naturalHeight || media?.height || 1);
+}
+
+function releaseImage() {
+  if (image && typeof image.close === 'function') {
+    image.close();
+  }
+  image = null;
+}
+
 function coverScale(width, height) {
   if (!image) {
     return 1;
   }
-  return Math.max(width / image.naturalWidth, height / image.naturalHeight);
+  return Math.max(width / mediaWidth(), height / mediaHeight());
 }
 
 function viewSize() {
@@ -79,7 +94,8 @@ function addMaskPath(ctx, x, y, width, height) {
 }
 
 function drawGuide(ctx, view) {
-  const inset = Math.max(3, Math.round(Math.min(view.width, view.height) * 0.012));
+  const stroke = Math.max(2, view.width / 140);
+  const inset = previewMask === 'circle' ? 0 : Math.max(3, Math.round(Math.min(view.width, view.height) * 0.012));
   const x = inset;
   const y = inset;
   const width = view.width - inset * 2;
@@ -95,7 +111,7 @@ function drawGuide(ctx, view) {
   ctx.fill('evenodd');
 
   ctx.strokeStyle = 'rgba(90, 230, 255, 0.95)';
-  ctx.lineWidth = Math.max(2, view.width / 140);
+  ctx.lineWidth = stroke;
   ctx.beginPath();
   addMaskPath(ctx, x, y, width, height);
   ctx.closePath();
@@ -157,8 +173,8 @@ function draw() {
     return;
   }
   const scale = coverScale(view.width, view.height) * zoom;
-  const dw = image.naturalWidth * scale;
-  const dh = image.naturalHeight * scale;
+  const dw = mediaWidth() * scale;
+  const dh = mediaHeight() * scale;
   const dx = (view.width - dw) / 2 + panX;
   const dy = (view.height - dh) / 2 + panY;
   ctx.imageSmoothingQuality = 'high';
@@ -188,10 +204,10 @@ function exportBlob() {
   const view = viewSize();
   const scale = coverScale(view.width, view.height) * zoom;
   const sx = outW / view.width;
-  const dx = ((view.width - image.naturalWidth * scale) / 2 + panX) * sx;
-  const dy = ((view.height - image.naturalHeight * scale) / 2 + panY) * sx;
-  const dw = image.naturalWidth * scale * sx;
-  const dh = image.naturalHeight * scale * sx;
+  const dx = ((view.width - mediaWidth() * scale) / 2 + panX) * sx;
+  const dy = ((view.height - mediaHeight() * scale) / 2 + panY) * sx;
+  const dw = mediaWidth() * scale * sx;
+  const dh = mediaHeight() * scale * sx;
   const out = document.createElement('canvas');
   out.width = outW;
   out.height = outH;
@@ -216,34 +232,62 @@ function exportBlob() {
   });
 }
 
-async function loadFromSource(src) {
-  revokeObjectUrl();
-  let url = src;
-  if (src instanceof File) {
-    objectUrl = URL.createObjectURL(src);
-    url = objectUrl;
-    filename = src.name || filename;
-  } else if (typeof src === 'string' && !src.startsWith('data:') && !src.startsWith('blob:')) {
-    try {
-      const response = await fetch(src, { mode: 'cors' });
-      if (!response.ok) {
-        throw new Error('fetch failed');
-      }
-      const blob = await response.blob();
-      objectUrl = URL.createObjectURL(blob);
-      url = objectUrl;
-    } catch {
-      url = src;
-    }
-  }
-  const loaded = await new Promise((resolve, reject) => {
+function decodeHtmlImage(url) {
+  return new Promise((resolve, reject) => {
     const next = new Image();
     next.onload = () => resolve(next);
     next.onerror = () => reject(new Error(t('img.loadFailed')));
     next.crossOrigin = 'anonymous';
     next.src = url;
   });
-  image = loaded;
+}
+
+async function imageFromBlob(blob) {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(blob, { imageOrientation: 'from-image' });
+    } catch {
+      // Fall back to HTMLImageElement when the bitmap decoder rejects the file.
+    }
+  }
+  revokeObjectUrl();
+  objectUrl = URL.createObjectURL(blob);
+  return decodeHtmlImage(objectUrl);
+}
+
+async function loadFromSource(src) {
+  revokeObjectUrl();
+  releaseImage();
+  if (src instanceof Blob) {
+    image = await imageFromBlob(src);
+    if (src instanceof File) {
+      filename = src.name || filename;
+    }
+    zoom = 1;
+    panX = 0;
+    panY = 0;
+    draw();
+    return;
+  }
+
+  let url = src;
+  if (typeof src === 'string' && !src.startsWith('data:') && !src.startsWith('blob:')) {
+    try {
+      const response = await fetch(src, { mode: 'cors' });
+      if (!response.ok) {
+        throw new Error('fetch failed');
+      }
+      image = await imageFromBlob(await response.blob());
+      zoom = 1;
+      panX = 0;
+      panY = 0;
+      draw();
+      return;
+    } catch {
+      url = src;
+    }
+  }
+  image = await decodeHtmlImage(url);
   zoom = 1;
   panX = 0;
   panY = 0;
@@ -354,11 +398,15 @@ export function ensureImageEditor() {
   host.querySelector('[data-img-choose]').addEventListener('click', () => fileInput.click());
   host.querySelector('[data-img-apply]').addEventListener('click', async () => {
     try {
+      if (!image) {
+        showStatus(t('img.choose'), true);
+        fileInput.click();
+        return;
+      }
       const file = await exportBlob();
       closeEditor({ file, radius, aspect: aspectId, size: outputSize });
     } catch (error) {
-      closeEditor(null);
-      console.warn(error);
+      showStatus(error.message || t('img.choose'), true);
     }
   });
   fileInput.addEventListener('change', async () => {
@@ -459,6 +507,8 @@ function syncStageAspect() {
 
 export async function openImageEditor(options = {}) {
   ensureImageEditor();
+  const fileInput = host.querySelector('#image-editor-file');
+  fileInput.value = '';
   aspectId = options.aspect || '1:1';
   previewMask = options.previewMask || (aspectId === '1:1' ? 'rounded' : 'rect');
   radius = Number.isFinite(options.radius) ? options.radius : previewMask === 'circle' ? 50 : 12;
@@ -474,19 +524,23 @@ export async function openImageEditor(options = {}) {
   host.querySelector('#image-editor-size').value = String(outputSize);
   renderChrome();
   syncStageAspect();
-  if (options.source) {
+  releaseImage();
+  draw();
+  const done = new Promise((resolve) => {
+    resolver = resolve;
+  });
+  if (!options.source) {
+    fileInput.click();
+  } else {
     try {
       await loadFromSource(options.source);
     } catch (error) {
       console.warn(error);
+      showStatus(t('img.loadFailed'), true);
+      fileInput.click();
     }
-  } else {
-    image = null;
-    draw();
   }
-  return new Promise((resolve) => {
-    resolver = resolve;
-  });
+  return done;
 }
 
 async function handleTrigger(trigger) {
@@ -502,7 +556,8 @@ async function handleTrigger(trigger) {
     aspect: trigger.getAttribute('data-aspect') || '1:1',
     previewMask: trigger.getAttribute('data-mask') || undefined,
     filename: trigger.getAttribute('data-filename') || 'image.jpg',
-    size: Number(trigger.getAttribute('data-size')) || undefined
+    size: Number(trigger.getAttribute('data-size')) || undefined,
+    autoPick: !existing
   });
   if (!result?.file) {
     return null;
