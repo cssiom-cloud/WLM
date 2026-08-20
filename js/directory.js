@@ -484,7 +484,7 @@ function bannerStyle(record) {
     return '';
   }
   const safe = cover.replaceAll('\\', '').replaceAll('"', '').replaceAll("'", '');
-  return `background-image: url("${safe}")`;
+  return `--dossier-cover: url("${safe}")`;
 }
 
 function storedTimeline(record) {
@@ -697,6 +697,7 @@ async function cropPersonnelImage(record, field, aspect) {
   const result = await openImageEditor({
     source: source || null,
     aspect,
+    previewMask: field === 'cover_url' ? 'rect' : 'rounded',
     filename: field === 'cover_url' ? 'cover.jpg' : 'avatar.jpg',
     size: field === 'cover_url' ? 1280 : 768
   });

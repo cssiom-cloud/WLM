@@ -19,12 +19,14 @@ let aspectId = '1:1';
 let zoom = 1;
 let panX = 0;
 let panY = 0;
-let radius = 16;
+let radius = 8;
 let outputSize = 768;
 let filename = 'image.jpg';
+let previewMask = 'rounded';
 let resolver = null;
 const pointers = new Map();
 let pinchDistance = 0;
+let previewCanvas = null;
 
 function currentAspect() {
   return ASPECTS.find((item) => item.id === aspectId) || ASPECTS[1];
@@ -57,17 +59,103 @@ function viewSize() {
   };
 }
 
+function addMaskPath(ctx, x, y, width, height) {
+  if (previewMask === 'circle') {
+    const radius = Math.min(width, height) / 2;
+    ctx.moveTo(x + width / 2 + radius, y + height / 2);
+    ctx.arc(x + width / 2, y + height / 2, radius, 0, Math.PI * 2);
+    return;
+  }
+  const corner =
+    previewMask === 'rect'
+      ? Math.min(22, Math.min(width, height) * 0.06)
+      : Math.round((radius / 50) * (Math.min(width, height) / 2));
+  const r = Math.max(0, Math.min(corner, Math.min(width, height) / 2));
+  ctx.moveTo(x + r, y);
+  ctx.arcTo(x + width, y, x + width, y + height, r);
+  ctx.arcTo(x + width, y + height, x, y + height, r);
+  ctx.arcTo(x, y + height, x, y, r);
+  ctx.arcTo(x, y, x + width, y, r);
+}
+
+function drawGuide(ctx, view) {
+  const inset = Math.max(3, Math.round(Math.min(view.width, view.height) * 0.012));
+  const x = inset;
+  const y = inset;
+  const width = view.width - inset * 2;
+  const height = view.height - inset * 2;
+
+  ctx.save();
+  ctx.fillStyle = 'rgba(6, 8, 14, 0.58)';
+  ctx.beginPath();
+  ctx.rect(0, 0, view.width, view.height);
+  ctx.closePath();
+  addMaskPath(ctx, x, y, width, height);
+  ctx.closePath();
+  ctx.fill('evenodd');
+
+  ctx.strokeStyle = 'rgba(90, 230, 255, 0.95)';
+  ctx.lineWidth = Math.max(2, view.width / 140);
+  ctx.beginPath();
+  addMaskPath(ctx, x, y, width, height);
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.setLineDash([Math.max(4, view.width / 80), Math.max(4, view.width / 80)]);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.28)';
+  ctx.lineWidth = Math.max(1, view.width / 320);
+  ctx.beginPath();
+  ctx.moveTo(x + width / 3, y);
+  ctx.lineTo(x + width / 3, y + height);
+  ctx.moveTo(x + (width * 2) / 3, y);
+  ctx.lineTo(x + (width * 2) / 3, y + height);
+  ctx.moveTo(x, y + height / 3);
+  ctx.lineTo(x + width, y + height / 3);
+  ctx.moveTo(x, y + (height * 2) / 3);
+  ctx.lineTo(x + width, y + (height * 2) / 3);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawPreview(view, scale, dx, dy, dw, dh) {
+  if (!previewCanvas) {
+    return;
+  }
+  const size = 88;
+  previewCanvas.width = size;
+  previewCanvas.height = size;
+  const ctx = previewCanvas.getContext('2d');
+  ctx.clearRect(0, 0, size, size);
+  ctx.save();
+  ctx.beginPath();
+  addMaskPath(ctx, 1, 1, size - 2, size - 2);
+  ctx.closePath();
+  ctx.clip();
+  ctx.fillStyle = '#14161c';
+  ctx.fillRect(0, 0, size, size);
+  if (image) {
+    const sx = size / view.width;
+    ctx.drawImage(image, dx * sx, dy * sx, dw * sx, dh * sx);
+  }
+  ctx.restore();
+  previewCanvas.classList.toggle('is-circle', previewMask === 'circle');
+}
+
 function draw() {
-  if (!canvas || !image) {
+  if (!canvas) {
     return;
   }
   const view = viewSize();
   canvas.width = view.width;
   canvas.height = view.height;
-  canvas.style.borderRadius = `${radius}px`;
   const ctx = canvas.getContext('2d');
   ctx.fillStyle = '#14161c';
   ctx.fillRect(0, 0, view.width, view.height);
+  if (!image) {
+    drawGuide(ctx, view);
+    drawPreview(view, 1, 0, 0, view.width, view.height);
+    return;
+  }
   const scale = coverScale(view.width, view.height) * zoom;
   const dw = image.naturalWidth * scale;
   const dh = image.naturalHeight * scale;
@@ -75,6 +163,8 @@ function draw() {
   const dy = (view.height - dh) / 2 + panY;
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(image, dx, dy, dw, dh);
+  drawGuide(ctx, view);
+  drawPreview(view, scale, dx, dy, dw, dh);
 }
 
 function roundRectPath(ctx, width, height, corner) {
@@ -106,17 +196,11 @@ function exportBlob() {
   out.width = outW;
   out.height = outH;
   const ctx = out.getContext('2d');
-  const bakeRadius = Math.round((radius / 50) * (Math.min(outW, outH) / 2));
-  if (bakeRadius > 2) {
-    roundRectPath(ctx, outW, outH, bakeRadius);
-    ctx.clip();
-  }
   ctx.fillStyle = '#14161c';
   ctx.fillRect(0, 0, outW, outH);
   ctx.imageSmoothingQuality = 'high';
   ctx.drawImage(image, dx, dy, dw, dh);
-  const typed = bakeRadius > 2 ? 'image/png' : 'image/jpeg';
-  const exportName = bakeRadius > 2 ? filename.replace(/\.\w+$/, '.png') : filename;
+  const exportName = filename.replace(/\.\w+$/, '.jpg');
   return new Promise((resolve, reject) => {
     out.toBlob(
       (blob) => {
@@ -124,9 +208,9 @@ function exportBlob() {
           reject(new Error(t('img.choose')));
           return;
         }
-        resolve(new File([blob], exportName, { type: typed, lastModified: Date.now() }));
+        resolve(new File([blob], exportName, { type: 'image/jpeg', lastModified: Date.now() }));
       },
-      typed,
+      'image/jpeg',
       0.92
     );
   });
@@ -192,6 +276,8 @@ function renderChrome() {
   host.querySelector('[data-img-size-label]').textContent = t('img.size');
   host.querySelector('[data-img-radius-label]').textContent = t('img.radius');
   host.querySelector('[data-img-aspect-label]').textContent = t('img.aspect');
+  host.querySelector('[data-img-guide]').textContent = t('img.guide');
+  host.querySelector('[data-img-preview-label]').textContent = t('img.preview');
   host.querySelector('#image-editor-aspects').innerHTML = ASPECTS.map(
     (item) =>
       `<button class="btn btn-inline${item.id === aspectId ? ' btn-primary' : ''}" type="button" data-aspect="${item.id}">${escapeHtml(
@@ -227,6 +313,11 @@ export function ensureImageEditor() {
       <div class="image-editor-stage">
         <canvas id="image-editor-canvas"></canvas>
       </div>
+      <p class="form-hint" data-img-guide>The bright frame is the area that will show.</p>
+      <div class="image-editor-live">
+        <span data-img-preview-label>Preview</span>
+        <canvas id="image-editor-preview" width="88" height="88"></canvas>
+      </div>
       <p class="editor-label" data-img-aspect-label>Frame</p>
       <div id="image-editor-aspects" class="image-editor-aspects"></div>
       <div class="image-editor-sliders">
@@ -251,6 +342,7 @@ export function ensureImageEditor() {
   `;
   document.body.appendChild(host);
   canvas = host.querySelector('#image-editor-canvas');
+  previewCanvas = host.querySelector('#image-editor-preview');
   const fileInput = host.querySelector('#image-editor-file');
   const stage = host.querySelector('.image-editor-stage');
 
@@ -368,7 +460,8 @@ function syncStageAspect() {
 export async function openImageEditor(options = {}) {
   ensureImageEditor();
   aspectId = options.aspect || '1:1';
-  radius = Number.isFinite(options.radius) ? options.radius : 8;
+  previewMask = options.previewMask || (aspectId === '1:1' ? 'rounded' : 'rect');
+  radius = Number.isFinite(options.radius) ? options.radius : previewMask === 'circle' ? 50 : 12;
   outputSize = options.size || (aspectId === '16:9' ? 1024 : 768);
   filename = options.filename || 'image.jpg';
   zoom = 1;
@@ -389,11 +482,7 @@ export async function openImageEditor(options = {}) {
     }
   } else {
     image = null;
-    const ctx = canvas.getContext('2d');
-    canvas.width = 320;
-    canvas.height = 180;
-    ctx.fillStyle = '#14161c';
-    ctx.fillRect(0, 0, 320, 180);
+    draw();
   }
   return new Promise((resolve) => {
     resolver = resolve;
@@ -411,6 +500,7 @@ async function handleTrigger(trigger) {
   const result = await openImageEditor({
     source: existing || null,
     aspect: trigger.getAttribute('data-aspect') || '1:1',
+    previewMask: trigger.getAttribute('data-mask') || undefined,
     filename: trigger.getAttribute('data-filename') || 'image.jpg',
     size: Number(trigger.getAttribute('data-size')) || undefined
   });

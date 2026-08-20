@@ -2,7 +2,7 @@ import { bootCommandShell, initAos } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
 import { escapeHtml, initialsFromName, optionMarkup, showStatus, upgradeSelects, withOverlay } from './ui.js';
-import { updatePersonnelRecord, uploadPersonnelAvatar } from './personnel-service.js';
+import { updatePersonnelRecord, uploadPersonnelAvatar, uploadPersonnelImage } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
 import { fetchUnitBoard } from './unit-service.js';
@@ -38,6 +38,14 @@ function bioText(record) {
   return [history.paragraphIdentity, history.paragraphService].filter(Boolean).join('\n\n');
 }
 
+function coverStyle(record) {
+  const cover = String(record.cover_url || record.banner_url || '').trim();
+  if (!/^https?:\/\//i.test(cover) && !cover.startsWith('data:')) {
+    return '';
+  }
+  return `--profile-cover: url("${cover.replaceAll('\\', '').replaceAll('"', '').replaceAll("'", '')}")`;
+}
+
 function renderHome(personnel, editing = false) {
   currentPersonnel = personnel;
   isEditing = editing;
@@ -47,18 +55,25 @@ function renderHome(personnel, editing = false) {
 
   root.innerHTML = `
     <section class="profile-panel${editing ? ' is-editing' : ''}" data-aos="fade-up">
-      <div class="avatar-stage${editing ? ' is-editing' : ''}" id="avatar-stage">
-        <div class="avatar-frame" id="avatar-frame">
-          ${renderAvatar(personnel)}
-        </div>
-        <div class="image-edit-actions">
-          <button class="btn" type="button" data-avatar-upload>${t('img.upload')}</button>
-          ${
-            personnel.avatar_url
-              ? `<button class="btn" type="button" data-avatar-crop>${t('img.crop')}</button>`
-              : ''
-          }
-          <button class="btn" type="button" id="avatar-pencil">${t('common.edit')}</button>
+      <div class="profile-hero">
+        <div
+          class="profile-banner${personnel.cover_url || personnel.banner_url ? ' has-image' : ''}"
+          style="${coverStyle(personnel)}"
+        ></div>
+        <div class="avatar-stage${editing ? ' is-editing' : ''}" id="avatar-stage">
+          <div class="avatar-frame" id="avatar-frame">
+            ${renderAvatar(personnel)}
+          </div>
+          <div class="image-edit-actions">
+            <button class="btn" type="button" data-avatar-upload>${t('img.upload')}</button>
+            ${
+              personnel.avatar_url
+                ? `<button class="btn" type="button" data-avatar-crop>${t('img.crop')}</button>`
+                : ''
+            }
+            <button class="btn" type="button" data-cover-crop>${t('dir.cover')}</button>
+            <button class="btn" type="button" id="avatar-pencil">${t('common.edit')}</button>
+          </div>
         </div>
       </div>
       ${
@@ -113,8 +128,10 @@ function renderHome(personnel, editing = false) {
     const result = await openImageEditor({
       source: source || personnel.avatar_url || null,
       aspect: '1:1',
+      previewMask: 'circle',
       filename: 'avatar.jpg',
-      size: 768
+      size: 768,
+      radius: 50
     });
     if (!result?.file) {
       return;
@@ -147,6 +164,25 @@ function renderHome(personnel, editing = false) {
   });
   stage.querySelector('[data-avatar-crop]')?.addEventListener('click', () => {
     applyAvatar(personnel.avatar_url);
+  });
+  stage.querySelector('[data-cover-crop]')?.addEventListener('click', async () => {
+    const result = await openImageEditor({
+      source: personnel.cover_url || personnel.banner_url || null,
+      aspect: '16:9',
+      previewMask: 'rect',
+      filename: 'cover.jpg',
+      size: 1280
+    });
+    if (!result?.file) {
+      return;
+    }
+    try {
+      const updated = await uploadPersonnelImage(personnel.id, result.file, 'cover_url');
+      renderHome(updated, isEditing);
+      showStatus(t('img.saved'));
+    } catch (error) {
+      showStatus(error.message, true);
+    }
   });
 
   const saveButton = document.querySelector('#save-profile');

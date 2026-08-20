@@ -589,6 +589,7 @@ body.is-local-test .page-shell {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   border-radius: 50%;
   border: 3px solid var(--accent);
   background: var(--bg-muted);
@@ -614,6 +615,33 @@ body.is-local-test .page-shell {
   width: min(640px, 100%);
   margin: 0 auto;
   text-align: center;
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0 1.25rem 1.5rem;
+}
+
+.profile-hero {
+  position: relative;
+  margin: 0 -1.25rem 0.35rem;
+}
+
+.profile-banner {
+  height: 148px;
+}
+
+.profile-hero .avatar-stage {
+  margin-top: -72px;
+  margin-bottom: 0.35rem;
+  gap: 0.95rem;
+}
+
+.profile-hero .image-edit-actions {
+  width: min(420px, 92vw);
+}
+
+.profile-name {
+  margin-top: 0.55rem;
 }
 
 .profile-name {

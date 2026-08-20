@@ -374,6 +374,7 @@ document.querySelector('#edit-avatar-crop')?.addEventListener('click', async () 
   const result = await openImageEditor({
     source: editingRecord.avatar_url || document.querySelector('#edit-avatar-url').value || null,
     aspect: '1:1',
+    previewMask: 'circle',
     filename: 'avatar.jpg',
     size: 768
   });

@@ -270,6 +270,7 @@ document.querySelector('#unit-page').addEventListener('click', async (event) => 
     const result = await openImageEditor({
       source: fileInput?.files?.[0] || currentUnit()?.logo_url || null,
       aspect: '1:1',
+      previewMask: 'rounded',
       filename: 'unit-logo.jpg',
       size: 768
     });

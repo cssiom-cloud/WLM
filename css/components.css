@@ -1286,6 +1286,7 @@
   .dossier-avatar-fallback {
     width: 88px;
     height: 88px;
+    margin-top: -40px;
   }
 }
 
@@ -1297,35 +1298,56 @@
   overflow: auto;
 }
 
-.dossier-banner {
-  height: 148px;
-  background:
-    linear-gradient(180deg, rgba(12, 24, 42, 0.08), rgba(12, 24, 42, 0.32)),
-    linear-gradient(120deg, #1e4e8c 0%, #2f5f8f 42%, #c9a227 160%);
-  background-size: cover;
+.dossier-banner,
+.profile-banner {
+  height: 176px;
+  background-image:
+    linear-gradient(180deg, rgba(10, 18, 32, 0.18) 0%, rgba(10, 16, 26, 0.78) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(201, 162, 39, 0.08) 0 12px,
+      transparent 12px 28px
+    ),
+    linear-gradient(120deg, #163a68 0%, #1e4e8c 42%, #8a6a22 155%);
+  background-size: cover, auto, cover;
   background-position: center;
   border-bottom: 1px solid var(--border);
 }
 
 .dossier-banner-marines {
-  background:
-    linear-gradient(180deg, rgba(12, 28, 20, 0.1), rgba(12, 28, 20, 0.34)),
-    linear-gradient(120deg, #1c6b46 0%, #2a7a54 46%, #c4a35a 160%);
+  background-image:
+    linear-gradient(180deg, rgba(10, 22, 16, 0.18) 0%, rgba(10, 18, 16, 0.78) 100%),
+    repeating-linear-gradient(
+      135deg,
+      rgba(196, 163, 90, 0.1) 0 12px,
+      transparent 12px 28px
+    ),
+    linear-gradient(120deg, #145238 0%, #1c6b46 46%, #8a6a22 155%);
+}
+
+.dossier-banner.has-image {
+  background-image:
+    linear-gradient(180deg, rgba(10, 16, 26, 0.12) 0%, rgba(10, 16, 26, 0.62) 100%),
+    var(--dossier-cover);
   background-size: cover;
   background-position: center;
 }
 
-.dossier-banner.has-image {
-  background-color: #1a2a40;
+.profile-banner.has-image {
+  background-image:
+    linear-gradient(180deg, rgba(10, 16, 26, 0.12) 0%, rgba(10, 16, 26, 0.62) 100%),
+    var(--profile-cover);
+  background-size: cover;
+  background-position: center;
 }
 
 .dossier-header {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
-  gap: 1rem;
-  padding: 1.15rem 1.25rem 1.25rem;
+  gap: 1rem 1.2rem;
+  padding: 0.9rem 1.25rem 1.25rem;
   align-items: start;
-  margin-top: -36px;
+  margin-top: 0;
 }
 
 .dossier-identity {
@@ -1336,7 +1358,7 @@
 }
 
 .dossier-heading {
-  padding-top: 0.7rem;
+  padding-top: 0.85rem;
 }
 
 .dossier-heading h2 {
@@ -1349,12 +1371,16 @@
 .dossier-avatar-fallback {
   width: 112px;
   height: 112px;
+  margin-top: -52px;
   border-radius: 18px;
   object-fit: cover;
+  object-position: center;
   border: 3px solid var(--bg-elevated);
   box-shadow: var(--shadow-layered, var(--shadow));
   background: var(--accent-soft);
   flex: 0 0 auto;
+  position: relative;
+  z-index: 1;
 }
 
 .dossier-avatar-fallback {
@@ -1697,12 +1723,19 @@
     grid-template-columns: 1fr;
   }
 
-  .dossier-banner {
-    height: 110px;
+  .dossier-banner,
+  .profile-banner {
+    height: 132px;
   }
 
   .dossier-header {
-    margin-top: -36px;
+    margin-top: 0;
+    padding-top: 0.75rem;
+  }
+
+  .dossier-avatar,
+  .dossier-avatar-fallback {
+    margin-top: -40px;
   }
 
   .dossier,
@@ -1788,6 +1821,28 @@
   display: block;
   width: 100%;
   height: 100%;
+}
+
+.image-editor-live {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: -0.35rem 0 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.86rem;
+}
+
+.image-editor-live canvas {
+  width: 72px;
+  height: 72px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: #14161c;
+  flex: 0 0 auto;
+}
+
+.image-editor-live canvas.is-circle {
+  border-radius: 50%;
 }
 
 .image-editor-aspects,

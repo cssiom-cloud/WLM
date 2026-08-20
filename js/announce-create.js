@@ -56,6 +56,7 @@ document.querySelector('#announce-crop')?.addEventListener('click', async () => 
   const result = await openImageEditor({
     source,
     aspect: '16:9',
+    previewMask: 'rect',
     filename: 'announcement-cover.jpg',
     size: 1280
   });
