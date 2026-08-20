@@ -1931,3 +1931,257 @@
     background: #fff;
   }
 }
+
+/* ---------- Visual chain of command ---------- */
+
+.org-page {
+  position: relative;
+  padding-bottom: 5.5rem;
+}
+
+.org-hint {
+  margin: 0 0 0.85rem;
+}
+
+.org-viewport {
+  height: min(72vh, 820px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  touch-action: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg, var(--bg-elevated)) 88%, transparent), var(--bg-elevated)),
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent 46%);
+  cursor: grab;
+  scrollbar-width: thin;
+}
+
+.org-viewport:active {
+  cursor: grabbing;
+}
+
+.org-viewport::-webkit-scrollbar {
+  height: 8px;
+  width: 8px;
+}
+
+.org-viewport::-webkit-scrollbar-thumb {
+  background: color-mix(in srgb, var(--accent) 45%, var(--border));
+  border-radius: 99px;
+}
+
+.org-canvas {
+  min-width: 100%;
+  min-height: 100%;
+  width: max-content;
+  padding: 2.2rem 2.5rem 3rem;
+  transform-origin: top center;
+  will-change: transform;
+}
+
+.org-tree {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0;
+}
+
+.org-command,
+.org-branch {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 220px;
+}
+
+.org-branch-title,
+.org-rank-title {
+  margin: 0;
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.org-rank-head {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.45rem;
+}
+
+.org-toggle {
+  min-height: 32px;
+  min-width: 32px;
+  padding: 0;
+}
+
+.org-people {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.65rem;
+  max-width: 920px;
+}
+
+.org-card {
+  display: grid;
+  grid-template-columns: 44px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 0.55rem;
+  width: min(240px, 78vw);
+  padding: 0.55rem 0.65rem;
+  text-align: left;
+  border-radius: 14px;
+  border: 1px solid var(--border);
+  background: var(--glass-bg, var(--bg-elevated));
+  backdrop-filter: blur(var(--glass-blur, 18px));
+  -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
+  box-shadow: var(--shadow-layered, var(--shadow));
+  color: inherit;
+  cursor: pointer;
+}
+
+.org-card-navy {
+  border-color: color-mix(in srgb, #1e4e8c 55%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #1e4e8c 18%, transparent), var(--shadow-layered, var(--shadow));
+}
+
+.org-card-marines {
+  border-color: color-mix(in srgb, #1c6b46 55%, var(--border));
+  box-shadow: 0 0 0 1px color-mix(in srgb, #1c6b46 18%, transparent), var(--shadow-layered, var(--shadow));
+}
+
+.org-card-unassigned {
+  border-style: dashed;
+}
+
+.org-avatar,
+.org-avatar-fallback {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid var(--accent);
+  background: var(--accent-soft);
+}
+
+.org-avatar-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.org-card-copy {
+  display: grid;
+  gap: 0.08rem;
+  min-width: 0;
+}
+
+.org-card-copy strong,
+.org-card-rank,
+.org-card-role {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.org-card-rank,
+.org-card-role,
+.org-card-nato {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.org-card-nato {
+  font-weight: 700;
+  color: var(--accent);
+}
+
+.org-stem {
+  width: 2px;
+  height: 22px;
+  margin: 0.15rem auto;
+  background: color-mix(in srgb, var(--border) 20%, var(--accent));
+}
+
+.org-fork {
+  width: min(70%, 640px);
+  height: 2px;
+  margin: 0 auto;
+  background: color-mix(in srgb, var(--border) 20%, var(--accent));
+}
+
+.org-branches {
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  gap: 2.4rem;
+  padding-top: 0;
+}
+
+.org-branches-2 > .org-branch,
+.org-branches-3 > .org-branch {
+  position: relative;
+}
+
+.org-branches-2 > .org-branch::before,
+.org-branches-3 > .org-branch::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  width: 2px;
+  height: 18px;
+  background: color-mix(in srgb, var(--border) 20%, var(--accent));
+  transform: translateX(-50%);
+}
+
+.org-branch {
+  padding-top: 18px;
+}
+
+.org-branch-navy .org-branch-title {
+  color: #3d6aa3;
+}
+
+.org-branch-marines .org-branch-title {
+  color: #2f7a54;
+}
+
+.org-children {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.org-controls {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 6;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  pointer-events: none;
+}
+
+.org-controls .btn {
+  pointer-events: auto;
+  min-height: 44px;
+  box-shadow: var(--shadow-layered, var(--shadow));
+}
+
+@media (max-width: 767px) {
+  .org-canvas {
+    padding: 1.2rem 1rem 2.4rem;
+  }
+
+  .org-people {
+    max-width: 280px;
+  }
+}
+

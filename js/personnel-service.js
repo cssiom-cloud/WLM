@@ -116,3 +116,24 @@ export async function updateLoginCredentials(userId, { email, password }) {
 export function uniqueAgencyValues(records) {
   return [...new Set(records.map((record) => record.wlc_agency).filter(Boolean))].sort();
 }
+
+export async function fetchRankStructure() {
+  // INJECT POINT: live rank table from public.oc_rank_structure (nato_grade + sort_order).
+  if (isLocalTestMode()) {
+    const { RANK_STRUCTURE } = await import('./domain.js');
+    return RANK_STRUCTURE.map((entry) => ({
+      rank_title: entry.rankTitle,
+      nato_grade: entry.natoGrade,
+      sort_order: entry.sortOrder
+    }));
+  }
+
+  const { data, error } = await supabaseClient
+    .from('oc_rank_structure')
+    .select('rank_title, nato_grade, sort_order')
+    .order('sort_order', { ascending: true });
+  if (error) {
+    throw error;
+  }
+  return data ?? [];
+}

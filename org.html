@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Chain of Command</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css?v=org-chart">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=org-chart">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content org-page">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="org.kicker">Command</p>
+            <h1 class="page-title" data-i18n="org.title">Visual Chain of Command</h1>
+            <p class="page-lead" data-i18n="org.lead">Personnel are grouped by NATO grade from the rank table, then split into Navy and Marines. Click a card to open the military dossier.</p>
+          </div>
+        </div>
+        <p class="form-hint org-hint" data-i18n="org.hint">Drag to pan. Pinch or use the controls to zoom. Tap a rank bar to collapse it.</p>
+        <div class="org-viewport" id="org-viewport">
+          <div class="org-canvas" id="org-canvas"></div>
+        </div>
+        <div class="org-controls" role="toolbar" aria-label="Chart view">
+          <button class="btn" type="button" data-org-zoom-out title="Zoom out">−</button>
+          <button class="btn" type="button" data-org-reset data-i18n="org.reset">Reset view</button>
+          <button class="btn" type="button" data-org-zoom-in title="Zoom in">+</button>
+          <button class="btn" type="button" data-org-collapse data-i18n="org.collapse">Collapse lower ranks</button>
+          <button class="btn" type="button" data-org-expand data-i18n="org.expand">Expand ranks</button>
+        </div>
+      </main>
+    </div>
+
+    <div id="profile-modal" class="modal-backdrop dossier-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <div class="modal-card dossier-card">
+        <div id="profile-modal-body"></div>
+      </div>
+    </div>
+
+    <div id="dossier-edit-modal" class="modal-backdrop dossier-edit-modal" role="dialog" aria-modal="true" aria-labelledby="dossier-edit-title">
+      <div class="modal-card dossier-edit-card">
+        <div class="toolbar-row">
+          <h2 id="dossier-edit-title" data-i18n="dir.editTitle">Edit profile data</h2>
+          <button class="btn" type="button" data-dossier-edit-close data-i18n="dir.close">Close</button>
+        </div>
+        <form id="dossier-edit-form" class="form-grid dossier-edit-form"></form>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/org-chart.js"></script>
+  </body>
+</html>

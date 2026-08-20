@@ -79,11 +79,10 @@ export async function initCommandNavbar(activePage) {
   const isAuthed = Boolean(session);
 
   const personnelLinks = [{ href: './index.html', page: 'home', label: t('nav.home') }];
+  personnelLinks.push({ href: './directory.html', page: 'directory', label: t('nav.directory') });
+  personnelLinks.push({ href: './org.html', page: 'org', label: t('nav.org') });
   if (isAuthed) {
-    personnelLinks.push({ href: './directory.html', page: 'directory', label: t('nav.directory') });
     personnelLinks.push({ href: './units.html', page: 'units', label: t('nav.units') });
-  } else {
-    personnelLinks.push({ href: './directory.html', page: 'directory', label: t('nav.directory') });
   }
 
   const operationsLinks = [{ href: './announcements.html', page: 'announcements', label: t('nav.announcements') }];

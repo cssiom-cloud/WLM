@@ -561,7 +561,7 @@ function renderDraftTimeline() {
 }
 
 function closeDossierEditor() {
-  document.querySelector('#dossier-edit-modal').classList.remove('is-open');
+  document.querySelector('#dossier-edit-modal')?.classList.remove('is-open');
 }
 
 function openDossierEditor(record) {
@@ -718,7 +718,7 @@ async function cropPersonnelImage(record, field, aspect) {
 function closeProfileModal() {
   openProfileId = null;
   closeDossierEditor();
-  document.querySelector('#profile-modal').classList.remove('is-open');
+  document.querySelector('#profile-modal')?.classList.remove('is-open');
 }
 
 function exportDossier() {
@@ -839,144 +839,170 @@ function refreshOpenDossier() {
   }
 }
 
-/* ---------- Boot ---------- */
-
-bootCommandShell('directory');
-renderSkeletons();
-
-// INJECT POINT: the two calls below are where data leaves Supabase and enters the UI.
-withOverlay(
-  () =>
-    Promise.all([
-      fetchPersonnelRoster(),
-      fetchSettingsMap().catch(() => ({})),
-      fetchUnitBoard().catch(() => ({ units: [], ranks: [] })),
-      readCurrentPersonnel().catch(() => ({ personnel: null }))
-    ]),
-  t('notice.loading')
-)
-  .then(([records, settings, board, session]) => {
-    rosterCache = records;
+export function setDossierContext({ roster, settings, board, isAdmin }) {
+  if (roster) {
+    rosterCache = roster;
+  }
+  if (settings) {
     settingsMap = settings;
+  }
+  if (board) {
     unitBoard = board;
-    viewerIsAdmin = session?.personnel?.role === 'admin';
-    renderDirectory('');
-  })
-  .catch((error) => {
-    document.querySelector('#directory-grid').innerHTML = '';
-    showToast(error.message, 'error', 6000);
+  }
+  viewerIsAdmin = Boolean(isAdmin);
+}
+
+export { openProfileModal, closeProfileModal };
+
+export function bindSharedDossier() {
+  const modal = document.querySelector('#profile-modal');
+  const editModal = document.querySelector('#dossier-edit-modal');
+  const editForm = document.querySelector('#dossier-edit-form');
+  if (!modal || modal.dataset.dossierBound === '1') {
+    return;
+  }
+  modal.dataset.dossierBound = '1';
+
+  modal.addEventListener('click', async (event) => {
+    if (event.target.id === 'profile-modal') {
+      closeProfileModal();
+      return;
+    }
+    if (event.target.closest('[data-dossier-close]')) {
+      closeProfileModal();
+      return;
+    }
+    const record = rosterCache.find((item) => item.id === openProfileId);
+    if (event.target.closest('[data-dossier-avatar]') && record) {
+      await cropPersonnelImage(record, 'avatar_url', '1:1');
+      return;
+    }
+    if (event.target.closest('[data-dossier-cover]') && record) {
+      await cropPersonnelImage(record, 'cover_url', '16:9');
+      return;
+    }
+    if (event.target.closest('[data-dossier-edit]')) {
+      if (record) {
+        openDossierEditor(record);
+      }
+      return;
+    }
+    if (event.target.closest('[data-dossier-export]')) {
+      exportDossier();
+    }
   });
 
-document.querySelector('#directory-search').addEventListener('input', (event) => {
-  renderDirectory(String(event.target.value).trim().toLowerCase());
-});
+  editModal?.addEventListener('click', async (event) => {
+    if (event.target.id === 'dossier-edit-modal' || event.target.closest('[data-dossier-edit-close]')) {
+      closeDossierEditor();
+      return;
+    }
+    const record = rosterCache.find((item) => item.id === openProfileId);
+    if (event.target.closest('[data-dossier-avatar]') && record) {
+      await cropPersonnelImage(record, 'avatar_url', '1:1');
+      return;
+    }
+    if (event.target.closest('[data-dossier-cover]') && record) {
+      await cropPersonnelImage(record, 'cover_url', '16:9');
+      return;
+    }
+    const preset = event.target.closest('[data-medal-preset]');
+    if (preset) {
+      addDraftMedal(preset.getAttribute('data-medal-preset'));
+      return;
+    }
+    if (event.target.closest('[data-medal-add]')) {
+      addDraftMedal(document.querySelector('#dossier-medal-name')?.value);
+      return;
+    }
+    const medalRemove = event.target.closest('[data-medal-remove]');
+    if (medalRemove) {
+      draftMedals.splice(Number(medalRemove.getAttribute('data-medal-remove')), 1);
+      renderDraftMedals();
+      return;
+    }
+    if (event.target.closest('[data-timeline-add]')) {
+      addDraftTimeline();
+      return;
+    }
+    const timelineRemove = event.target.closest('[data-timeline-remove]');
+    if (timelineRemove) {
+      draftTimeline = readDraftTimeline();
+      draftTimeline.splice(Number(timelineRemove.getAttribute('data-timeline-remove')), 1);
+      if (!draftTimeline.length) {
+        draftTimeline.push({ date: '', kind: 'other', title: '', description: '' });
+      }
+      renderDraftTimeline();
+      upgradeSelects(document.querySelector('#dossier-edit-form'));
+    }
+  });
+  editForm?.addEventListener('submit', persistDossierEditor);
 
-document.querySelector('#directory-grid').addEventListener('click', (event) => {
-  const button = event.target.closest('[data-view-id]');
-  if (!button) {
-    return;
-  }
-  const record = rosterCache.find((item) => item.id === button.getAttribute('data-view-id'));
-  if (record) {
-    openProfileModal(record);
-  }
-});
+  document.addEventListener('keydown', (event) => {
+    if (event.key !== 'Escape') {
+      return;
+    }
+    if (editModal?.classList.contains('is-open')) {
+      closeDossierEditor();
+      return;
+    }
+    closeProfileModal();
+  });
 
-document.querySelector('#profile-modal').addEventListener('click', async (event) => {
-  if (event.target.id === 'profile-modal') {
-    closeProfileModal();
-    return;
-  }
-  if (event.target.closest('[data-dossier-close]')) {
-    closeProfileModal();
-    return;
-  }
-  const record = rosterCache.find((item) => item.id === openProfileId);
-  if (event.target.closest('[data-dossier-avatar]') && record) {
-    await cropPersonnelImage(record, 'avatar_url', '1:1');
-    return;
-  }
-  if (event.target.closest('[data-dossier-cover]') && record) {
-    await cropPersonnelImage(record, 'cover_url', '16:9');
-    return;
-  }
-  if (event.target.closest('[data-dossier-edit]')) {
+  window.addEventListener('afterprint', () => {
+    document.body.classList.remove('is-printing-dossier');
+  });
+}
+
+/* ---------- Boot ---------- */
+
+if (document.querySelector('#directory-grid')) {
+  bootCommandShell('directory');
+  renderSkeletons();
+  bindSharedDossier();
+
+  // INJECT POINT: the two calls below are where data leaves Supabase and enters the UI.
+  withOverlay(
+    () =>
+      Promise.all([
+        fetchPersonnelRoster(),
+        fetchSettingsMap().catch(() => ({})),
+        fetchUnitBoard().catch(() => ({ units: [], ranks: [] })),
+        readCurrentPersonnel().catch(() => ({ personnel: null }))
+      ]),
+    t('notice.loading')
+  )
+    .then(([records, settings, board, session]) => {
+      rosterCache = records;
+      settingsMap = settings;
+      unitBoard = board;
+      viewerIsAdmin = session?.personnel?.role === 'admin';
+      renderDirectory('');
+    })
+    .catch((error) => {
+      document.querySelector('#directory-grid').innerHTML = '';
+      showToast(error.message, 'error', 6000);
+    });
+
+  document.querySelector('#directory-search').addEventListener('input', (event) => {
+    renderDirectory(String(event.target.value).trim().toLowerCase());
+  });
+
+  document.querySelector('#directory-grid').addEventListener('click', (event) => {
+    const button = event.target.closest('[data-view-id]');
+    if (!button) {
+      return;
+    }
+    const record = rosterCache.find((item) => item.id === button.getAttribute('data-view-id'));
     if (record) {
-      openDossierEditor(record);
+      openProfileModal(record);
     }
-    return;
-  }
-  if (event.target.closest('[data-dossier-export]')) {
-    exportDossier();
-  }
-});
+  });
 
-const editModal = document.querySelector('#dossier-edit-modal');
-editModal.addEventListener('click', async (event) => {
-  if (event.target.id === 'dossier-edit-modal' || event.target.closest('[data-dossier-edit-close]')) {
-    closeDossierEditor();
-    return;
-  }
-  const record = rosterCache.find((item) => item.id === openProfileId);
-  if (event.target.closest('[data-dossier-avatar]') && record) {
-    await cropPersonnelImage(record, 'avatar_url', '1:1');
-    return;
-  }
-  if (event.target.closest('[data-dossier-cover]') && record) {
-    await cropPersonnelImage(record, 'cover_url', '16:9');
-    return;
-  }
-  const preset = event.target.closest('[data-medal-preset]');
-  if (preset) {
-    addDraftMedal(preset.getAttribute('data-medal-preset'));
-    return;
-  }
-  if (event.target.closest('[data-medal-add]')) {
-    addDraftMedal(document.querySelector('#dossier-medal-name')?.value);
-    return;
-  }
-  const medalRemove = event.target.closest('[data-medal-remove]');
-  if (medalRemove) {
-    draftMedals.splice(Number(medalRemove.getAttribute('data-medal-remove')), 1);
-    renderDraftMedals();
-    return;
-  }
-  if (event.target.closest('[data-timeline-add]')) {
-    addDraftTimeline();
-    return;
-  }
-  const timelineRemove = event.target.closest('[data-timeline-remove]');
-  if (timelineRemove) {
-    draftTimeline = readDraftTimeline();
-    draftTimeline.splice(Number(timelineRemove.getAttribute('data-timeline-remove')), 1);
-    if (!draftTimeline.length) {
-      draftTimeline.push({ date: '', kind: 'other', title: '', description: '' });
+  window.addEventListener('wlr-lang-changed', () => {
+    if (rosterCache.length > 0) {
+      renderDirectory(lastQuery);
+      refreshOpenDossier();
     }
-    renderDraftTimeline();
-    upgradeSelects(document.querySelector('#dossier-edit-form'));
-  }
-});
-document.querySelector('#dossier-edit-form').addEventListener('submit', persistDossierEditor);
-
-document.addEventListener('keydown', (event) => {
-  if (event.key !== 'Escape') {
-    return;
-  }
-  if (editModal.classList.contains('is-open')) {
-    closeDossierEditor();
-    return;
-  }
-  closeProfileModal();
-});
-
-window.addEventListener('afterprint', () => {
-  document.body.classList.remove('is-printing-dossier');
-});
-
-// Re-render cards when the TH/EN switcher changes language.
-window.addEventListener('wlr-lang-changed', () => {
-  if (rosterCache.length > 0) {
-    renderDirectory(lastQuery);
-    refreshOpenDossier();
-  }
-});
+  });
+}
