@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W.L.R Login Accounts</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=login-accounts">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="accounts.kicker">Command</p>
+            <h1 class="page-title" data-i18n="accounts.title">Login Accounts</h1>
+          </div>
+          <div class="search-wrap">
+            <label class="visually-hidden" for="accounts-search" data-i18n="accounts.search">Search by name</label>
+            <input id="accounts-search" class="search-field" type="search" data-i18n-placeholder="accounts.search" placeholder="Search by name">
+          </div>
+        </div>
+        <p class="page-lead" data-i18n="accounts.lead">Administrators can view login emails, search personnel by name, and change email or password. Live passwords are hashed and cannot be shown; a new password can still be set.</p>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <div class="table-wrap">
+          <table class="personnel-table accounts-table">
+            <thead>
+              <tr>
+                <th data-i18n="accounts.name">Name</th>
+                <th data-i18n="accounts.email">Email</th>
+                <th data-i18n="accounts.password">Password</th>
+                <th data-i18n="accounts.action">Action</th>
+              </tr>
+            </thead>
+            <tbody id="accounts-table-body"></tbody>
+          </table>
+        </div>
+        <p id="accounts-empty" class="empty-log" data-i18n="accounts.empty" hidden>No personnel matched the search.</p>
+      </main>
+    </div>
+
+    <div id="account-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="account-edit-title">
+      <div class="modal-card">
+        <h2 id="account-edit-title" data-i18n="accounts.editTitle">Change login</h2>
+        <form id="account-form" class="form-grid" style="margin-top: 1rem;">
+          <p class="full page-lead" id="account-edit-name"></p>
+          <label class="full">
+            <span data-i18n="accounts.email">Email</span>
+            <input id="account-email" class="text-field" type="email" required>
+          </label>
+          <label class="full">
+            <span data-i18n="accounts.password">Password</span>
+            <input id="account-password" class="text-field" type="text" autocomplete="new-password">
+            <span class="field-hint" data-i18n="accounts.passwordKeep">Leave blank to keep the current password. Minimum 6 characters when setting a new one.</span>
+          </label>
+          <div class="full btn-row">
+            <button class="btn btn-primary" type="submit" data-i18n="common.save">Save</button>
+            <button id="account-cancel" class="btn" type="button" data-i18n="common.cancel">Cancel</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/accounts.js"></script>
+  </body>
+</html>

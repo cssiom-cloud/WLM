@@ -453,6 +453,83 @@ export async function localUpdatePersonnel(personnelId, payload) {
   return clone(rows[index]);
 }
 
+export async function localFetchLoginAccounts() {
+  const actor = await localActor();
+  if (actor?.role !== 'admin') {
+    throw new Error('Only command administrators can view login accounts.');
+  }
+  const login = accounts();
+  return personnelRows().map((person) => {
+    const account = login.find((item) => item.id === person.id);
+    return {
+      ...clone(person),
+      email: account?.email || person.email,
+      login_password: account ? account.password : null,
+      has_login: Boolean(account)
+    };
+  });
+}
+
+export async function localUpdateLoginCredentials(userId, { email, password }) {
+  const actor = await localActor();
+  if (actor?.role !== 'admin') {
+    throw new Error('Only command administrators can update login credentials.');
+  }
+
+  const nextEmail = String(email || '').trim();
+  const nextPassword = String(password ?? '');
+  if (!nextEmail || !nextEmail.includes('@')) {
+    throw new Error('Enter a valid email address.');
+  }
+  if (nextPassword && nextPassword.length < 6) {
+    throw new Error('Password must be at least 6 characters.');
+  }
+
+  const login = accounts();
+  const people = personnelRows();
+  const personIndex = people.findIndex((row) => row.id === userId);
+  if (personIndex === -1) {
+    throw new Error('Personnel was not found.');
+  }
+
+  const emailTaken =
+    login.some((row) => row.id !== userId && row.email.toLowerCase() === nextEmail.toLowerCase()) ||
+    people.some((row) => row.id !== userId && String(row.email || '').toLowerCase() === nextEmail.toLowerCase());
+  if (emailTaken) {
+    throw new Error('This email is already registered.');
+  }
+
+  const accountIndex = login.findIndex((row) => row.id === userId);
+  if (accountIndex === -1) {
+    if (!nextPassword) {
+      throw new Error('Enter a password to create a login for this personnel.');
+    }
+    login.push({ id: userId, email: nextEmail, password: nextPassword });
+  } else {
+    login[accountIndex] = {
+      ...login[accountIndex],
+      email: nextEmail,
+      password: nextPassword ? nextPassword : login[accountIndex].password
+    };
+  }
+  writeJson(STORAGE_ACCOUNTS, login);
+
+  people[personIndex] = { ...people[personIndex], email: nextEmail };
+  savePersonnel(people);
+
+  const session = await localReadSession();
+  if (session?.user?.id === userId) {
+    writeJson(STORAGE_SESSION, { user: { id: userId, email: nextEmail } });
+  }
+
+  await localWriteLog({
+    userId: actor.id,
+    roleSnapshot: 'admin',
+    actionType: 'login_credentials_update',
+    details: `Updated login credentials for ${userId}`
+  });
+}
+
 export async function localUploadAvatar(userId, file) {
   const dataUrl = await new Promise((resolve, reject) => {
     const reader = new FileReader();

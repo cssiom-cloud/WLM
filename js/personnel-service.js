@@ -3,7 +3,9 @@ import { supabaseClient } from './supabase-client.js';
 import { comparePersonnelByRank } from './domain.js';
 import {
   localDeletePersonnelAccount,
+  localFetchLoginAccounts,
   localFetchRoster,
+  localUpdateLoginCredentials,
   localUpdatePersonnel,
   localUploadAvatar
 } from './local-station.js';
@@ -68,6 +70,35 @@ export async function deletePersonnelAccount(userId) {
   }
 
   const { error } = await supabaseClient.rpc('delete_personnel_account', { p_user_id: userId });
+  if (error) {
+    throw error;
+  }
+}
+
+export async function fetchLoginAccounts() {
+  if (isLocalTestMode()) {
+    const data = await localFetchLoginAccounts();
+    return data.slice().sort(comparePersonnelByRank);
+  }
+
+  const roster = await fetchPersonnelRoster();
+  return roster.map((record) => ({
+    ...record,
+    login_password: null,
+    has_login: true
+  }));
+}
+
+export async function updateLoginCredentials(userId, { email, password }) {
+  if (isLocalTestMode()) {
+    return localUpdateLoginCredentials(userId, { email, password });
+  }
+
+  const { error } = await supabaseClient.rpc('admin_update_login_credentials', {
+    p_user_id: userId,
+    p_email: email || null,
+    p_password: password || null
+  });
   if (error) {
     throw error;
   }
