@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css">
+    <link rel="stylesheet" href="./css/components.css?v=dossier">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -42,13 +42,9 @@
       </main>
     </div>
 
-    <!-- Full profile modal (opened from each card) -->
-    <div id="profile-modal" class="modal-backdrop" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
-      <div class="modal-card">
-        <div class="toolbar-row">
-          <h2 id="profile-modal-title">View Profile</h2>
-          <button id="profile-modal-close" class="btn" type="button">Close</button>
-        </div>
+    <!-- Military dossier modal (opened from each card) -->
+    <div id="profile-modal" class="modal-backdrop dossier-modal" role="dialog" aria-modal="true" aria-labelledby="profile-modal-title">
+      <div class="modal-card dossier-card">
         <div id="profile-modal-body"></div>
       </div>
     </div>
