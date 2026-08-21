@@ -1,5 +1,5 @@
 import { logoMarkup } from './unit-common.js';
-import { t } from './i18n.js';
+import { getLang, t } from './i18n.js';
 import { escapeHtml } from './ui.js';
 
 export function statusLabel(status) {
@@ -66,14 +66,70 @@ export function factionBoardMarkup(allies, objectives, { compact = false } = {})
   `;
 }
 
+export function filedDate(iso) {
+  if (!iso) {
+    return '—';
+  }
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) {
+    return '—';
+  }
+  return date.toLocaleDateString(getLang() === 'th' ? 'th-TH' : 'en-GB', {
+    year: 'numeric',
+    month: 'short',
+    day: '2-digit'
+  });
+}
+
+export function docId(operation) {
+  return String(operation?.id || '')
+    .replace(/-/g, '')
+    .slice(0, 8)
+    .toUpperCase() || '—';
+}
+
+function overviewCell(units) {
+  if (!units.length) {
+    return escapeHtml(t('ops.noUnitsAssigned'));
+  }
+  return factionStackMarkup(units, { compact: true });
+}
+
+export function overviewGridMarkup(operation, allies, objectives) {
+  return `
+    <table class="ops-doc-grid">
+      <tbody>
+        <tr>
+          <th>${escapeHtml(t('ops.doc.operationName'))}</th>
+          <td>${escapeHtml(operation.title || '—')}</td>
+          <th>${escapeHtml(t('ops.statusLabel'))}</th>
+          <td>${escapeHtml(statusLabel(operation.status))}</td>
+        </tr>
+        <tr>
+          <th>${escapeHtml(t('ops.auth.officer'))}</th>
+          <td>${escapeHtml(String(operation.commanding_officer || '').trim() || t('ops.auth.unsigned'))}</td>
+          <th>${escapeHtml(t('ops.doc.date'))}</th>
+          <td>${escapeHtml(filedDate(operation.created_at))}</td>
+        </tr>
+        <tr>
+          <th>${escapeHtml(t('ops.allies'))}</th>
+          <td>${overviewCell(allies)}</td>
+          <th>${escapeHtml(t('ops.objectives'))}</th>
+          <td>${overviewCell(objectives)}</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+}
+
 export function authorizationMarkup(operation) {
   const name = String(operation?.commanding_officer || '').trim();
   const approved = operation?.status === 'completed' && Boolean(name);
   const stampClass = approved ? 'ops-stamp-approved' : 'ops-stamp-restricted';
   const stampLabel = approved ? t('ops.auth.approved') : t('ops.auth.restricted');
   return `
-    <section class="ops-auth" aria-label="${escapeHtml(t('ops.auth.title'))}">
-      <h2>${escapeHtml(t('ops.auth.title'))}</h2>
+    <section class="ops-doc-section ops-auth" aria-label="${escapeHtml(t('ops.auth.title'))}">
+      <h2>${escapeHtml(t('ops.doc.auth'))}</h2>
       <div class="ops-auth-grid">
         <div class="ops-auth-sign">
           <p class="ops-auth-kicker">${escapeHtml(t('ops.auth.officer'))}</p>

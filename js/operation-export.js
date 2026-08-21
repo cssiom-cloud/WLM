@@ -6,7 +6,7 @@ import { renderMapStill } from './tactical-map.js';
 // jspdf places the captured image onto A4 pages.
 const HTML_TO_IMAGE_URL = 'https://cdn.jsdelivr.net/npm/html-to-image@1.11.13/+esm';
 const JSPDF_URL = 'https://cdn.jsdelivr.net/npm/jspdf@2.5.2/+esm';
-const PAPER = '#f4f6f8';
+const PAPER = '#ffffff';
 
 function dossierRoot() {
   return document.querySelector('#op-dossier');

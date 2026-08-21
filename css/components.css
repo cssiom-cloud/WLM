@@ -2498,6 +2498,16 @@
 }
 
 @media (max-width: 900px) {
+  .ops-doc-head {
+    grid-template-columns: 1fr;
+  }
+
+  .ops-doc-meta,
+  .ops-doc-meta div {
+    text-align: left;
+    justify-content: start;
+  }
+
   .ops-factions {
     grid-template-columns: 1fr;
   }
@@ -2551,33 +2561,252 @@
   }
 }
 
-.ops-export-masthead,
-.ops-export-footer {
-  display: none;
+.ops-view-page .btn,
+.ops-view-page .text-field,
+.ops-view-page .unit-card,
+.ops-view-page .lang-switch,
+.ops-view-page .lang-switch button,
+.ops-doc,
+.ops-doc .unit-logo,
+.ops-doc .unit-logo-sm,
+.ops-doc .ops-aar-card,
+.ops-doc .ops-stamp,
+.ops-doc .tac-viewport,
+.ops-doc .tac-stage {
+  border-radius: 0;
 }
 
-.ops-export-masthead img {
-  width: 56px;
-  height: 56px;
-  object-fit: cover;
-  border-radius: 10px;
-  border: 1px solid #d5e0ee;
+.ops-doc {
+  background: #ffffff;
+  color: #122033;
+  border: 2px solid #334155;
+  padding: 1.15rem 1.15rem 1rem;
 }
 
-.ops-export-regiment {
+.ops-doc,
+.ops-doc p,
+.ops-doc td,
+.ops-doc strong,
+.ops-doc .ops-auth-name,
+.ops-doc .ops-briefing {
+  color: #122033;
+}
+
+.ops-doc .empty-log,
+.ops-doc small,
+.ops-doc .form-hint,
+.ops-doc .ops-auth-kicker,
+.ops-doc .ops-auth-role,
+.ops-doc .ops-doc-footer {
+  color: #64748b;
+}
+
+.ops-doc .ops-auth-rule {
+  border-bottom-color: #122033;
+}
+
+.ops-doc-table-wrap {
+  overflow-x: auto;
+  border: 2px solid #334155;
+  border-top: 0;
+}
+
+.ops-doc-head {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(180px, 0.8fr);
+  gap: 1rem;
+  align-items: start;
+  margin-bottom: 1rem;
+  padding-bottom: 0.85rem;
+  border-bottom: 2px solid #334155;
+}
+
+.ops-doc-command {
   margin: 0;
-  font-weight: 700;
-  letter-spacing: 0.12em;
   font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.16em;
 }
 
-.ops-export-footer {
-  margin: 1.4rem 0 0;
-  text-align: center;
-  font-size: 0.75rem;
+.ops-doc-banner {
+  margin: 0.2rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ops-doc-meta {
+  margin: 0;
+  display: grid;
+  gap: 0.25rem;
+  text-align: right;
+  font-size: 0.72rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: #5b6b80;
+}
+
+.ops-doc-meta div {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 0.55rem;
+  justify-content: end;
+}
+
+.ops-doc-meta dt {
+  color: #64748b;
+  font-weight: 600;
+}
+
+.ops-doc-meta dd {
+  margin: 0;
+  font-weight: 800;
+  color: #122033;
+}
+
+.ops-doc-section {
+  margin: 0 0 0.85rem;
+}
+
+.ops-doc-section > h2,
+.ops-auth > h2 {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  background: #334155;
+  color: #ffffff;
+  border: 2px solid #334155;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ops-doc-grid {
+  width: 100%;
+  min-width: 640px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.ops-doc-grid th,
+.ops-doc-grid td {
+  border: 1px solid #94a3b8;
+  padding: 0.55rem 0.7rem;
+  vertical-align: top;
+  text-align: left;
+}
+
+.ops-doc-grid th {
+  width: 16%;
+  background: #e2e8f0;
+  color: #334155;
+  font-size: 0.7rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.ops-doc-grid td {
+  width: 34%;
+  background: #ffffff;
+  color: #122033;
+}
+
+.ops-doc-box {
+  border: 2px solid #334155;
+  border-top: 0;
+  padding: 0.85rem 0.95rem;
+  background: #ffffff;
+  min-height: 4.5rem;
+}
+
+.ops-doc-map {
+  padding: 0;
+}
+
+.ops-doc-map .tac-viewport {
+  border: 0;
+  min-height: min(52vh, 520px);
+  height: min(62vh, 640px);
+}
+
+.ops-doc-footer {
+  margin: 1rem 0 0;
+  padding-top: 0.7rem;
+  border-top: 2px solid #334155;
+  text-align: center;
+  font-size: 0.68rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #64748b;
+}
+
+.ops-doc .ops-auth {
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: transparent;
+}
+
+.ops-doc .ops-doc-section > h2,
+.ops-doc .ops-auth > h2 {
+  margin: 0;
+  padding: 0.45rem 0.7rem;
+  background: #334155;
+  color: #ffffff;
+  border: 2px solid #334155;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.ops-doc .ops-auth-grid {
+  border: 2px solid #334155;
+  border-top: 0;
+  padding: 1rem 1.05rem;
+  background: #ffffff;
+}
+
+.ops-doc .ops-stamp {
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.ops-doc .ops-aar-card {
+  border: 1px solid #94a3b8;
+  background: #ffffff;
+  border-radius: 0;
+}
+
+.ops-doc .text-field {
+  border-radius: 0;
+  border-color: #94a3b8;
+  background: #ffffff;
+  color: #122033;
+}
+
+body.is-exporting .ops-doc,
+body.is-exporting .ops-doc-box,
+body.is-exporting .ops-doc-grid td,
+body.is-exporting .ops-doc .ops-auth-grid,
+body.is-exporting .ops-doc .tac-viewport {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #122033 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+}
+
+body.is-exporting .ops-doc-grid th {
+  background: #e2e8f0 !important;
+  color: #334155 !important;
+  border-color: #94a3b8 !important;
+}
+
+body.is-exporting .ops-doc-section > h2,
+body.is-exporting .ops-auth > h2 {
+  background: #334155 !important;
+  color: #ffffff !important;
+  border-color: #334155 !important;
 }
 
 .tac-export-still {
@@ -2596,10 +2825,21 @@ body.is-exporting .command-bottom-nav {
   display: none !important;
 }
 
+body.is-exporting #op-dossier {
+  width: 794px;
+  max-width: none;
+}
+
+body.is-exporting .ops-doc-table-wrap {
+  overflow: visible !important;
+}
+
+body.is-exporting .ops-doc-grid {
+  min-width: 0;
+}
+
 body.is-exporting .ops-view-page,
 body.is-exporting .ops-dossier,
-body.is-exporting .ops-dossier .unit-card,
-body.is-exporting .ops-dossier .ops-faction,
 body.is-exporting .ops-dossier .ops-aar-card,
 body.is-exporting .ops-dossier .tac-viewport,
 body.is-exporting .ops-dossier .tac-stage,
@@ -2607,31 +2847,11 @@ body.is-exporting .ops-dossier .text-field {
   background: #ffffff !important;
   background-image: none !important;
   color: #122033 !important;
-  border-color: #d5e0ee !important;
+  border-color: #94a3b8 !important;
   box-shadow: none !important;
   backdrop-filter: none !important;
   -webkit-backdrop-filter: none !important;
   filter: none !important;
-}
-
-body.is-exporting .ops-dossier {
-  background: #f4f6f8 !important;
-  padding: 1.1rem 1.15rem 1.25rem;
-  color: #122033 !important;
-}
-
-body.is-exporting .ops-dossier .page-title,
-body.is-exporting .ops-dossier h2,
-body.is-exporting .ops-dossier strong,
-body.is-exporting .ops-export-regiment {
-  color: #122033 !important;
-}
-
-body.is-exporting .ops-dossier .form-hint,
-body.is-exporting .ops-dossier small,
-body.is-exporting .ops-dossier .ops-section-head h2,
-body.is-exporting .ops-export-footer {
-  color: #5b6b80 !important;
 }
 
 body.is-exporting .badge-op-planning {
@@ -2647,20 +2867,6 @@ body.is-exporting .badge-op-active {
 body.is-exporting .badge-op-completed {
   background: #e7f4ec !important;
   color: #1c6b46 !important;
-}
-
-body.is-exporting .ops-export-masthead {
-  display: flex;
-  align-items: center;
-  gap: 0.85rem;
-  margin-bottom: 1.1rem;
-  padding-bottom: 0.9rem;
-  border-bottom: 2px solid #1e4e8c;
-  color: #122033;
-}
-
-body.is-exporting .ops-export-footer {
-  display: block;
 }
 
 body.is-exporting .tac-viewport {
@@ -2764,7 +2970,7 @@ body.is-exporting .ops-aar-form textarea {
   text-align: center;
   text-transform: uppercase;
   transform: rotate(-12deg);
-  background: rgba(255, 255, 255, 0.72);
+  background: #ffffff;
 }
 
 .ops-stamp-approved {
@@ -2773,12 +2979,10 @@ body.is-exporting .ops-aar-form textarea {
   color: #1c6b46;
 }
 
-body.is-exporting .ops-auth,
-body.is-exporting .ops-auth .ops-stamp {
-  background: #ffffff !important;
-  color: #122033;
-  border-color: #d5e0ee;
-  box-shadow: none;
+body.is-exporting .ops-auth {
+  background: transparent !important;
+  border: 0 !important;
+  box-shadow: none !important;
 }
 
 body.is-exporting .ops-stamp {
@@ -2811,21 +3015,9 @@ body.is-exporting .ops-stamp-approved {
   }
 
   .ops-dossier {
-    background: #f4f6f8;
+    background: #ffffff;
     color: #122033;
-  }
-
-  .ops-export-masthead {
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    margin-bottom: 1rem;
-    padding-bottom: 0.8rem;
-    border-bottom: 2px solid #1e4e8c;
-  }
-
-  .ops-export-footer {
-    display: block;
+    border-radius: 0;
   }
 
   .tac-viewport {

@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=ops-auth">
+    <link rel="stylesheet" href="./css/components.css?v=ops-grid">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -29,6 +29,10 @@
             <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
           </div>
           <div class="btn-row">
+            <div class="lang-switch ops-lang-switch" role="group" aria-label="Language">
+              <button type="button" data-lang="en">EN</button>
+              <button type="button" data-lang="th">TH</button>
+            </div>
             <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
             <a id="op-edit-link" class="btn" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
             <div class="ops-export" role="group" aria-label="Export dossier">
@@ -44,33 +48,45 @@
           </div>
         </div>
         <p id="status-banner" class="status-banner ops-chrome" role="status"></p>
-        <article id="op-dossier" class="ops-dossier">
-          <header class="ops-export-masthead">
-            <img src="./assets/1.jpg" alt="WHITE LION REGIMENT">
+        <article id="op-dossier" class="ops-dossier ops-doc">
+          <header class="ops-doc-head">
             <div>
-              <p class="ops-export-regiment">WHITE LION REGIMENT</p>
-              <p data-i18n="ops.export.masthead">Official Operation Dossier</p>
+              <p class="ops-doc-command">W.L.R COMMAND</p>
+              <p class="ops-doc-banner" data-i18n="ops.doc.title">Official Operation Dossier</p>
             </div>
+            <dl class="ops-doc-meta">
+              <div>
+                <dt data-i18n="ops.doc.id">Doc ID</dt>
+                <dd id="op-doc-id">—</dd>
+              </div>
+              <div>
+                <dt data-i18n="ops.doc.classification">Classification</dt>
+                <dd id="op-doc-class">RESTRICTED</dd>
+              </div>
+              <div>
+                <dt data-i18n="ops.doc.date">Date</dt>
+                <dd id="op-doc-date">—</dd>
+              </div>
+            </dl>
           </header>
-          <div class="ops-title-row">
-            <span id="op-status-badge"></span>
-            <h1 class="page-title" id="op-title">Operation</h1>
-          </div>
-          <section class="unit-card ops-brief-card">
-            <h2 data-i18n="ops.briefingLabel">Briefing</h2>
-            <div id="op-briefing" class="ops-briefing"></div>
+          <section class="ops-doc-section">
+            <h2 data-i18n="ops.doc.overview">I. Operation Overview</h2>
+            <div id="op-overview" class="ops-doc-table-wrap"></div>
           </section>
-          <section id="op-factions" class="ops-faction-wrap"></section>
-          <section class="ops-map-wrap">
-            <div class="ops-section-head">
-              <h2 data-i18n="ops.map">Tactical map</h2>
-              <p class="form-hint ops-zoom-hint" data-i18n="ops.zoomHint">Drag to pan. Pinch or use the controls to zoom the annotated map.</p>
+          <section class="ops-doc-section">
+            <h2 data-i18n="ops.doc.briefing">II. Tactical Briefing</h2>
+            <div id="op-briefing" class="ops-doc-box ops-briefing"></div>
+          </section>
+          <section class="ops-doc-section">
+            <h2 data-i18n="ops.doc.map">III. Tactical Map</h2>
+            <p class="form-hint ops-zoom-hint" data-i18n="ops.zoomHint">Drag to pan. Pinch or use the controls to zoom the annotated map.</p>
+            <div class="ops-doc-box ops-doc-map">
+              <div id="map-viewer"></div>
             </div>
-            <div id="map-viewer"></div>
           </section>
-          <section id="aar-board" class="unit-card ops-aar-wrap" hidden></section>
+          <section id="aar-board" class="ops-doc-section ops-aar-wrap"></section>
           <div id="op-auth"></div>
-          <p class="ops-export-footer" data-i18n="ops.export.footer">W.L.R Command Personnel · Official operation record</p>
+          <p class="ops-doc-footer" data-i18n="ops.doc.footer">CONFIDENTIAL // W.L.R COMMAND PERSONNEL SYSTEM // GENERATED AUTOMATICALLY</p>
         </article>
       </main>
     </div>

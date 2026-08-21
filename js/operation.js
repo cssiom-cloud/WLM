@@ -1,10 +1,10 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
 import { escapeHtml, showToast, withOverlay } from './ui.js';
-import { t } from './i18n.js';
+import { getLang, setLang, t } from './i18n.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { canEditOperation, fetchOperationBoard, saveOperationAar } from './operation-service.js';
-import { authorizationMarkup, briefingHtml, factionBoardMarkup, statusBadge, unitsForSide } from './operation-ui.js';
+import { authorizationMarkup, briefingHtml, docId, filedDate, overviewGridMarkup, unitsForSide } from './operation-ui.js';
 import { mountMapViewer } from './tactical-map.js';
 import { handleExportJPG, handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
@@ -21,6 +21,13 @@ let aars = [];
 let canEdit = false;
 let mapViewer = null;
 
+function syncLangSwitch() {
+  const lang = getLang();
+  document.querySelectorAll('.ops-lang-switch [data-lang]').forEach((button) => {
+    button.classList.toggle('is-active', button.getAttribute('data-lang') === lang);
+  });
+}
+
 function aarFor(unitId) {
   return aars.find((row) => row.operation_id === operationId && row.unit_id === unitId) || null;
 }
@@ -33,64 +40,23 @@ function participatingUnits() {
 function renderAar() {
   const host = document.querySelector('#aar-board');
   const roster = participatingUnits();
-  const showSection = operation.status === 'completed' || canEdit;
-  host.hidden = !showSection;
-  if (!showSection) {
-    host.innerHTML = '';
-    return;
-  }
-
-  if (!roster.length) {
-    host.innerHTML = `
-      <h2>${escapeHtml(t('ops.aar.title'))}</h2>
-      <p class="empty-log">${escapeHtml(t('ops.aar.noUnits'))}</p>
-    `;
-    return;
-  }
+  const heading = `<h2>${escapeHtml(t('ops.doc.aar'))}</h2>`;
 
   if (canEdit) {
+    if (!roster.length) {
+      host.innerHTML = `${heading}<div class="ops-doc-box"><p class="empty-log">${escapeHtml(t('ops.aar.noUnits'))}</p></div>`;
+      return;
+    }
     host.innerHTML = `
-      <div class="ops-aar-head">
-        <h2>${escapeHtml(t('ops.aar.title'))}</h2>
-        <p class="form-hint">${escapeHtml(t('ops.aar.leaderHint'))}</p>
-      </div>
-      <form id="aar-form" class="ops-aar-form">
-        ${roster
-          .map((unit) => {
-            const record = aarFor(unit.id);
-            return `
-              <section class="ops-aar-card">
-                <div class="ops-aar-unit">
-                  ${logoMarkup(unit, 'unit-logo-sm', false)}
-                  <div>
-                    <strong>${escapeHtml(unit.name)}</strong>
-                    <small>${escapeHtml(unit.code)}</small>
-                  </div>
-                </div>
-                <label>
-                  <span>${escapeHtml(t('ops.aar.unit'))}</span>
-                  <textarea class="text-field" data-aar-unit="${escapeHtml(unit.id)}" rows="4" maxlength="2000">${escapeHtml(record?.evaluation || '')}</textarea>
-                </label>
-              </section>
-            `;
-          })
-          .join('')}
-        <button class="btn btn-primary" type="submit">${escapeHtml(t('ops.aar.save'))}</button>
-      </form>
-    `;
-    return;
-  }
-
-  const filled = roster.filter((unit) => aarFor(unit.id)?.evaluation);
-  host.innerHTML = `
-    <h2>${escapeHtml(t('ops.aar.title'))}</h2>
-    ${
-      filled.length
-        ? filled
+      ${heading}
+      <div class="ops-doc-box">
+        <p class="form-hint ops-chrome">${escapeHtml(t('ops.aar.leaderHint'))}</p>
+        <form id="aar-form" class="ops-aar-form">
+          ${roster
             .map((unit) => {
               const record = aarFor(unit.id);
               return `
-                <section class="ops-aar-card ops-aar-read">
+                <section class="ops-aar-card">
                   <div class="ops-aar-unit">
                     ${logoMarkup(unit, 'unit-logo-sm', false)}
                     <div>
@@ -98,26 +64,62 @@ function renderAar() {
                       <small>${escapeHtml(unit.code)}</small>
                     </div>
                   </div>
-                  <p>${briefingHtml(record.evaluation)}</p>
+                  <label>
+                    <span>${escapeHtml(t('ops.aar.unit'))}</span>
+                    <textarea class="text-field" data-aar-unit="${escapeHtml(unit.id)}" rows="4" maxlength="2000">${escapeHtml(record?.evaluation || '')}</textarea>
+                  </label>
                 </section>
               `;
             })
-            .join('')
-        : `<p class="empty-log">${escapeHtml(t('ops.aar.empty'))}</p>`
-    }
+            .join('')}
+          <button class="btn btn-primary ops-chrome" type="submit">${escapeHtml(t('ops.aar.save'))}</button>
+        </form>
+      </div>
+    `;
+    return;
+  }
+
+  const filled = roster.filter((unit) => aarFor(unit.id)?.evaluation);
+  host.innerHTML = `
+    ${heading}
+    <div class="ops-doc-box">
+      ${
+        filled.length
+          ? filled
+              .map((unit) => {
+                const record = aarFor(unit.id);
+                return `
+                  <section class="ops-aar-card ops-aar-read">
+                    <div class="ops-aar-unit">
+                      ${logoMarkup(unit, 'unit-logo-sm', false)}
+                      <div>
+                        <strong>${escapeHtml(unit.name)}</strong>
+                        <small>${escapeHtml(unit.code)}</small>
+                      </div>
+                    </div>
+                    <p>${briefingHtml(record.evaluation)}</p>
+                  </section>
+                `;
+              })
+              .join('')
+          : `<p class="empty-log">${escapeHtml(t('ops.aar.empty'))}</p>`
+      }
+    </div>
   `;
 }
 
 function renderHeader() {
-  document.querySelector('#op-status-badge').innerHTML = statusBadge(operation.status);
-  document.querySelector('#op-title').textContent = operation.title;
-  document.querySelector('#op-briefing').innerHTML = briefingHtml(operation.briefing) || `<p class="empty-log">${escapeHtml(t('ops.noBriefing'))}</p>`;
+  document.querySelector('#op-doc-id').textContent = docId(operation);
+  document.querySelector('#op-doc-class').textContent = t('ops.doc.restricted');
+  document.querySelector('#op-doc-date').textContent = filedDate(operation.created_at);
+  document.querySelector('#op-briefing').innerHTML =
+    briefingHtml(operation.briefing) || `<p class="empty-log">${escapeHtml(t('ops.noBriefing'))}</p>`;
   const editLink = document.querySelector('#op-edit-link');
   editLink.hidden = !canEdit;
   editLink.href = `./operation-create.html?id=${encodeURIComponent(operation.id)}`;
   const allies = unitsForSide(units, sides, operation.id, 'allies');
   const objectives = unitsForSide(units, sides, operation.id, 'objectives');
-  document.querySelector('#op-factions').innerHTML = factionBoardMarkup(allies, objectives);
+  document.querySelector('#op-overview').innerHTML = overviewGridMarkup(operation, allies, objectives);
   const authHost = document.querySelector('#op-auth');
   if (authHost) {
     authHost.innerHTML = authorizationMarkup(operation);
@@ -145,6 +147,7 @@ async function boot() {
   sides = operationBoard.sides || [];
   aars = operationBoard.aars || [];
   canEdit = canEditOperation(actor, operation, units, sides);
+  syncLangSwitch();
   renderHeader();
   mapViewer = mountMapViewer(document.querySelector('#map-viewer'), {
     mapUrl: operation.map_url || '',
@@ -152,6 +155,14 @@ async function boot() {
   });
   renderAar();
 }
+
+document.querySelector('.ops-lang-switch')?.addEventListener('click', (event) => {
+  const button = event.target.closest('[data-lang]');
+  if (!button) {
+    return;
+  }
+  setLang(button.getAttribute('data-lang'));
+});
 
 document.querySelector('.ops-export')?.addEventListener('click', async (event) => {
   const button = event.target.closest('[data-export]');
@@ -197,6 +208,7 @@ withOverlay(() => boot(), t('notice.loading')).catch((error) => {
 });
 
 window.addEventListener('wlr-lang-changed', () => {
+  syncLangSwitch();
   if (!operation) {
     return;
   }
