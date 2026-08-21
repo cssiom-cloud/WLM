@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css?v=nav-rail">
     <link rel="stylesheet" href="./css/animations.css?v=nav-rail">
-    <link rel="stylesheet" href="./css/components.css?v=memo-align">
+    <link rel="stylesheet" href="./css/components.css?v=memo-axis">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -35,11 +35,11 @@
         </div>
         <p id="status-banner" class="status-banner memo-chrome" role="status"></p>
         <div class="memo-layout">
-          <aside class="memo-folders" aria-label="Document folders">
+          <aside class="memo-folders memo-chrome" aria-label="Document folders">
             <p class="memo-folders-label" data-i18n="memo.folders">Folders</p>
             <nav id="memo-folder-nav" class="memo-folder-nav"></nav>
           </aside>
-          <section class="memo-list-pane">
+          <section class="memo-list-pane memo-chrome">
             <div class="memo-list-head">
               <h2 id="memo-folder-title">Normal</h2>
               <p class="form-hint" id="memo-folder-hint"></p>
@@ -48,6 +48,15 @@
           </section>
           <section class="memo-work">
             <form id="memo-form" class="memo-form memo-chrome">
+              <label>
+                <span data-i18n="memo.field.prefix">Prefix</span>
+                <select class="select-field" id="memo-prefix">
+                  <option value="ธด.">ธด.</option>
+                  <option value="หน.">หน.</option>
+                  <option value="อด.">อด.</option>
+                  <option value="พธ.">พธ.</option>
+                </select>
+              </label>
               <label>
                 <span data-i18n="memo.field.docNo">Document number</span>
                 <input class="text-field" id="memo-doc-no" type="text" maxlength="80">
@@ -99,6 +108,6 @@
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/memo.js?v=memo-align"></script>
+    <script type="module" src="./js/memo.js?v=memo-axis"></script>
   </body>
 </html>

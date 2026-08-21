@@ -36,6 +36,7 @@ let selectedId = null;
 
 function fields() {
   return {
+    prefix: document.querySelector('#memo-prefix'),
     docNo: document.querySelector('#memo-doc-no'),
     date: document.querySelector('#memo-doc-date'),
     subject: document.querySelector('#memo-subject'),
@@ -46,6 +47,24 @@ function fields() {
     signName: document.querySelector('#memo-sign-name'),
     signTitle: document.querySelector('#memo-sign-title')
   };
+}
+
+function prefixOf(docNo) {
+  const value = String(docNo || '').trim();
+  return Object.values(DOC_PREFIX).find((item) => value.startsWith(item)) || DOC_PREFIX[folder] || DOC_PREFIX.normal;
+}
+
+function withDocPrefix(docNo, prefix) {
+  let rest = String(docNo || '').trim();
+  Object.values(DOC_PREFIX).forEach((item) => {
+    if (rest.startsWith(item)) {
+      rest = rest.slice(item.length).trim();
+    }
+  });
+  if (!rest) {
+    return nextDocNo(folder).replace(DOC_PREFIX[folder] || DOC_PREFIX.normal, prefix);
+  }
+  return `${prefix} ${rest}`;
 }
 
 function buddhistYear() {
@@ -172,7 +191,7 @@ function formValues() {
   return {
     id: selectedId,
     folder,
-    doc_no: input.docNo.value.trim() || nextDocNo(folder),
+    doc_no: withDocPrefix(input.docNo.value, input.prefix?.value || prefixOf(input.docNo.value)),
     doc_date: input.date.value.trim(),
     subject: input.subject.value.trim(),
     addressed_to: input.to.value.trim(),
@@ -191,6 +210,9 @@ function fillForm(doc) {
   const input = fields();
   const parts = doc.paragraph1 != null ? doc : { ...doc, ...parseBody(doc.body) };
   input.docNo.value = doc.doc_no || nextDocNo(folder);
+  if (input.prefix) {
+    input.prefix.value = prefixOf(input.docNo.value);
+  }
   input.date.value = doc.doc_date || defaultThaiDate();
   input.subject.value = doc.subject || '';
   input.to.value = doc.addressed_to || '';
@@ -237,6 +259,10 @@ function renderPaper(doc) {
       ${paragraphHtml(parts.paragraph2)}
       ${paragraphHtml(parts.closingParagraph)}
     </div>
+    <figure class="memo-map-slot">
+      <div class="memo-map-canvas" data-memo-map role="img" aria-label="${escapeHtml(t('memo.paper.map'))}"></div>
+      <figcaption>${escapeHtml(t('memo.paper.map'))}</figcaption>
+    </figure>
     <div class="memo-sign-row">
       <div class="memo-sign-spacer"></div>
       <div class="memo-sign">
@@ -348,7 +374,17 @@ document.querySelector('#memo-new').addEventListener('click', () => {
   renderList();
 });
 
-document.querySelector('#memo-form').addEventListener('input', () => {
+document.querySelector('#memo-form').addEventListener('input', (event) => {
+  const input = fields();
+  if (event.target.id === 'memo-prefix' && input.prefix) {
+    input.docNo.value = withDocPrefix(input.docNo.value, input.prefix.value);
+  }
+  renderPaper(formValues());
+});
+
+document.querySelector('#memo-prefix')?.addEventListener('change', () => {
+  const input = fields();
+  input.docNo.value = withDocPrefix(input.docNo.value, input.prefix.value);
   renderPaper(formValues());
 });
 

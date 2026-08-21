@@ -123,14 +123,16 @@ function avatarMarkup(record, className = 'card-avatar') {
 function cardMarkup(record, index) {
   const name = formatPersonnelName(record) || 'Unassigned name';
   return `
-    <article class="gallery-card" style="--stagger:${index}">
+    <article class="gallery-card" style="--stagger:${index}" data-view-id="${escapeHtml(record.id)}">
       <div class="gallery-card-media">
         ${avatarMarkup(record)}
         <span class="gallery-card-glare" aria-hidden="true"></span>
+        <div class="gallery-card-overlay">
+          <h2>${escapeHtml(name)}</h2>
+          <p class="card-sub">${escapeHtml(unitNameFor(record) || record.organization_role || '')}</p>
+        </div>
       </div>
       <div class="gallery-card-body">
-        <h2>${escapeHtml(name)}</h2>
-        <p class="card-sub">${escapeHtml(unitNameFor(record) || record.organization_role || '')}</p>
         <div class="card-badges">
           ${rankBadge(record.military_rank)}
           ${branchBadge(record.military_branch)}
