@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Operation Brief</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=ops-board">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content ops-view-page">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
+            <div class="ops-title-row">
+              <span id="op-status-badge"></span>
+              <h1 class="page-title" id="op-title">Operation</h1>
+            </div>
+          </div>
+          <div class="btn-row">
+            <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
+            <a id="op-edit-link" class="btn btn-primary" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <section class="unit-card ops-brief-card" data-aos="fade-up">
+          <h2 data-i18n="ops.briefingLabel">Briefing</h2>
+          <div id="op-briefing" class="ops-briefing"></div>
+        </section>
+        <section id="op-factions" class="ops-faction-wrap" data-aos="fade-up"></section>
+        <section class="ops-map-wrap" data-aos="fade-up">
+          <div class="ops-section-head">
+            <h2 data-i18n="ops.map">Tactical map</h2>
+            <p class="form-hint" data-i18n="ops.zoomHint">Drag to pan. Pinch or use the controls to zoom the annotated map.</p>
+          </div>
+          <div id="map-viewer"></div>
+        </section>
+        <section id="aar-board" class="unit-card ops-aar-wrap" data-aos="fade-up" hidden></section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/operation.js"></script>
+  </body>
+</html>

@@ -2185,3 +2185,339 @@
   }
 }
 
+.unit-logo-sm {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.ops-create-card {
+  width: min(1100px, 100%);
+}
+
+.ops-list {
+  display: grid;
+  gap: 1rem;
+}
+
+.ops-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.65rem;
+  margin-bottom: 0.55rem;
+}
+
+.ops-card-head h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.ops-excerpt {
+  margin: 0 0 1rem;
+  color: var(--text-muted);
+  line-height: 1.6;
+}
+
+.ops-title-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ops-title-row .page-title {
+  margin: 0;
+}
+
+.ops-briefing {
+  white-space: normal;
+  line-height: 1.75;
+}
+
+.ops-section-head {
+  margin: 1.4rem 0 0.7rem;
+}
+
+.ops-section-head h2,
+.ops-brief-card h2,
+.ops-aar-wrap h2,
+.ops-faction h2 {
+  margin: 0 0 0.35rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ops-factions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.ops-faction {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-muted) 55%, var(--bg-elevated));
+}
+
+.ops-unit-stack {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 0.65rem;
+}
+
+.ops-unit-chip {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ops-unit-chip small {
+  display: block;
+  color: var(--text-muted);
+  letter-spacing: 0.06em;
+}
+
+.ops-assign-row {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.55rem;
+  margin-top: 0.85rem;
+}
+
+.ops-assign-row span {
+  grid-column: 1 / -1;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.badge-op-planning {
+  background: var(--bg-muted);
+  color: var(--text-muted);
+}
+
+.badge-op-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+.badge-op-completed {
+  background: color-mix(in srgb, #1c6b46 16%, var(--bg-elevated));
+  color: #1c6b46;
+}
+
+[data-theme="dark"] .badge-op-completed {
+  color: #8fd4b0;
+}
+
+.ops-map-wrap {
+  margin: 1.2rem 0 1.5rem;
+}
+
+.tac-editor {
+  display: grid;
+  gap: 0.75rem;
+  position: relative;
+}
+
+.tac-editor [data-tac-bar] {
+  position: absolute;
+  top: 0.7rem;
+  left: 0.7rem;
+  right: 0.7rem;
+  z-index: 5;
+}
+
+.tac-stage,
+.tac-viewport {
+  position: relative;
+  min-height: min(62vh, 640px);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg, var(--bg-elevated)) 88%, transparent), var(--bg-elevated)),
+    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent 46%);
+  overflow: hidden;
+}
+
+.tac-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  padding: 0.45rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-elevated) 92%, transparent);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  box-shadow: var(--shadow);
+}
+
+.tac-tool {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  min-height: 40px;
+  padding: 0.35rem 0.7rem;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  cursor: pointer;
+}
+
+.tac-tool.is-active,
+.tac-tool:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.tac-tool-label {
+  font-size: 0.78rem;
+}
+
+.tac-tool-field {
+  cursor: default;
+}
+
+.tac-tool-field input {
+  display: block;
+  width: 92px;
+}
+
+.tac-frame {
+  position: relative;
+  width: 100%;
+}
+
+.tac-map {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+.tac-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  touch-action: none;
+  cursor: crosshair;
+}
+
+.tac-empty {
+  margin: 0;
+  min-height: min(42vh, 420px);
+  display: grid;
+  place-items: center;
+  color: var(--text-muted);
+  padding: 5.5rem 2rem 2rem;
+  text-align: center;
+}
+
+.tac-text-input {
+  position: absolute;
+  z-index: 4;
+  min-width: 140px;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--accent);
+  border-radius: 8px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+}
+
+.tac-upload {
+  display: grid;
+  gap: 0.35rem;
+  font-size: 0.88rem;
+}
+
+.tac-viewer {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.tac-viewport {
+  height: min(74vh, 860px);
+  overflow: hidden;
+  touch-action: none;
+  cursor: grab;
+}
+
+.tac-viewport .tac-canvas {
+  cursor: grab;
+  pointer-events: none;
+}
+
+.tac-view-stage {
+  width: 100%;
+  transform-origin: center center;
+  will-change: transform;
+}
+
+.tac-zoom-controls {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.ops-aar-form,
+.ops-aar-wrap {
+  display: grid;
+  gap: 1rem;
+}
+
+.ops-aar-card {
+  display: grid;
+  gap: 0.7rem;
+  padding: 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+}
+
+.ops-aar-unit {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+
+.ops-aar-unit small {
+  display: block;
+  color: var(--text-muted);
+}
+
+@media (max-width: 900px) {
+  .ops-factions {
+    grid-template-columns: 1fr;
+  }
+
+  .tac-tool-label {
+    display: none;
+  }
+
+  .tac-tool-field .tac-tool-label {
+    display: inline;
+  }
+
+  .tac-stage,
+  .tac-viewport {
+    min-height: min(52vh, 520px);
+  }
+
+  .ops-assign-row {
+    grid-template-columns: 1fr;
+  }
+}
+
+

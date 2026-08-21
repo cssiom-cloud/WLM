@@ -14,6 +14,9 @@ const STORAGE_UNIT_RANKS = 'wlr-local-unit-ranks';
 const STORAGE_UNIT_LINKS = 'wlr-local-unit-links';
 const STORAGE_UNIT_APPS = 'wlr-local-unit-apps';
 const STORAGE_TICKETS = 'wlr-local-tickets';
+const STORAGE_OPERATIONS = 'wlr-local-operations';
+const STORAGE_OP_SIDES = 'wlr-local-operation-sides';
+const STORAGE_OP_AAR = 'wlr-local-operation-aar';
 
 export const LOCAL_TEST_ACCOUNTS = [
   { email: 'admin@local.test', password: 'admin' },
@@ -272,6 +275,15 @@ export function ensureLocalStation() {
   if (!window.localStorage.getItem(STORAGE_TICKETS)) {
     writeJson(STORAGE_TICKETS, []);
   }
+  if (!window.localStorage.getItem(STORAGE_OPERATIONS)) {
+    writeJson(STORAGE_OPERATIONS, []);
+  }
+  if (!window.localStorage.getItem(STORAGE_OP_SIDES)) {
+    writeJson(STORAGE_OP_SIDES, []);
+  }
+  if (!window.localStorage.getItem(STORAGE_OP_AAR)) {
+    writeJson(STORAGE_OP_AAR, []);
+  }
   if (!window.localStorage.getItem(STORAGE_SIGNUPS)) {
     writeJson(STORAGE_SIGNUPS, [
       {
@@ -308,6 +320,9 @@ export function resetLocalStation() {
   window.localStorage.removeItem(STORAGE_UNIT_LINKS);
   window.localStorage.removeItem(STORAGE_UNIT_APPS);
   window.localStorage.removeItem(STORAGE_TICKETS);
+  window.localStorage.removeItem(STORAGE_OPERATIONS);
+  window.localStorage.removeItem(STORAGE_OP_SIDES);
+  window.localStorage.removeItem(STORAGE_OP_AAR);
   ensureLocalStation();
 }
 
@@ -1177,6 +1192,150 @@ export async function localUpdateTicket(ticketId, payload) {
   }
   Object.assign(row, payload, { updated_at: new Date().toISOString() });
   writeJson(STORAGE_TICKETS, rows);
+}
+
+function operationRows() {
+  ensureLocalStation();
+  return readJson(STORAGE_OPERATIONS, []);
+}
+
+function canPlanOps(actor) {
+  if (!actor) {
+    return false;
+  }
+  if (actor.role === 'admin') {
+    return true;
+  }
+  return unitRows().some((unit) => unit.head_user_id === actor.id);
+}
+
+function canEditOp(actor, operationId) {
+  if (!actor) {
+    return false;
+  }
+  if (actor.role === 'admin') {
+    return true;
+  }
+  const operation = operationRows().find((row) => row.id === operationId);
+  if (operation?.created_by === actor.id) {
+    return true;
+  }
+  return readJson(STORAGE_OP_SIDES, []).some(
+    (row) => row.operation_id === operationId && canManageUnit(actor, row.unit_id)
+  );
+}
+
+export async function localFetchOperations() {
+  ensureLocalStation();
+  return {
+    operations: clone(operationRows()).sort((a, b) => String(b.created_at).localeCompare(String(a.created_at))),
+    sides: clone(readJson(STORAGE_OP_SIDES, [])),
+    aars: clone(readJson(STORAGE_OP_AAR, []))
+  };
+}
+
+export async function localSaveOperation(payload) {
+  const actor = await localActor();
+  if (payload.id) {
+    if (!canEditOp(actor, payload.id)) {
+      throw new Error('Only administrators and unit leaders can edit this operation.');
+    }
+  } else if (!canPlanOps(actor)) {
+    throw new Error('Only administrators and unit leaders can plan operations.');
+  }
+  const rows = operationRows();
+  const now = new Date().toISOString();
+  if (payload.id) {
+    const row = rows.find((item) => item.id === payload.id);
+    if (!row) {
+      throw new Error('Operation was not found.');
+    }
+    Object.assign(row, {
+      title: payload.title,
+      briefing: payload.briefing,
+      status: payload.status,
+      drawings: payload.drawings || [],
+      map_url: payload.map_url || row.map_url || '',
+      updated_at: now
+    });
+    writeJson(STORAGE_OPERATIONS, rows);
+    writeJson(
+      STORAGE_OP_SIDES,
+      readJson(STORAGE_OP_SIDES, [])
+        .filter((item) => item.operation_id !== payload.id)
+        .concat((payload.sides || []).map((item) => ({ operation_id: payload.id, unit_id: item.unit_id, side: item.side })))
+    );
+    return payload.id;
+  }
+  const id = window.crypto.randomUUID();
+  rows.unshift({
+    id,
+    title: payload.title,
+    briefing: payload.briefing || '',
+    status: payload.status || 'planning',
+    drawings: payload.drawings || [],
+    map_url: payload.map_url || '',
+    created_by: actor.id,
+    created_at: now,
+    updated_at: now
+  });
+  writeJson(STORAGE_OPERATIONS, rows);
+  writeJson(
+    STORAGE_OP_SIDES,
+    readJson(STORAGE_OP_SIDES, []).concat(
+      (payload.sides || []).map((item) => ({ operation_id: id, unit_id: item.unit_id, side: item.side }))
+    )
+  );
+  return id;
+}
+
+export async function localDeleteOperation(operationId) {
+  const actor = await localActor();
+  const row = operationRows().find((item) => item.id === operationId);
+  if (!row) {
+    throw new Error('Operation was not found.');
+  }
+  if (!(actor?.role === 'admin' || row.created_by === actor?.id)) {
+    throw new Error('You cannot delete this operation.');
+  }
+  writeJson(
+    STORAGE_OPERATIONS,
+    operationRows().filter((item) => item.id !== operationId)
+  );
+  writeJson(
+    STORAGE_OP_SIDES,
+    readJson(STORAGE_OP_SIDES, []).filter((item) => item.operation_id !== operationId)
+  );
+  writeJson(
+    STORAGE_OP_AAR,
+    readJson(STORAGE_OP_AAR, []).filter((item) => item.operation_id !== operationId)
+  );
+}
+
+export async function localSaveOperationAar(payload) {
+  const actor = await localActor();
+  if (!canEditOp(actor, payload.operation_id)) {
+    throw new Error('Only administrators and unit leaders can write after-action reports.');
+  }
+  const rows = readJson(STORAGE_OP_AAR, []);
+  const existing = rows.find(
+    (item) => item.operation_id === payload.operation_id && item.unit_id === payload.unit_id
+  );
+  const now = new Date().toISOString();
+  if (existing) {
+    existing.evaluation = payload.evaluation || '';
+    existing.authored_by = actor.id;
+    existing.updated_at = now;
+  } else {
+    rows.push({
+      operation_id: payload.operation_id,
+      unit_id: payload.unit_id,
+      evaluation: payload.evaluation || '',
+      authored_by: actor.id,
+      updated_at: now
+    });
+  }
+  writeJson(STORAGE_OP_AAR, rows);
 }
 
 export function localSystemStatus() {

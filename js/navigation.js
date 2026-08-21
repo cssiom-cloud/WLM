@@ -85,7 +85,10 @@ export async function initCommandNavbar(activePage) {
     personnelLinks.push({ href: './units.html', page: 'units', label: t('nav.units') });
   }
 
-  const operationsLinks = [{ href: './announcements.html', page: 'announcements', label: t('nav.announcements') }];
+  const operationsLinks = [
+    { href: './operations.html', page: 'operations', label: t('nav.operations') },
+    { href: './announcements.html', page: 'announcements', label: t('nav.announcements') }
+  ];
   if (isAdmin) {
     operationsLinks.push({ href: './announce-create.html', page: 'announce-create', label: t('nav.createAnnouncement') });
   }
@@ -118,6 +121,7 @@ export async function initCommandNavbar(activePage) {
   const desktopLinks = [
     ...personnelLinks,
     operationsLinks[0],
+    operationsLinks[1],
     archiveLinks[0]
   ].filter(Boolean);
   desktopNav.innerHTML = desktopLinks

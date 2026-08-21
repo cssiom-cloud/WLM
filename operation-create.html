@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Operation Creation Room</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=ops-board">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <div class="toolbar-row">
+          <div>
+            <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
+            <h1 class="page-title" data-i18n="ops.create.title">Operation Creation Room</h1>
+            <p class="page-lead" data-i18n="ops.create.lead">Administrators and unit leaders only. Brief the operation, assign factions, and annotate the tactical map.</p>
+          </div>
+          <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
+        </div>
+        <p id="status-banner" class="status-banner" role="status"></p>
+        <section class="announce-form-card ops-create-card" data-aos="fade-up">
+          <form id="operation-form">
+            <label for="op-title"><span data-i18n="ops.titleLabel">Operation title</span>
+              <input id="op-title" class="text-field" type="text" required maxlength="120">
+            </label>
+            <label for="op-briefing"><span data-i18n="ops.briefingLabel">Briefing</span>
+              <textarea id="op-briefing" class="text-field" rows="8" maxlength="8000"></textarea>
+            </label>
+            <label for="op-status"><span data-i18n="ops.statusLabel">Status</span>
+              <select id="op-status" class="text-field select-field">
+                <option value="planning" data-i18n="ops.status.planning">Planning</option>
+                <option value="active" data-i18n="ops.status.active">Active</option>
+                <option value="completed" data-i18n="ops.status.completed">Completed</option>
+              </select>
+            </label>
+            <div class="ops-section-head">
+              <h2 data-i18n="ops.factions">Faction assignment</h2>
+              <p class="form-hint" data-i18n="ops.factionsHint">Assign units to Allies or Objectives. Each unit crest appears on the public board.</p>
+            </div>
+            <div id="faction-board"></div>
+            <div class="ops-section-head">
+              <h2 data-i18n="ops.map">Tactical map</h2>
+              <p class="form-hint" data-i18n="ops.mapHint">Upload a map image, then mark arrows, points, boxes, and labels. Tools sit over the canvas like a CAD overlay.</p>
+            </div>
+            <div id="map-editor"></div>
+            <div class="btn-row">
+              <button class="btn btn-primary" id="op-submit" type="submit" data-i18n="ops.publish">Publish Operation</button>
+              <a class="btn" href="./operations.html" data-i18n="ops.back">Back</a>
+            </div>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/operation-create.js"></script>
+  </body>
+</html>
