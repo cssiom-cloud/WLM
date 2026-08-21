@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=ops-board">
+    <link rel="stylesheet" href="./css/components.css?v=ops-export">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -24,33 +24,47 @@
     <div class="page-shell">
       <header id="command-header"></header>
       <main class="page-content ops-view-page">
-        <div class="toolbar-row">
-          <div>
-            <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
-            <div class="ops-title-row">
-              <span id="op-status-badge"></span>
-              <h1 class="page-title" id="op-title">Operation</h1>
+        <article id="op-dossier" class="ops-dossier">
+          <header class="ops-export-masthead">
+            <img src="./assets/1.jpg" alt="WHITE LION REGIMENT">
+            <div>
+              <p class="ops-export-regiment">WHITE LION REGIMENT</p>
+              <p data-i18n="ops.export.masthead">Official Operation Dossier</p>
+            </div>
+          </header>
+          <div class="toolbar-row">
+            <div>
+              <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
+              <div class="ops-title-row">
+                <span id="op-status-badge"></span>
+                <h1 class="page-title" id="op-title">Operation</h1>
+              </div>
+            </div>
+            <div class="btn-row ops-chrome">
+              <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
+              <a id="op-edit-link" class="btn" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
+              <div class="ops-export" role="group" aria-label="Export dossier">
+                <button class="btn btn-primary ops-export-btn" id="op-export-pdf" type="button" data-export="pdf" data-i18n="ops.export.pdf">Export Dossier · PDF</button>
+                <button class="btn ops-export-btn" id="op-export-jpg" type="button" data-export="jpg" data-i18n="ops.export.jpg">JPG</button>
+              </div>
             </div>
           </div>
-          <div class="btn-row">
-            <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
-            <a id="op-edit-link" class="btn btn-primary" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
-          </div>
-        </div>
-        <p id="status-banner" class="status-banner" role="status"></p>
-        <section class="unit-card ops-brief-card" data-aos="fade-up">
-          <h2 data-i18n="ops.briefingLabel">Briefing</h2>
-          <div id="op-briefing" class="ops-briefing"></div>
-        </section>
-        <section id="op-factions" class="ops-faction-wrap" data-aos="fade-up"></section>
-        <section class="ops-map-wrap" data-aos="fade-up">
-          <div class="ops-section-head">
-            <h2 data-i18n="ops.map">Tactical map</h2>
-            <p class="form-hint" data-i18n="ops.zoomHint">Drag to pan. Pinch or use the controls to zoom the annotated map.</p>
-          </div>
-          <div id="map-viewer"></div>
-        </section>
-        <section id="aar-board" class="unit-card ops-aar-wrap" data-aos="fade-up" hidden></section>
+          <p id="status-banner" class="status-banner ops-chrome" role="status"></p>
+          <section class="unit-card ops-brief-card">
+            <h2 data-i18n="ops.briefingLabel">Briefing</h2>
+            <div id="op-briefing" class="ops-briefing"></div>
+          </section>
+          <section id="op-factions" class="ops-faction-wrap"></section>
+          <section class="ops-map-wrap">
+            <div class="ops-section-head">
+              <h2 data-i18n="ops.map">Tactical map</h2>
+              <p class="form-hint ops-zoom-hint" data-i18n="ops.zoomHint">Drag to pan. Pinch or use the controls to zoom the annotated map.</p>
+            </div>
+            <div id="map-viewer"></div>
+          </section>
+          <section id="aar-board" class="unit-card ops-aar-wrap" hidden></section>
+          <p class="ops-export-footer" data-i18n="ops.export.footer">W.L.R Command Personnel · Official operation record</p>
+        </article>
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>

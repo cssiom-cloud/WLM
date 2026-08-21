@@ -2520,4 +2520,146 @@
   }
 }
 
+.ops-export {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.ops-export-btn {
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  font-weight: 700;
+  font-size: 0.76rem;
+}
+
+.ops-export-masthead,
+.ops-export-footer {
+  display: none;
+}
+
+.ops-export-masthead img {
+  width: 56px;
+  height: 56px;
+  object-fit: cover;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+
+.ops-export-regiment {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  font-size: 0.78rem;
+}
+
+.ops-export-footer {
+  margin: 1.4rem 0 0;
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.tac-export-still {
+  display: none;
+}
+
+body.is-exporting .ops-chrome,
+body.is-exporting .tac-zoom-controls,
+body.is-exporting .ops-zoom-hint,
+body.is-exporting .ops-aar-form .btn,
+body.is-exporting .ops-aar-form .form-hint,
+body.is-exporting #command-header,
+body.is-exporting .local-test-banner,
+body.is-exporting .hamburger,
+body.is-exporting .command-bottom-nav {
+  display: none !important;
+}
+
+body.is-exporting .ops-export-masthead {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  margin-bottom: 1.1rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 2px solid var(--accent);
+}
+
+body.is-exporting .ops-export-footer {
+  display: block;
+}
+
+body.is-exporting .tac-viewport {
+  height: auto;
+  min-height: 0;
+  overflow: visible;
+  cursor: default;
+}
+
+body.is-exporting .tac-view-stage {
+  transform: none !important;
+}
+
+body.is-exporting .tac-export-still {
+  display: block;
+  position: relative;
+  z-index: 3;
+  width: 100%;
+  height: auto;
+}
+
+body.is-exporting .tac-frame.is-export-still .tac-map,
+body.is-exporting .tac-frame.is-export-still .tac-canvas {
+  display: none;
+}
+
+body.is-exporting .ops-aar-form textarea {
+  border: none;
+  background: transparent;
+  resize: none;
+  box-shadow: none;
+  padding: 0;
+  min-height: 0;
+}
+
+body.is-exporting .ops-dossier {
+  background: var(--bg);
+  padding: 0.2rem 0 1rem;
+}
+
+@media print {
+  #command-header,
+  .ops-chrome,
+  .tac-zoom-controls,
+  .ops-zoom-hint,
+  .local-test-banner,
+  .command-bottom-nav {
+    display: none !important;
+  }
+
+  .ops-export-masthead {
+    display: flex;
+    align-items: center;
+    gap: 0.85rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.8rem;
+    border-bottom: 2px solid var(--accent);
+  }
+
+  .ops-export-footer {
+    display: block;
+  }
+
+  .tac-viewport {
+    height: auto;
+    overflow: visible;
+  }
+
+  .tac-view-stage {
+    transform: none !important;
+  }
+}
+
 

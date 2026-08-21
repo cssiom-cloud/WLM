@@ -139,19 +139,23 @@ export function hideNotice() {
   root.classList.remove('is-loading', 'is-error', 'is-success');
 }
 
-export function showLoading(message) {
+export function showLoading(message, holdMs = 8000) {
   clearHideTimer();
   loadingArmedAt = Date.now();
   renderNotice({ mode: 'loading', message: message || t('notice.loading') });
   if (safetyTimer) {
     window.clearTimeout(safetyTimer);
   }
+  const hold = Number(holdMs);
+  if (!Number.isFinite(hold) || hold <= 0) {
+    return;
+  }
   safetyTimer = window.setTimeout(() => {
     const root = document.querySelector('#wlr-notice');
     if (root?.dataset.mode === 'loading') {
       hideNotice();
     }
-  }, 8000);
+  }, hold);
 }
 
 export function hideLoading() {

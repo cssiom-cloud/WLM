@@ -6,6 +6,7 @@ import { fetchUnitBoard } from './unit-service.js';
 import { canEditOperation, fetchOperationBoard, saveOperationAar } from './operation-service.js';
 import { briefingHtml, factionBoardMarkup, statusBadge, unitsForSide } from './operation-ui.js';
 import { mountMapViewer } from './tactical-map.js';
+import { handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
 
 bootCommandShell('operations');
@@ -18,6 +19,7 @@ let operation = null;
 let sides = [];
 let aars = [];
 let canEdit = false;
+let mapViewer = null;
 
 function aarFor(unitId) {
   return aars.find((row) => row.operation_id === operationId && row.unit_id === unitId) || null;
@@ -140,12 +142,26 @@ async function boot() {
   aars = operationBoard.aars || [];
   canEdit = canEditOperation(actor, operation, units, sides);
   renderHeader();
-  mountMapViewer(document.querySelector('#map-viewer'), {
+  mapViewer = mountMapViewer(document.querySelector('#map-viewer'), {
     mapUrl: operation.map_url || '',
     drawings: operation.drawings || []
   });
   renderAar();
 }
+
+document.querySelector('.ops-export')?.addEventListener('click', async (event) => {
+  const button = event.target.closest('[data-export]');
+  if (!button || !operation) {
+    return;
+  }
+  mapViewer?.resetView();
+  await handleExportPDF({
+    title: operation.title,
+    mapUrl: operation.map_url || '',
+    drawings: operation.drawings || [],
+    format: button.getAttribute('data-export')
+  });
+});
 
 document.querySelector('#aar-board')?.addEventListener('submit', async (event) => {
   event.preventDefault();

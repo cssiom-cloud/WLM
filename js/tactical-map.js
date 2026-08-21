@@ -81,6 +81,33 @@ function paintMark(ctx, item, width, height) {
   ctx.restore();
 }
 
+function loadImage(url) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = () => reject(new Error('Map image could not be loaded for export.'));
+    image.src = url;
+  });
+}
+
+export async function renderMapStill(mapUrl, drawings = [], maxWidth = 2000) {
+  if (!mapUrl) {
+    return '';
+  }
+  const image = await loadImage(mapUrl);
+  const scale = Math.min(2, maxWidth / Math.max(1, image.naturalWidth));
+  const width = Math.max(1, Math.round(image.naturalWidth * scale));
+  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(image, 0, 0, width, height);
+  drawMarkings(ctx, drawings, width, height);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
 function pointFromEvent(canvas, event, cssWidth, cssHeight) {
   const rect = canvas.getBoundingClientRect();
   return {
@@ -534,5 +561,13 @@ export function mountMapViewer(root, { mapUrl, drawings = [] } = {}) {
     applyTransform();
   });
 
-  return { paint };
+  return {
+    paint,
+    resetView() {
+      scale = 1;
+      panX = 0;
+      panY = 0;
+      applyTransform();
+    }
+  };
 }
