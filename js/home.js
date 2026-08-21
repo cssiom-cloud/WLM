@@ -1,4 +1,4 @@
-import { bootCommandShell, initAos } from './shell.js';
+import { bootCommandShell } from './shell.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { GENDERS, biographyParagraphs, formatPersonnelName, parsePersonnelName } from './domain.js';
 import {
@@ -15,6 +15,7 @@ import {
 import { updatePersonnelRecord, uploadPersonnelAvatar, uploadPersonnelImage } from './personnel-service.js';
 import { writeActivityLog } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
+import { bindSpotlightCards, revealBlurText, staggerIn } from './motion.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { t } from './i18n.js';
 import { openImageEditor } from './image-editor.js';
@@ -68,7 +69,12 @@ function renderHome(personnel, editing = false) {
   const root = document.querySelector('#home-root');
 
   root.innerHTML = `
-    <section class="profile-panel${editing ? ' is-editing' : ''}" data-aos="fade-up">
+    <header class="command-hero">
+      <p class="page-kicker">${escapeHtml(t('home.kicker'))}</p>
+      <h1 id="home-command-title" class="page-title">${escapeHtml(t('home.commandTitle'))}</h1>
+      <p class="page-lead">${escapeHtml(t('home.lead'))}</p>
+    </header>
+    <section class="profile-panel${editing ? ' is-editing' : ''}">
       <div class="profile-hero">
         <div
           class="profile-banner${personnel.cover_url || personnel.banner_url ? ' has-image' : ''}"
@@ -113,7 +119,7 @@ function renderHome(personnel, editing = false) {
             <button class="btn btn-primary" id="save-profile" type="button">Save</button>
           `
           : `
-            <h1 class="profile-name">${escapeHtml(name)}</h1>
+            <h2 class="profile-name">${escapeHtml(name)}</h2>
             <p class="profile-rank">${escapeHtml(personnel.military_rank || '')}</p>
             ${
               unitNameFor(personnel)
@@ -258,8 +264,10 @@ function renderHome(personnel, editing = false) {
   }
 
   upgradeSelects(root);
-  initAos();
+  revealBlurText(document.querySelector('#home-command-title'));
+  staggerIn(root, '.profile-panel');
   bindTiltTargets('.profile-panel');
+  bindSpotlightCards('.profile-panel');
 }
 
 bootCommandShell('home');

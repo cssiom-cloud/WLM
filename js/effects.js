@@ -54,9 +54,10 @@ function initInteractiveGrid() {
   function paint() {
     const rgb = accentRgb();
     const isHome = document.body.dataset.page === 'home';
-    const lineAlpha = isHome ? 0.09 : 0.055;
-    const offsetY = (scrollY * 0.14) % CELL;
-    const offsetX = (scrollY * 0.04) % CELL;
+    const isDirectory = document.body.dataset.page === 'directory';
+    const lineAlpha = isHome || isDirectory ? 0.08 : 0.045;
+    const offsetY = (scrollY * 0.1) % CELL;
+    const offsetX = (scrollY * 0.03) % CELL;
 
     ctx.clearRect(0, 0, width, height);
     ctx.lineWidth = 1;
@@ -218,6 +219,7 @@ export function bindTiltTargets(selector) {
 export function initVisualEffects() {
   initInteractiveGrid();
   initParallax();
+  import('./motion.js').then((motion) => motion.mountPremiumBackdrop()).catch(() => {});
   window.addEventListener(
     'resize',
     () => {
