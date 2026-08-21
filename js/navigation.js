@@ -4,7 +4,6 @@ import { showStatus } from './ui.js';
 
 let lastActivePage = '';
 let langListenerBound = false;
-let railListenerBound = false;
 let navGeneration = 0;
 
 function hamburgerIcon() {
@@ -38,30 +37,14 @@ function groupMarkup(title, links, activePage) {
   `;
 }
 
-function usesNavRail() {
-  const page = document.body.dataset.page;
-  if (page === 'auth' || page === 'profiles') {
-    return false;
-  }
-  return window.matchMedia('(min-width: 1025px)').matches;
-}
+let closeTimer = 0;
 
-function syncNavRail(drawer, backdrop, hamburger) {
-  const rail = usesNavRail();
-  document.body.classList.toggle('has-nav-rail', rail);
-  drawer.classList.toggle('is-rail', rail);
-  if (rail) {
-    drawer.classList.remove('is-open');
-    drawer.hidden = false;
-    backdrop.classList.remove('is-open');
-    hamburger.classList.remove('is-open');
-    hamburger.setAttribute('aria-expanded', 'false');
-    hamburger.setAttribute('aria-label', 'Open menu');
-    return;
-  }
-  if (!drawer.classList.contains('is-open')) {
-    drawer.hidden = true;
-  }
+function syncMenuButtons(header, open) {
+  header.querySelectorAll('.hamburger').forEach((button) => {
+    button.classList.toggle('is-open', open);
+    button.setAttribute('aria-expanded', String(open));
+    button.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
+  });
 }
 
 export async function initCommandNavbar(activePage) {
@@ -74,16 +57,18 @@ export async function initCommandNavbar(activePage) {
 
   header.innerHTML = `
     <div class="command-navbar">
-      <a class="brand" href="./index.html">
-        <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
-        <span class="clan-title">WHITE LION REGIMENT</span>
-      </a>
-      <nav class="command-nav-desktop" aria-label="${t('nav.group.personnel')}"></nav>
-      <div class="nav-actions">
-        ${langSwitchMarkup()}
+      <div class="nav-lead">
         <button class="hamburger" type="button" aria-label="Open menu" aria-expanded="false" aria-controls="command-drawer">
           ${hamburgerIcon()}
         </button>
+        <a class="brand" href="./index.html">
+          <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
+          <span class="clan-title">WHITE LION REGIMENT</span>
+        </a>
+      </div>
+      <nav class="command-nav-desktop" aria-label="${t('nav.group.personnel')}"></nav>
+      <div class="nav-actions">
+        ${langSwitchMarkup()}
       </div>
     </div>
     <button class="drawer-backdrop" type="button" aria-label="Close menu"></button>
@@ -142,10 +127,6 @@ export async function initCommandNavbar(activePage) {
   }
 
   drawer.innerHTML = `
-    <a class="brand brand-rail" href="./index.html">
-      <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
-      <span class="clan-title">WHITE LION REGIMENT</span>
-    </a>
     <div class="command-drawer-body">
     ${groupMarkup(t('nav.group.personnel'), personnelLinks, activePage)}
     ${groupMarkup(t('nav.group.operations'), operationsLinks, activePage)}
@@ -189,16 +170,27 @@ export async function initCommandNavbar(activePage) {
     </button>`;
 
   const setOpen = (open) => {
-    if (usesNavRail()) {
-      syncNavRail(drawer, backdrop, hamburger);
-      return;
+    window.clearTimeout(closeTimer);
+    document.body.classList.remove('has-nav-rail');
+    drawer.classList.remove('is-rail');
+    if (open) {
+      drawer.hidden = false;
+      window.requestAnimationFrame(() => {
+        window.requestAnimationFrame(() => {
+          drawer.classList.add('is-open');
+          backdrop.classList.add('is-open');
+        });
+      });
+    } else {
+      drawer.classList.remove('is-open');
+      backdrop.classList.remove('is-open');
+      closeTimer = window.setTimeout(() => {
+        if (!drawer.classList.contains('is-open')) {
+          drawer.hidden = true;
+        }
+      }, 380);
     }
-    drawer.classList.toggle('is-open', open);
-    backdrop.classList.toggle('is-open', open);
-    hamburger.classList.toggle('is-open', open);
-    hamburger.setAttribute('aria-expanded', String(open));
-    hamburger.setAttribute('aria-label', open ? 'Close menu' : 'Open menu');
-    drawer.hidden = !open;
+    syncMenuButtons(header, open);
   };
 
   hamburger.addEventListener('click', () => {
@@ -206,7 +198,7 @@ export async function initCommandNavbar(activePage) {
   });
   backdrop.addEventListener('click', () => setOpen(false));
   bottomNav.querySelector('[data-open-drawer]')?.addEventListener('click', () => {
-    setOpen(true);
+    setOpen(!drawer.classList.contains('is-open'));
   });
 
   header.querySelectorAll('.lang-switch [data-lang]').forEach((button) => {
@@ -224,21 +216,10 @@ export async function initCommandNavbar(activePage) {
     });
   }
 
-  syncNavRail(drawer, backdrop, hamburger);
-  if (!railListenerBound) {
-    railListenerBound = true;
-    window.addEventListener(
-      'resize',
-      () => {
-        const liveDrawer = document.querySelector('#command-drawer');
-        const liveBackdrop = document.querySelector('.drawer-backdrop');
-        const liveHamburger = document.querySelector('.hamburger');
-        if (liveDrawer && liveBackdrop && liveHamburger) {
-          syncNavRail(liveDrawer, liveBackdrop, liveHamburger);
-        }
-      },
-      { passive: true }
-    );
+  document.body.classList.remove('has-nav-rail');
+  drawer.classList.remove('is-rail');
+  if (!drawer.classList.contains('is-open')) {
+    drawer.hidden = true;
   }
 
   if (!langListenerBound) {

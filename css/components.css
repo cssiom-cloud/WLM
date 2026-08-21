@@ -2061,17 +2061,38 @@
 }
 
 .org-viewport {
+  position: relative;
   height: min(72vh, 820px);
   overflow: auto;
   overscroll-behavior: contain;
   touch-action: none;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  perspective: 1600px;
+  perspective-origin: 50% 12%;
   background:
-    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg, var(--bg-elevated)) 88%, transparent), var(--bg-elevated)),
-    radial-gradient(circle at top, color-mix(in srgb, var(--accent) 8%, transparent), transparent 46%);
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 42%),
+    linear-gradient(180deg, color-mix(in srgb, var(--glass-bg, var(--bg-elevated)) 88%, transparent), var(--bg-elevated));
   cursor: grab;
   scrollbar-width: thin;
+}
+
+.org-viewport::before {
+  content: '';
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -28%;
+  height: 62%;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px),
+    linear-gradient(to top, color-mix(in srgb, var(--accent) 22%, transparent) 1px, transparent 1px);
+  background-size: 48px 48px;
+  transform: perspective(720px) rotateX(68deg);
+  transform-origin: center bottom;
+  opacity: 0.28;
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.7), transparent 78%);
 }
 
 .org-viewport:active {
@@ -2089,11 +2110,14 @@
 }
 
 .org-canvas {
+  position: relative;
+  z-index: 1;
   min-width: 100%;
   min-height: 100%;
   width: max-content;
   padding: 2.2rem 2.5rem 3rem;
   transform-origin: top center;
+  transform-style: preserve-3d;
   will-change: transform;
 }
 
@@ -2102,6 +2126,7 @@
   flex-direction: column;
   align-items: center;
   gap: 0;
+  transform-style: preserve-3d;
 }
 
 .org-command,
@@ -2110,6 +2135,11 @@
   flex-direction: column;
   align-items: center;
   min-width: 220px;
+  transform-style: preserve-3d;
+}
+
+.org-command {
+  transform: translateZ(42px);
 }
 
 .org-branch-title,
@@ -2126,6 +2156,11 @@
   align-items: center;
   gap: 0.35rem;
   margin-bottom: 0.45rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--bg-elevated) 72%, transparent);
+  border: 1px solid color-mix(in srgb, var(--border) 80%, transparent);
+  box-shadow: 0 10px 18px color-mix(in srgb, black 22%, transparent);
 }
 
 .org-toggle {
@@ -2138,36 +2173,73 @@
   display: flex;
   flex-wrap: wrap;
   justify-content: center;
-  gap: 0.65rem;
+  gap: 0.85rem;
   max-width: 920px;
+  transform-style: preserve-3d;
 }
 
 .org-card {
+  position: relative;
+  isolation: isolate;
   display: grid;
   grid-template-columns: 44px minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.55rem;
   width: min(240px, 78vw);
-  padding: 0.55rem 0.65rem;
+  padding: 0.65rem 0.75rem;
   text-align: left;
-  border-radius: 14px;
-  border: 1px solid var(--border);
-  background: var(--glass-bg, var(--bg-elevated));
+  border-radius: 16px;
+  border: 1px solid color-mix(in srgb, var(--accent) 28%, var(--border));
+  background:
+    linear-gradient(165deg, color-mix(in srgb, white 12%, transparent), transparent 38%),
+    var(--glass-bg, var(--bg-elevated));
   backdrop-filter: blur(var(--glass-blur, 18px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
-  box-shadow: var(--shadow-layered, var(--shadow));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 16%, transparent) inset,
+    0 12px 24px color-mix(in srgb, black 28%, transparent),
+    0 2px 0 color-mix(in srgb, black 45%, transparent),
+    0 18px 32px color-mix(in srgb, var(--accent) 12%, transparent);
   color: inherit;
   cursor: pointer;
+  transform: translateZ(12px) rotateX(8deg);
+  transform-style: preserve-3d;
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.org-card-glare {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.22), transparent 42%);
+  opacity: 0.55;
+  mix-blend-mode: screen;
+}
+
+.org-card:hover,
+.org-card.tilt-enabled:hover {
+  transform: translateY(-8px) translateZ(28px) rotateX(12deg);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 22%, transparent) inset,
+    0 18px 36px color-mix(in srgb, black 36%, transparent),
+    0 28px 48px color-mix(in srgb, var(--accent) 18%, transparent);
 }
 
 .org-card-navy {
-  border-color: color-mix(in srgb, #1e4e8c 55%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, #1e4e8c 18%, transparent), var(--shadow-layered, var(--shadow));
+  border-color: color-mix(in srgb, #4f8adf 55%, var(--border));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 16%, transparent) inset,
+    0 0 0 1px color-mix(in srgb, #1e4e8c 22%, transparent),
+    0 14px 28px color-mix(in srgb, #1e4e8c 28%, transparent);
 }
 
 .org-card-marines {
-  border-color: color-mix(in srgb, #1c6b46 55%, var(--border));
-  box-shadow: 0 0 0 1px color-mix(in srgb, #1c6b46 18%, transparent), var(--shadow-layered, var(--shadow));
+  border-color: color-mix(in srgb, #3dba7a 55%, var(--border));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 16%, transparent) inset,
+    0 0 0 1px color-mix(in srgb, #1c6b46 22%, transparent),
+    0 14px 28px color-mix(in srgb, #1c6b46 28%, transparent);
 }
 
 .org-card-unassigned {
@@ -2182,6 +2254,8 @@
   object-fit: cover;
   border: 2px solid var(--accent);
   background: var(--accent-soft);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent), 0 8px 16px color-mix(in srgb, black 30%, transparent);
+  transform: translateZ(16px);
 }
 
 .org-avatar-fallback {
@@ -2219,17 +2293,23 @@
 }
 
 .org-stem {
-  width: 2px;
-  height: 22px;
+  width: 3px;
+  height: 28px;
   margin: 0.15rem auto;
-  background: color-mix(in srgb, var(--border) 20%, var(--accent));
+  border-radius: 99px;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 80%, white), color-mix(in srgb, var(--border) 20%, var(--accent)));
+  box-shadow: 0 0 16px color-mix(in srgb, var(--accent) 45%, transparent);
+  transform: translateZ(8px);
 }
 
 .org-fork {
   width: min(70%, 640px);
-  height: 2px;
+  height: 3px;
   margin: 0 auto;
-  background: color-mix(in srgb, var(--border) 20%, var(--accent));
+  border-radius: 99px;
+  background: linear-gradient(90deg, transparent, color-mix(in srgb, var(--accent) 80%, white), transparent);
+  box-shadow: 0 8px 18px color-mix(in srgb, var(--accent) 28%, transparent);
+  transform: translateZ(6px) rotateX(55deg);
 }
 
 .org-branches {
@@ -2238,6 +2318,7 @@
   align-items: flex-start;
   gap: 2.4rem;
   padding-top: 0;
+  transform-style: preserve-3d;
 }
 
 .org-branches-2 > .org-branch,
@@ -2251,14 +2332,17 @@
   position: absolute;
   top: 0;
   left: 50%;
-  width: 2px;
+  width: 3px;
   height: 18px;
+  border-radius: 99px;
   background: color-mix(in srgb, var(--border) 20%, var(--accent));
+  box-shadow: 0 0 12px color-mix(in srgb, var(--accent) 40%, transparent);
   transform: translateX(-50%);
 }
 
 .org-branch {
   padding-top: 18px;
+  transform: translateZ(18px);
 }
 
 .org-branch-navy .org-branch-title {
@@ -2269,10 +2353,15 @@
   color: #2f7a54;
 }
 
+.org-rank {
+  transform-style: preserve-3d;
+}
+
 .org-children {
   display: flex;
   flex-direction: column;
   align-items: center;
+  transform: translateZ(-14px);
 }
 
 .org-controls {
@@ -2299,6 +2388,19 @@
 
   .org-people {
     max-width: 280px;
+  }
+
+  .org-card,
+  .org-card:hover,
+  .org-card.tilt-enabled:hover {
+    transform: none;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .org-card,
+  .org-card:hover {
+    transform: none;
   }
 }
 

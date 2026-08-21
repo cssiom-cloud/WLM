@@ -126,6 +126,13 @@ p {
   border-bottom: 1px solid var(--border);
 }
 
+.nav-lead {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-width: 0;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -244,16 +251,22 @@ p {
 .command-drawer {
   position: fixed;
   top: var(--nav-height);
-  right: 0;
+  left: 0;
+  right: auto;
   z-index: 39;
   width: min(320px, 100%);
-  height: calc(100dvh - var(--nav-height));
-  height: calc(100vh - var(--nav-height));
+  max-height: calc(100dvh - var(--nav-height));
+  max-height: calc(100vh - var(--nav-height));
+  height: auto;
   background: var(--bg-elevated);
-  border-left: 1px solid var(--border);
+  border: 0;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  border-radius: 0 0 18px 0;
   box-shadow: var(--shadow);
-  transform: translateX(110%);
-  transition: transform 0.25s ease;
+  transform: translate3d(0, -112%, 0);
+  transform-origin: top left;
+  transition: transform 0.38s cubic-bezier(0.4, 0, 0.2, 1);
   padding: 1.25rem;
   display: flex;
   flex-direction: column;
@@ -270,8 +283,16 @@ p {
   gap: 0.5rem;
 }
 
+.command-drawer[hidden] {
+  display: none !important;
+}
+
+.command-drawer:not(.is-open) {
+  pointer-events: none;
+}
+
 .command-drawer.is-open {
-  transform: translateX(0);
+  transform: translate3d(0, 0, 0);
 }
 
 .drawer-group {
@@ -331,12 +352,6 @@ p {
 
 .command-nav-desktop {
   display: none;
-  align-items: center;
-  gap: 0.15rem;
-  flex: 1 1 auto;
-  min-width: 0;
-  overflow-x: auto;
-  scrollbar-width: none;
 }
 
 .command-nav-desktop::-webkit-scrollbar {
@@ -416,74 +431,9 @@ p {
 }
 
 @media (min-width: 1025px) {
-  .command-nav-desktop {
-    display: flex;
-  }
-
   .clan-title {
-    max-width: min(28vw, 280px);
+    max-width: min(42vw, 420px);
   }
-
-  body.has-nav-rail {
-    --sidebar-width: 268px;
-  }
-
-  body.has-nav-rail .page-shell {
-    padding-left: var(--sidebar-width);
-  }
-
-  body.has-nav-rail .command-navbar {
-    left: var(--sidebar-width);
-  }
-
-  body.has-nav-rail .command-nav-desktop {
-    display: none;
-  }
-
-  body.has-nav-rail .command-drawer {
-    top: 0;
-    left: 0;
-    right: auto;
-    width: var(--sidebar-width);
-    height: 100dvh;
-    height: 100vh;
-    transform: none;
-    border-left: 0;
-    border-right: 1px solid var(--border);
-    box-shadow: none;
-    background: var(--bg-elevated);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-  }
-
-  body.has-nav-rail .drawer-backdrop {
-    display: none !important;
-  }
-
-  body.has-nav-rail .brand-rail {
-    display: flex;
-    margin-bottom: 1rem;
-    padding: 0.15rem 0.35rem 1rem;
-    border-bottom: 1px solid var(--border);
-  }
-
-  body.has-nav-rail .brand-rail .clan-title {
-    max-width: 11.5rem;
-    white-space: normal;
-    line-height: 1.25;
-  }
-
-  body.has-nav-rail .local-test-banner {
-    left: var(--sidebar-width);
-  }
-}
-
-.brand-rail {
-  display: none;
-}
-
-body.is-exporting.has-nav-rail .page-shell {
-  padding-left: 0;
 }
 
 .local-test-banner {

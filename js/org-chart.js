@@ -1,4 +1,5 @@
 import { bootCommandShell, initAos } from './shell.js';
+import { bindTiltTargets } from './effects.js';
 import { formatPersonnelName } from './domain.js';
 import { escapeHtml, initialsFromName, showToast, withOverlay } from './ui.js';
 import { t } from './i18n.js';
@@ -63,6 +64,7 @@ function personCard(record) {
   const role = record.organization_role || record.wlc_agency || record._nato || '';
   return `
     <button class="org-card org-card-${tone}" type="button" data-org-id="${escapeHtml(record.id)}" aria-label="${escapeHtml(t('org.openDossier'))}: ${escapeHtml(name)}">
+      <span class="org-card-glare" aria-hidden="true"></span>
       ${avatarMarkup(record)}
       <span class="org-card-copy">
         <strong>${escapeHtml(name)}</strong>
@@ -120,7 +122,7 @@ function renderBranch(node) {
 
 function applyTransform() {
   const canvas = document.querySelector('#org-canvas');
-  canvas.style.transform = `translate(${panX}px, ${panY}px) scale(${scale})`;
+  canvas.style.transform = `translate3d(${panX}px, ${panY}px, 0) scale(${scale})`;
 }
 
 function resetView() {
@@ -176,6 +178,7 @@ function renderChart() {
     </div>
   `;
   applyTransform();
+  bindTiltTargets('.org-card');
   initAos();
 }
 
