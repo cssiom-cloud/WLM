@@ -240,8 +240,8 @@ function renderPaper(doc) {
     <div class="memo-sign">
       <p>${escapeHtml(t('memo.paper.sign'))}</p>
       <p class="memo-sign-space">................................</p>
-      <p>(${escapeHtml(doc.sign_name || '....................')})</p>
-      <p>${escapeHtml(doc.sign_title || '')}</p>
+      <p class="memo-sign-name">(${escapeHtml(doc.sign_name || '....................')})</p>
+      <p class="memo-sign-role">${escapeHtml(doc.sign_title || '')}</p>
     </div>
     <p class="memo-foot">W.L.C</p>
   `;

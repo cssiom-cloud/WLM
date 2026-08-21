@@ -3219,7 +3219,7 @@ body.is-exporting .ops-aar-form textarea {
   width: 210mm;
   min-height: 297mm;
   margin: 0 auto;
-  padding: 5rem 4rem;
+  padding: 4cm 3cm 3cm;
   background: #ffffff;
   color: #000000;
   font-family: "Sarabun", "Prompt", sans-serif;
@@ -3231,8 +3231,8 @@ body.is-exporting .ops-aar-form textarea {
 
 .memo-office {
   position: absolute;
-  top: 4rem;
-  right: 4rem;
+  top: 2.5cm;
+  right: 2.5cm;
   margin: 0;
   font-size: 0.95rem;
   font-weight: 700;
@@ -3304,10 +3304,15 @@ body.is-exporting .ops-aar-form textarea {
   margin: 18px 0 8px;
 }
 
+.memo-sign-name,
+.memo-sign-role {
+  white-space: nowrap;
+}
+
 .memo-foot {
   position: absolute;
-  bottom: 2.5rem;
-  left: 4rem;
+  bottom: 2cm;
+  left: 3cm;
   margin: 0;
   font-size: 0.875rem;
   color: #6b7280;
