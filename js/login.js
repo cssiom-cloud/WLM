@@ -77,7 +77,7 @@ renderLocalTestNotes();
 
 const redirectError = readAuthRedirectError();
 readSession()
-  .then((session) => {
+  .then(async (session) => {
     clearAuthRedirectParams();
     if (redirectError) {
       showStatus(redirectError, true);
