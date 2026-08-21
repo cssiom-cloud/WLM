@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>W.L.R Personnel Selection</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css?v=profiles">
+    <link rel="stylesheet" href="./css/animations.css">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content">
+        <section class="profile-select" data-aos="fade-up">
+          <p class="page-kicker" data-i18n="profiles.kicker">Command access</p>
+          <h1 class="page-title" data-i18n="profiles.title">Select personnel file</h1>
+          <p class="settings-lead" data-i18n="profiles.lead">Choose the character this Discord identity will operate as.</p>
+          <div id="profile-grid" class="profile-select-grid"></div>
+          <form id="profile-register" class="profile-register">
+            <h2 data-i18n="profiles.register">Register New Personnel</h2>
+            <div class="profile-register-fields">
+              <label>
+                <span data-i18n="profiles.firstName">First name</span>
+                <input id="profile-first" class="text-field" type="text" maxlength="80" required>
+              </label>
+              <label>
+                <span data-i18n="profiles.lastName">Last name</span>
+                <input id="profile-last" class="text-field" type="text" maxlength="80">
+              </label>
+            </div>
+            <button class="btn btn-primary" type="submit" data-i18n="profiles.create">Create personnel file</button>
+          </form>
+        </section>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/profiles.js?v=profiles"></script>
+  </body>
+</html>

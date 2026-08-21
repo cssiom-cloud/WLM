@@ -5,6 +5,7 @@ import {
   clearAuthRedirectParams,
   readAuthRedirectError,
   readSession,
+  routeAfterAuth,
   signInWithDiscord,
   signInWithEmail,
   signUpWithEmail
@@ -83,7 +84,7 @@ readSession()
       return;
     }
     if (session) {
-      window.location.replace('./index.html');
+      await routeAfterAuth();
     }
   })
   .catch((error) => {
@@ -129,7 +130,7 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
     if (mode === 'signup') {
       const result = await signUpWithEmail(email, password);
       if (result.session) {
-        window.location.replace('./index.html');
+        await routeAfterAuth();
         return;
       }
       showStatus(t('auth.created'));
@@ -139,7 +140,7 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
     }
 
     await signInWithEmail(email, password);
-    window.location.replace('./index.html');
+    await routeAfterAuth();
   } catch (error) {
     showStatus(error.message, true);
   } finally {

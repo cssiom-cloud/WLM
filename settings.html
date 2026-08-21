@@ -37,6 +37,14 @@
             <div id="connected-accounts" class="connected-accounts"></div>
           </article>
           <article class="settings-row" data-aos="fade-up">
+            <h2 data-i18n="settings.profiles">Owned personnel files</h2>
+            <p class="settings-lead" data-i18n="settings.profilesHint">All dossiers linked to this Discord identity. Switch the active file without signing out.</p>
+            <div id="owned-profiles" class="owned-profiles"></div>
+            <p class="settings-actions">
+              <a class="btn" href="./profiles.html" data-i18n="profiles.register">Register New Personnel</a>
+            </p>
+          </article>
+          <article class="settings-row" data-aos="fade-up">
             <h2 data-i18n="settings.theme">Theme Customization</h2>
             <div class="settings-actions">
               <button id="add-theme" class="btn" type="button">+</button>
@@ -65,6 +73,6 @@
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/settings.js?v=discord-auth"></script>
+    <script type="module" src="./js/settings.js?v=profiles"></script>
   </body>
 </html>

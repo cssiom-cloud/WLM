@@ -2,12 +2,17 @@ import { isLocalTestMode } from './config.js';
 import { t } from './i18n.js';
 import { supabaseClient } from './supabase-client.js';
 import {
+  localCreatePersonnelProfile,
+  localOwnedPersonnel,
   localReadCurrentPersonnel,
   localReadSession,
+  localSetActivePersonnel,
   localSignIn,
   localSignOut,
   localSignUp
 } from './local-station.js';
+
+const ACTIVE_PERSONNEL_KEY = 'wlr-active-personnel-id';
 
 export async function readSession() {
   if (isLocalTestMode()) {
@@ -21,33 +26,185 @@ export async function readSession() {
   return data.session;
 }
 
-export async function readCurrentPersonnel() {
-  if (isLocalTestMode()) {
-    return localReadCurrentPersonnel();
-  }
+export function readStoredActivePersonnelId() {
+  return window.localStorage.getItem(ACTIVE_PERSONNEL_KEY) || '';
+}
 
-  const session = await readSession();
-  if (!session?.user) {
-    return { session: null, personnel: null };
+export function clearStoredActivePersonnelId() {
+  window.localStorage.removeItem(ACTIVE_PERSONNEL_KEY);
+}
+
+function rememberActivePersonnelId(personnelId) {
+  if (personnelId) {
+    window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, personnelId);
+  }
+}
+
+function isProfileSelectorPage() {
+  return /profiles\.html$/i.test(window.location.pathname);
+}
+
+export async function fetchOwnedPersonnel(authUserId) {
+  if (isLocalTestMode()) {
+    return localOwnedPersonnel(authUserId);
   }
 
   const { data, error } = await supabaseClient
     .from('oc_personnel')
     .select('*')
-    .eq('id', session.user.id)
-    .single();
+    .eq('owner_user_id', authUserId)
+    .order('first_name', { ascending: true });
 
+  if (!error) {
+    return data || [];
+  }
+
+  const { data: legacy, error: legacyError } = await supabaseClient
+    .from('oc_personnel')
+    .select('*')
+    .eq('id', authUserId)
+    .maybeSingle();
+  if (legacyError) {
+    throw error;
+  }
+  return legacy ? [legacy] : [];
+}
+
+export async function setActivePersonnel(personnelId) {
+  rememberActivePersonnelId(personnelId);
+  if (isLocalTestMode()) {
+    localSetActivePersonnel(personnelId);
+    return personnelId;
+  }
+  const { error } = await supabaseClient.rpc('set_active_personnel', {
+    p_personnel_id: personnelId
+  });
   if (error) {
     throw error;
   }
+  return personnelId;
+}
 
-  return { session, personnel: data };
+export async function createPersonnelProfile({ firstName = '', lastName = '' } = {}) {
+  if (isLocalTestMode()) {
+    const session = await localReadSession();
+    return localCreatePersonnelProfile(session.user.id, session.user.email, firstName, lastName);
+  }
+
+  const { data, error } = await supabaseClient.rpc('create_personnel_profile', {
+    p_first_name: firstName,
+    p_last_name: lastName
+  });
+  if (error) {
+    throw error;
+  }
+  rememberActivePersonnelId(data);
+  const { data: row, error: rowError } = await supabaseClient
+    .from('oc_personnel')
+    .select('*')
+    .eq('id', data)
+    .single();
+  if (rowError) {
+    throw rowError;
+  }
+  return row;
+}
+
+function findOwnedPersonnel(owned, personnelId) {
+  return owned.find((row) => row.id === personnelId) || null;
+}
+
+function pickActivePersonnel(owned, preferredId) {
+  return findOwnedPersonnel(owned, preferredId) || owned[0] || null;
+}
+
+export async function routeAfterAuth() {
+  const session = await readSession();
+  if (!session?.user) {
+    return;
+  }
+  let owned = await fetchOwnedPersonnel(session.user.id);
+  if (!owned.length) {
+    await createPersonnelProfile({});
+    owned = await fetchOwnedPersonnel(session.user.id);
+  }
+  if (owned.length > 1) {
+    window.location.replace('./profiles.html');
+    return;
+  }
+  if (owned[0]) {
+    await setActivePersonnel(owned[0].id);
+  }
+  window.location.replace('./index.html');
+}
+
+export async function readCurrentPersonnel() {
+  // AuthUser = Discord/email identity (session.user).
+  // ActivePersonnel = selected oc_personnel row owned by that identity.
+  if (isLocalTestMode()) {
+    const local = await localReadCurrentPersonnel();
+    return {
+      session: local.session,
+      personnel: local.personnel,
+      authUser: local.session?.user || null,
+      profiles: local.profiles || []
+    };
+  }
+
+  const session = await readSession();
+  if (!session?.user) {
+    return { session: null, personnel: null, authUser: null, profiles: [] };
+  }
+
+  const owned = await fetchOwnedPersonnel(session.user.id);
+  let preferredId = readStoredActivePersonnelId();
+  if (!isLocalTestMode() && supabaseClient) {
+    const { data: state } = await supabaseClient
+      .from('oc_auth_state')
+      .select('active_personnel_id')
+      .eq('auth_user_id', session.user.id)
+      .maybeSingle();
+    if (state?.active_personnel_id) {
+      preferredId = state.active_personnel_id;
+    }
+  }
+  const personnel = pickActivePersonnel(owned, preferredId);
+  if (personnel && personnel.id !== readStoredActivePersonnelId()) {
+    rememberActivePersonnelId(personnel.id);
+  }
+  return { session, personnel, authUser: session.user, profiles: owned };
+}
+
+export async function requireAuthUser() {
+  const session = await readSession();
+  if (!session?.user) {
+    window.location.replace('./login.html');
+    return null;
+  }
+  const owned = await fetchOwnedPersonnel(session.user.id);
+  return { session, authUser: session.user, profiles: owned };
 }
 
 export async function requireAuthenticatedPersonnel() {
   const result = await readCurrentPersonnel();
   if (!result.session) {
     window.location.replace('./login.html');
+    return null;
+  }
+  if (isProfileSelectorPage()) {
+    return result;
+  }
+  if (!result.profiles.length) {
+    await createPersonnelProfile({});
+    window.location.replace('./index.html');
+    return null;
+  }
+  if (result.profiles.length > 1 && !findOwnedPersonnel(result.profiles, readStoredActivePersonnelId())) {
+    window.location.replace('./profiles.html');
+    return null;
+  }
+  if (!result.personnel) {
+    window.location.replace('./profiles.html');
     return null;
   }
   return result;
@@ -247,6 +404,7 @@ export async function unlinkDiscordIdentity() {
 }
 
 export async function signOutSession() {
+  clearStoredActivePersonnelId();
   if (isLocalTestMode()) {
     await localSignOut();
     window.location.replace('./login.html');

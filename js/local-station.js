@@ -66,6 +66,32 @@ function seedPersonnel() {
       biography: 'Command administrator assigned to Test Agency Alpha. Responsible for personnel records and rank control.',
       completed_missions: ['Operation Silent Tide', 'Fleet Escort Exercise', 'Harbor Defense Drill'],
       medals: ['Meritorious Service Medal', 'Fleet Command Ribbon'],
+      honor_ranks: [],
+      owner_user_id: '00000000-0000-4000-8000-000000000001'
+    },
+    {
+      id: '00000000-0000-4000-8000-0000000000a2',
+      owner_user_id: '00000000-0000-4000-8000-000000000001',
+      email: 'admin@local.test',
+      role: 'user',
+      first_name: 'Maiddress',
+      middle_name: '',
+      last_name: '',
+      age: 24,
+      nationality: 'Aquilish',
+      gender: 'Female',
+      avatar_url: '',
+      religion: '',
+      race: 'Human',
+      wlc_agency: '',
+      training_course: '',
+      military_branch: 'Navy',
+      organization_role: 'Systems Developer',
+      military_rank: 'Lieutenant',
+      is_dev: true,
+      biography: 'Alternate personnel file used for local profile-switch testing.',
+      completed_missions: [],
+      medals: [],
       honor_ranks: []
     },
     {
@@ -88,9 +114,8 @@ function seedPersonnel() {
       military_rank: 'Lieutenant',
       biography: 'Commissioned officer of the Marines. Training course completed under Test Agency Bravo.',
       completed_missions: ['Amphibious Landing Exercise'],
-      medals: ['Basic Training Honor'],
-      honor_ranks: []
-    },
+      honor_ranks: [],
+      owner_user_id: '00000000-0000-4000-8000-000000000002'
     {
       id: '00000000-0000-4000-8000-000000000003',
       email: 'roster-a@local.test',
@@ -360,8 +385,61 @@ export async function localReadCurrentPersonnel() {
   if (!session) {
     return { session: null, personnel: null };
   }
-  const personnel = personnelRows().find((row) => row.id === session.user.id) || null;
-  return { session, personnel: personnel ? clone(personnel) : null };
+  const owned = localOwnedPersonnel(session.user.id);
+  const stored = window.localStorage.getItem('wlr-active-personnel-id');
+  const personnel = owned.find((row) => row.id === stored) || owned[0] || null;
+  return { session, personnel: personnel ? clone(personnel) : null, profiles: owned };
+}
+
+export function localOwnedPersonnel(authUserId) {
+  return personnelRows()
+    .filter((row) => (row.owner_user_id || row.id) === authUserId)
+    .map((row) => clone(row));
+}
+
+export function localSetActivePersonnel(personnelId) {
+  window.localStorage.setItem('wlr-active-personnel-id', personnelId);
+}
+
+export function localCreatePersonnelProfile(authUserId, email, firstName, lastName) {
+  const id = window.crypto.randomUUID();
+  const rows = personnelRows();
+  rows.push({
+    id,
+    owner_user_id: authUserId,
+    email: email || '',
+    role: 'user',
+    first_name: firstName || '',
+    middle_name: '',
+    last_name: lastName || '',
+    age: null,
+    nationality: null,
+    gender: null,
+    avatar_url: '',
+    religion: '',
+    race: null,
+    wlc_agency: '',
+    training_course: '',
+    military_branch: null,
+    organization_role: '',
+    military_rank: 'Lieutenant',
+    biography: '',
+    completed_missions: [],
+    medals: [],
+    honor_ranks: [],
+    is_dev: false
+  });
+  savePersonnel(rows);
+  const settings = readJson(STORAGE_SETTINGS, []);
+  settings.push({
+    user_id: id,
+    theme_accent: null,
+    bio_public: true,
+    updated_at: new Date().toISOString()
+  });
+  writeJson(STORAGE_SETTINGS, settings);
+  localSetActivePersonnel(id);
+  return rows.find((row) => row.id === id);
 }
 
 export async function localSignIn(email, password) {
@@ -387,6 +465,7 @@ export async function localSignUp(email, password) {
   const rows = personnelRows();
   rows.push({
     id,
+    owner_user_id: id,
     email,
     role: 'user',
     first_name: '',
@@ -427,6 +506,7 @@ export async function localSignUp(email, password) {
 
 export async function localSignOut() {
   window.localStorage.removeItem(STORAGE_SESSION);
+  window.localStorage.removeItem('wlr-active-personnel-id');
 }
 
 export async function localFetchRoster() {

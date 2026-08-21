@@ -17,7 +17,9 @@ export function visiblePersonnel(records, viewer) {
   if (isDev(viewer)) {
     return rows;
   }
-  return rows.filter((row) => !row.is_dev || row.id === viewer?.id);
+  return rows.filter(
+    (row) => !row.is_dev || row.id === viewer?.id || row.owner_user_id === viewer?.owner_user_id
+  );
 }
 
 export function visibleMemoFolders(person, units = []) {
