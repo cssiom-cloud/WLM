@@ -226,22 +226,25 @@ function renderPaper(doc) {
   host.innerHTML = `
     <p class="memo-office">สำนักงานเอกสาร WLC</p>
     <img class="memo-crest" src="${escapeHtml(logo)}" alt="W.L.R">
-    <header class="memo-meta">
-      <p class="memo-no"><span>${escapeHtml(t('memo.paper.no'))}</span> ${escapeHtml(doc.doc_no || '....................')}</p>
-      <p class="memo-date"><span>${escapeHtml(t('memo.paper.date'))}</span> ${escapeHtml(doc.doc_date || '....................')}</p>
-    </header>
-    <p class="memo-line"><span>${escapeHtml(t('memo.paper.subject'))}</span> ${escapeHtml(doc.subject || '....................')}</p>
-    <p class="memo-line"><span>${escapeHtml(t('memo.paper.to'))}</span> ${escapeHtml(doc.addressed_to || '....................')}</p>
+    <div class="memo-meta">
+      <div class="memo-no"><span>${escapeHtml(t('memo.paper.no'))}</span> ${escapeHtml(doc.doc_no || '....................')}</div>
+      <div class="memo-date"><span>${escapeHtml(t('memo.paper.date'))}</span> ${escapeHtml(doc.doc_date || '....................')}</div>
+    </div>
+    <p class="memo-line memo-subject"><span>${escapeHtml(t('memo.paper.subject'))}</span> ${escapeHtml(doc.subject || '....................')}</p>
+    <p class="memo-line memo-to"><span>${escapeHtml(t('memo.paper.to'))}</span> ${escapeHtml(doc.addressed_to || '....................')}</p>
     <div class="memo-body">
       ${paragraphHtml(parts.paragraph1, t('memo.paper.empty'))}
       ${paragraphHtml(parts.paragraph2)}
       ${paragraphHtml(parts.closingParagraph)}
     </div>
-    <div class="memo-sign">
-      <p>${escapeHtml(t('memo.paper.sign'))}</p>
-      <p class="memo-sign-space">................................</p>
-      <p class="memo-sign-name">(${escapeHtml(doc.sign_name || '....................')})</p>
-      <p class="memo-sign-role">${escapeHtml(doc.sign_title || '')}</p>
+    <div class="memo-sign-row">
+      <div class="memo-sign-spacer"></div>
+      <div class="memo-sign">
+        <p>${escapeHtml(t('memo.paper.sign'))}</p>
+        <p class="memo-sign-space">................................</p>
+        <p class="memo-sign-name">(${escapeHtml(doc.sign_name || '....................')})</p>
+        <p class="memo-sign-role">${escapeHtml(doc.sign_title || '')}</p>
+      </div>
     </div>
     <p class="memo-foot">W.L.C</p>
   `;

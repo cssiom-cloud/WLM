@@ -3237,6 +3237,7 @@ body.is-exporting .ops-aar-form textarea {
   font-size: 0.95rem;
   font-weight: 700;
   letter-spacing: 0.04em;
+  white-space: nowrap;
 }
 
 .memo-crest {
@@ -3250,20 +3251,28 @@ body.is-exporting .ops-aar-form textarea {
 }
 
 .memo-meta {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0;
-  margin: 2rem 0 1.15rem;
+  display: flex;
+  width: 100%;
+  margin: 2rem 0 0;
 }
 
-.memo-meta .memo-date {
+.memo-no,
+.memo-date {
+  width: 50%;
+  margin: 0;
   text-align: left;
 }
 
-.memo-line,
-.memo-no,
-.memo-date {
-  margin: 0 0 0.45rem;
+.memo-line {
+  margin: 0;
+}
+
+.memo-subject {
+  margin-top: 1.5rem;
+}
+
+.memo-to {
+  margin-top: 1rem;
 }
 
 .memo-line span,
@@ -3274,12 +3283,13 @@ body.is-exporting .ops-aar-form textarea {
 
 .memo-body {
   min-height: 110mm;
-  text-align: justify;
 }
 
 .memo-body p {
-  margin: 1rem 0 0;
+  margin: 1.5rem 0 0;
   text-indent: 3rem;
+  text-align: justify;
+  text-justify: inter-word;
 }
 
 .memo-empty {
@@ -3287,9 +3297,18 @@ body.is-exporting .ops-aar-form textarea {
   color: #666666;
 }
 
+.memo-sign-row {
+  display: flex;
+  width: 100%;
+  margin-top: 4rem;
+}
+
+.memo-sign-spacer,
 .memo-sign {
   width: 50%;
-  margin: 4rem 0 0 auto;
+}
+
+.memo-sign {
   display: flex;
   flex-direction: column;
   align-items: center;
