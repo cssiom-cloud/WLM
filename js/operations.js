@@ -70,7 +70,7 @@ function render() {
 async function loadBoard() {
   const [{ personnel }, unitBoard, operationBoard] = await Promise.all([
     readCurrentPersonnel().catch(() => ({ personnel: null })),
-    fetchUnitBoard(),
+    fetchUnitBoard().catch(() => ({ units: [], ranks: [], links: [], applications: [], personnel: [], announcements: [] })),
     fetchOperationBoard()
   ]);
   actor = personnel;
