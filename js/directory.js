@@ -17,6 +17,7 @@ import { fetchSettingsMap } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { readCurrentPersonnel } from './session.js';
+import { visiblePersonnel } from './access.js';
 import { openImageEditor } from './image-editor.js';
 
 const SKELETON_COUNT = 8;
@@ -973,7 +974,7 @@ if (document.querySelector('#directory-grid')) {
     t('notice.loading')
   )
     .then(([records, settings, board, session]) => {
-      rosterCache = records;
+      rosterCache = visiblePersonnel(records, session?.personnel);
       settingsMap = settings;
       unitBoard = board;
       viewerIsAdmin = session?.personnel?.role === 'admin';

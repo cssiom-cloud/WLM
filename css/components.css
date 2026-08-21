@@ -2716,13 +2716,21 @@
   background: transparent;
 }
 
-.ops-sign-field {
-  position: relative;
-  min-height: 4.4rem;
+.ops-sign-block {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  max-width: 24rem;
+  margin: 1.5rem auto 0;
 }
 
 .ops-auth-name {
-  margin: 0.35rem 0 0.15rem;
+  margin: 0 0 0.5rem;
+  padding: 0;
+  text-align: center;
+  text-decoration: none;
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: 0.02em;
@@ -2736,41 +2744,35 @@
 }
 
 .ops-signature {
-  position: absolute;
-  left: 0;
-  bottom: 0.1rem;
-  z-index: 3;
-  margin: 0;
-  max-width: none;
   font-family: "Caveat", "Sriracha", cursive;
   font-size: clamp(2rem, 3.4vw, 2.7rem);
   font-weight: 600;
-  line-height: 0.9;
+  line-height: 1;
   letter-spacing: 0.01em;
   color: #1b3a6b;
   white-space: nowrap;
-  transform: rotate(-4deg);
-  transform-origin: left bottom;
 }
 
 [data-theme="dark"] .ops-signature {
   color: #c5d4ff;
 }
 
-.ops-auth-rule {
-  margin: 0 0 0.45rem;
-  width: min(100%, 280px);
-  border-bottom: 1px solid var(--text);
-  height: 3.2rem;
+.ops-auth-role {
+  width: 100%;
+  margin: 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid var(--text);
+  text-align: center;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
 }
 
 .ops-auth-stamp-wrap {
   display: grid;
   place-items: center;
-  position: relative;
-  z-index: 2;
   min-height: 110px;
-  margin-left: -0.6rem;
 }
 
 .ops-stamp {
@@ -2943,8 +2945,8 @@ body.is-exporting .ops-doc .ops-auth-grid {
   background: #ffffff !important;
 }
 
-body.is-exporting .ops-auth-rule {
-  border-bottom-color: #122033;
+body.is-exporting .ops-auth-role {
+  border-top-color: #122033;
 }
 
 body.is-exporting .ops-doc .ops-signature {
@@ -3034,9 +3036,9 @@ body.is-exporting .ops-aar-form textarea {
   align-items: end;
 }
 
-.ops-auth-kicker,
-.ops-auth-role {
+.ops-auth-kicker {
   margin: 0;
+  text-align: center;
   font-size: 0.75rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -3052,10 +3054,6 @@ body.is-exporting .ops-aar-form textarea {
 @media (max-width: 900px) {
   .ops-auth-grid {
     grid-template-columns: 1fr;
-  }
-
-  .ops-auth-stamp-wrap {
-    margin-left: 0;
   }
 
   .ops-signature {
@@ -3087,6 +3085,235 @@ body.is-exporting .ops-aar-form textarea {
 
   .tac-view-stage {
     transform: none !important;
+  }
+}
+
+.memo-page {
+  width: min(1400px, 100%);
+}
+
+.memo-layout {
+  display: grid;
+  grid-template-columns: minmax(180px, 220px) minmax(220px, 280px) minmax(0, 1fr);
+  gap: 1rem;
+  align-items: start;
+}
+
+.memo-folders {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  box-shadow: var(--shadow);
+}
+
+.memo-folders-label {
+  margin: 0 0 0.7rem;
+  font-size: 0.76rem;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.memo-folder-nav {
+  display: grid;
+  gap: 0.4rem;
+}
+
+.memo-folder {
+  width: 100%;
+  min-height: 44px;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.memo-folder.is-active,
+.memo-folder:hover {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.memo-list-pane {
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+  min-height: 420px;
+}
+
+.memo-list-head h2 {
+  margin: 0 0 0.3rem;
+  font-size: 1.05rem;
+}
+
+.memo-list {
+  display: grid;
+  gap: 0.45rem;
+  margin-top: 0.85rem;
+}
+
+.memo-item {
+  width: 100%;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-muted);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.memo-item small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+}
+
+.memo-item.is-active {
+  border-color: var(--accent);
+  background: var(--accent-soft);
+}
+
+.memo-work {
+  display: grid;
+  gap: 1rem;
+}
+
+.memo-form {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+  padding: 1rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.memo-form .full {
+  grid-column: 1 / -1;
+}
+
+.memo-form label {
+  display: grid;
+  gap: 0.3rem;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.memo-paper-wrap {
+  overflow: auto;
+  padding: 0.4rem 0 1.5rem;
+}
+
+.memo-paper {
+  width: 210mm;
+  min-height: 297mm;
+  margin: 0 auto;
+  padding: 20mm 18mm 22mm;
+  background: #ffffff;
+  color: #000000;
+  font-family: "Sarabun", "Prompt", sans-serif;
+  font-size: 16px;
+  line-height: 1.7;
+  border-radius: 0;
+  box-shadow: 0 18px 46px rgba(18, 32, 51, 0.18);
+}
+
+.memo-crest {
+  width: 96px;
+  height: 96px;
+  margin: 0 auto 18px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 1px solid #c9c9c9;
+}
+
+.memo-meta {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.1rem;
+}
+
+.memo-meta .memo-date {
+  text-align: right;
+}
+
+.memo-line,
+.memo-no,
+.memo-date {
+  margin: 0 0 0.45rem;
+}
+
+.memo-line span,
+.memo-no span,
+.memo-date span {
+  font-weight: 700;
+}
+
+.memo-body {
+  min-height: 140mm;
+  text-align: justify;
+}
+
+.memo-body p {
+  margin: 0 0 0.9rem;
+  text-indent: 2.5em;
+}
+
+.memo-empty {
+  text-indent: 0;
+  color: #666666;
+}
+
+.memo-sign {
+  width: min(280px, 100%);
+  margin: 24mm 0 0 auto;
+  text-align: center;
+}
+
+.memo-sign p {
+  margin: 0;
+}
+
+.memo-sign-space {
+  margin: 18px 0 8px;
+}
+
+body.is-exporting .memo-chrome,
+body.is-exporting #command-header,
+body.is-exporting .local-test-banner,
+body.is-exporting .command-bottom-nav,
+body.is-exporting .hamburger {
+  display: none !important;
+}
+
+body.is-exporting .memo-paper {
+  box-shadow: none;
+}
+
+@media (max-width: 1100px) {
+  .memo-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .memo-form {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 900px) {
+  .memo-paper-wrap {
+    transform-origin: top center;
   }
 }
 

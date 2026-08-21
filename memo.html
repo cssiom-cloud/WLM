@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WHITE LION REGIMENT Official Documents</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&family=Sarabun:wght@400;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="./css/design-system.css">
+    <link rel="stylesheet" href="./css/animations.css">
+    <link rel="stylesheet" href="./css/components.css?v=memo">
+    <script>
+      (function () {
+        var theme = localStorage.getItem('wlr-command-theme');
+        document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+        var accent = localStorage.getItem('wlr-command-accent');
+        if (accent) document.documentElement.style.setProperty('--accent', accent);
+      })();
+    </script>
+  </head>
+  <body>
+    <div class="page-shell">
+      <header id="command-header"></header>
+      <main class="page-content memo-page">
+        <div class="toolbar-row memo-chrome">
+          <div>
+            <p class="page-kicker" data-i18n="memo.kicker">Command</p>
+            <h1 class="page-title" data-i18n="memo.title">Official Document Center</h1>
+          </div>
+          <div class="btn-row">
+            <button class="btn btn-primary" id="memo-new" type="button" data-i18n="memo.new">New memorandum</button>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner memo-chrome" role="status"></p>
+        <div class="memo-layout">
+          <aside class="memo-folders" aria-label="Document folders">
+            <p class="memo-folders-label" data-i18n="memo.folders">Folders</p>
+            <nav id="memo-folder-nav" class="memo-folder-nav"></nav>
+          </aside>
+          <section class="memo-list-pane">
+            <div class="memo-list-head">
+              <h2 id="memo-folder-title">Normal</h2>
+              <p class="form-hint" id="memo-folder-hint"></p>
+            </div>
+            <div id="memo-list" class="memo-list"></div>
+          </section>
+          <section class="memo-work">
+            <form id="memo-form" class="memo-form memo-chrome">
+              <label>
+                <span data-i18n="memo.field.docNo">Document number</span>
+                <input class="text-field" id="memo-doc-no" type="text" maxlength="80">
+              </label>
+              <label>
+                <span data-i18n="memo.field.date">Date</span>
+                <input class="text-field" id="memo-doc-date" type="text" maxlength="80">
+              </label>
+              <label class="full">
+                <span data-i18n="memo.field.subject">Subject</span>
+                <input class="text-field" id="memo-subject" type="text" maxlength="200">
+              </label>
+              <label class="full">
+                <span data-i18n="memo.field.to">To</span>
+                <input class="text-field" id="memo-to" type="text" maxlength="200">
+              </label>
+              <label class="full">
+                <span data-i18n="memo.field.body">Content</span>
+                <textarea class="text-field" id="memo-body" rows="10" maxlength="12000"></textarea>
+              </label>
+              <label>
+                <span data-i18n="memo.field.signName">Signatory name</span>
+                <input class="text-field" id="memo-sign-name" type="text" maxlength="120">
+              </label>
+              <label>
+                <span data-i18n="memo.field.signTitle">Position</span>
+                <input class="text-field" id="memo-sign-title" type="text" maxlength="120">
+              </label>
+              <div class="full btn-row">
+                <button class="btn btn-primary" type="submit" data-i18n="memo.save">Save</button>
+                <button class="btn" id="memo-export-pdf" type="button" data-i18n="memo.export.pdf">Export PDF</button>
+                <button class="btn" id="memo-export-jpg" type="button" data-i18n="memo.export.jpg">Save JPG</button>
+                <button class="btn btn-danger" id="memo-delete" type="button" hidden data-i18n="common.delete">Delete</button>
+              </div>
+            </form>
+            <div class="memo-paper-wrap">
+              <article id="memo-paper" class="memo-paper"></article>
+            </div>
+          </section>
+        </div>
+      </main>
+    </div>
+    <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
+    <script type="module" src="./js/memo.js"></script>
+  </body>
+</html>

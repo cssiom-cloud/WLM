@@ -134,11 +134,10 @@ export function authorizationMarkup(operation) {
       <div class="ops-auth-grid">
         <div class="ops-auth-sign">
           <p class="ops-auth-kicker">${escapeHtml(t('ops.auth.officer'))}</p>
-          <div class="ops-sign-field">
+          <div class="ops-sign-block">
             <p class="ops-auth-name ${signed ? 'ops-signature' : 'is-unsigned'}">${escapeHtml(name || t('ops.auth.unsigned'))}</p>
-            <p class="ops-auth-rule" aria-hidden="true"></p>
+            <p class="ops-auth-role">${escapeHtml(t('ops.auth.role'))}</p>
           </div>
-          <p class="ops-auth-role">${escapeHtml(t('ops.auth.role'))}</p>
         </div>
         <div class="ops-auth-stamp-wrap">
           <div class="ops-stamp ${stampClass}">${escapeHtml(stampLabel)}</div>

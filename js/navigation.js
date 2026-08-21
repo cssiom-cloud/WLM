@@ -97,6 +97,9 @@ export async function initCommandNavbar(activePage) {
     { href: './lore.html', page: 'lore', label: t('nav.lore') },
     { href: './documents.html', page: 'documents', label: t('nav.documents') }
   ];
+  if (isAuthed) {
+    archiveLinks.push({ href: './memo.html', page: 'memo', label: t('nav.memo') });
+  }
 
   const supportLinks = [{ href: './tickets.html', page: 'tickets', label: t('nav.tickets') }];
 
@@ -124,6 +127,9 @@ export async function initCommandNavbar(activePage) {
     operationsLinks[1],
     archiveLinks[0]
   ].filter(Boolean);
+  if (isAuthed) {
+    desktopLinks.push({ href: './memo.html', page: 'memo', label: t('nav.memo') });
+  }
   desktopNav.innerHTML = desktopLinks
     .map(
       (link) =>

@@ -1,4 +1,5 @@
 import { COMMAND_UNITS } from './domain.js';
+import { canAccessMemoFolder, canEditMemo, visiblePersonnel } from './access.js';
 
 const STORAGE_ACCOUNTS = 'wlr-local-accounts';
 const STORAGE_PERSONNEL = 'wlr-local-personnel';
@@ -17,6 +18,7 @@ const STORAGE_TICKETS = 'wlr-local-tickets';
 const STORAGE_OPERATIONS = 'wlr-local-operations';
 const STORAGE_OP_SIDES = 'wlr-local-operation-sides';
 const STORAGE_OP_AAR = 'wlr-local-operation-aar';
+const STORAGE_MEMOS = 'wlr-local-official-docs';
 
 export const LOCAL_TEST_ACCOUNTS = [
   { email: 'admin@local.test', password: 'admin' },
@@ -60,6 +62,7 @@ function seedPersonnel() {
       military_branch: 'Navy',
       organization_role: 'Test organization role',
       military_rank: 'Captain',
+      is_dev: true,
       biography: 'Command administrator assigned to Test Agency Alpha. Responsible for personnel records and rank control.',
       completed_missions: ['Operation Silent Tide', 'Fleet Escort Exercise', 'Harbor Defense Drill'],
       medals: ['Meritorious Service Medal', 'Fleet Command Ribbon'],
@@ -303,6 +306,9 @@ export function ensureLocalStation() {
       }
     ]);
   }
+  if (!window.localStorage.getItem(STORAGE_MEMOS)) {
+    writeJson(STORAGE_MEMOS, []);
+  }
 }
 
 export function resetLocalStation() {
@@ -323,6 +329,7 @@ export function resetLocalStation() {
   window.localStorage.removeItem(STORAGE_OPERATIONS);
   window.localStorage.removeItem(STORAGE_OP_SIDES);
   window.localStorage.removeItem(STORAGE_OP_AAR);
+  window.localStorage.removeItem(STORAGE_MEMOS);
   ensureLocalStation();
 }
 
@@ -399,7 +406,8 @@ export async function localSignUp(email, password) {
     biography: '',
     completed_missions: [],
     medals: [],
-    honor_ranks: []
+    honor_ranks: [],
+    is_dev: false
   });
   savePersonnel(rows);
 
@@ -422,7 +430,8 @@ export async function localSignOut() {
 }
 
 export async function localFetchRoster() {
-  return clone(personnelRows());
+  const actor = await localActor();
+  return visiblePersonnel(clone(personnelRows()), actor);
 }
 
 export async function localUpdatePersonnel(personnelId, payload) {
@@ -439,6 +448,10 @@ export async function localUpdatePersonnel(personnelId, payload) {
 
   if (!isAdmin && !isSelf) {
     throw new Error('Update is not permitted.');
+  }
+
+  if (!actor?.is_dev) {
+    delete payload.is_dev;
   }
 
   if (!isAdmin) {
@@ -878,18 +891,23 @@ function canManageUnit(actor, unitId) {
 }
 
 export async function localFetchUnitBoard() {
+  const actor = await localActor();
   const announcements = announcementRows().map((row) => ({ id: row.id, title: row.title }));
-  const personnel = personnelRows().map((row) => ({
-    id: row.id,
-    first_name: row.first_name,
-    middle_name: row.middle_name,
-    last_name: row.last_name,
-    role: row.role,
-    military_rank: row.military_rank || '',
-    unit_id: row.unit_id || null,
-    unit_rank_id: row.unit_rank_id || null,
-    honor_ranks: row.honor_ranks || []
-  }));
+  const personnel = visiblePersonnel(
+    personnelRows().map((row) => ({
+      id: row.id,
+      first_name: row.first_name,
+      middle_name: row.middle_name,
+      last_name: row.last_name,
+      role: row.role,
+      military_rank: row.military_rank || '',
+      unit_id: row.unit_id || null,
+      unit_rank_id: row.unit_rank_id || null,
+      honor_ranks: row.honor_ranks || [],
+      is_dev: Boolean(row.is_dev)
+    })),
+    actor
+  );
   return {
     units: clone(unitRows()).sort((a, b) => a.sort_order - b.sort_order),
     ranks: clone(unitRankRows()),
@@ -1338,6 +1356,87 @@ export async function localSaveOperationAar(payload) {
     });
   }
   writeJson(STORAGE_OP_AAR, rows);
+}
+
+export async function localFetchOfficialDocs() {
+  const actor = await localActor();
+  if (!actor) {
+    throw new Error('Sign in is required.');
+  }
+  const units = unitRows();
+  return clone(readJson(STORAGE_MEMOS, [])).filter((row) => canAccessMemoFolder(actor, row.folder, units));
+}
+
+export async function localSaveOfficialDoc(doc) {
+  const actor = await localActor();
+  if (!actor) {
+    throw new Error('Sign in is required.');
+  }
+  const units = unitRows();
+  if (!canAccessMemoFolder(actor, doc.folder || 'normal', units)) {
+    throw new Error('You cannot save to this folder.');
+  }
+  const rows = readJson(STORAGE_MEMOS, []);
+  const now = new Date().toISOString();
+  if (doc.id) {
+    const index = rows.findIndex((row) => row.id === doc.id);
+    if (index === -1) {
+      throw new Error('Memorandum was not found.');
+    }
+    if (!canEditMemo(actor, rows[index], units)) {
+      throw new Error('You cannot edit this memorandum.');
+    }
+    rows[index] = {
+      ...rows[index],
+      folder: doc.folder || rows[index].folder,
+      doc_no: doc.doc_no || '',
+      doc_date: doc.doc_date || '',
+      subject: doc.subject || '',
+      addressed_to: doc.addressed_to || '',
+      body: doc.body || '',
+      sign_name: doc.sign_name || '',
+      sign_title: doc.sign_title || '',
+      logo_url: doc.logo_url || rows[index].logo_url || null,
+      updated_at: now
+    };
+    writeJson(STORAGE_MEMOS, rows);
+    return clone(rows[index]);
+  }
+  const saved = {
+    id: window.crypto.randomUUID(),
+    folder: doc.folder || 'normal',
+    doc_no: doc.doc_no || '',
+    doc_date: doc.doc_date || '',
+    subject: doc.subject || '',
+    addressed_to: doc.addressed_to || '',
+    body: doc.body || '',
+    sign_name: doc.sign_name || '',
+    sign_title: doc.sign_title || '',
+    logo_url: doc.logo_url || null,
+    created_by: actor.id,
+    created_at: now,
+    updated_at: now
+  };
+  rows.unshift(saved);
+  writeJson(STORAGE_MEMOS, rows);
+  return clone(saved);
+}
+
+export async function localDeleteOfficialDoc(docId) {
+  const actor = await localActor();
+  const units = unitRows();
+  const rows = readJson(STORAGE_MEMOS, []);
+  const row = rows.find((item) => item.id === docId);
+  if (!row) {
+    throw new Error('Memorandum was not found.');
+  }
+  if (!canEditMemo(actor, row, units)) {
+    throw new Error('You cannot delete this memorandum.');
+  }
+  writeJson(
+    STORAGE_MEMOS,
+    rows.filter((item) => item.id !== docId)
+  );
 }
 
 export function localSystemStatus() {

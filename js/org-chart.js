@@ -6,6 +6,7 @@ import { fetchPersonnelRoster, fetchRankStructure } from './personnel-service.js
 import { fetchSettingsMap } from './command-services.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { readCurrentPersonnel } from './session.js';
+import { visiblePersonnel } from './access.js';
 import { buildHierarchyTree } from './hierarchy.js';
 import {
   bindSharedDossier,
@@ -309,10 +310,10 @@ withOverlay(
   t('notice.loading')
 )
   .then(([records, ranks, settings, board, session]) => {
-    rosterCache = records;
-    tree = buildHierarchyTree(records, ranks);
+    rosterCache = visiblePersonnel(records, session?.personnel);
+    tree = buildHierarchyTree(rosterCache, ranks);
     setDossierContext({
-      roster: records,
+      roster: rosterCache,
       settings,
       board,
       isAdmin: session?.personnel?.role === 'admin'

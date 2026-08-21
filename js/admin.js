@@ -20,6 +20,7 @@ import {
 import { isLocalTestMode } from './config.js';
 import { writeActivityLog } from './command-services.js';
 import { t } from './i18n.js';
+import { isDev, visiblePersonnel } from './access.js';
 import { openImageEditor } from './image-editor.js';
 
 let currentAdmin = null;
@@ -134,6 +135,15 @@ function actionButtons(record) {
   const deleteAdmin = record.role === 'admin'
     ? `<button class="btn btn-danger" type="button" data-action="delete-admin" data-id="${escapeHtml(record.id)}">Delete Admin</button>`
     : '';
+  // Dev check: Grant/Revoke Dev is rendered only for viewers who already hold is_dev.
+  const grantDev =
+    isDev(currentAdmin) && !isDev(record)
+      ? `<button class="btn" type="button" data-action="grant-dev" data-id="${escapeHtml(record.id)}">${escapeHtml(t('admin.grantDev'))}</button>`
+      : '';
+  const revokeDev =
+    isDev(currentAdmin) && isDev(record) && record.id !== currentAdmin.id
+      ? `<button class="btn btn-danger" type="button" data-action="revoke-dev" data-id="${escapeHtml(record.id)}">${escapeHtml(t('admin.revokeDev'))}</button>`
+      : '';
   const deleteUser =
     currentAdmin && record.id === currentAdmin.id
       ? ''
@@ -144,6 +154,8 @@ function actionButtons(record) {
       <button class="btn" type="button" data-action="edit" data-id="${escapeHtml(record.id)}">Edit</button>
       ${addAdmin}
       ${deleteAdmin}
+      ${grantDev}
+      ${revokeDev}
       ${deleteUser}
     </div>
   `;
@@ -169,7 +181,7 @@ function renderTable() {
           <td>${escapeHtml(record.wlc_agency || '')}</td>
           <td>${escapeHtml(record.nationality || '')}</td>
           <td>${escapeHtml(record.age ?? '')}</td>
-          <td>${escapeHtml(record.role || '')}</td>
+          <td>${escapeHtml(record.role || '')}${isDev(record) && isDev(currentAdmin) ? ' · Dev' : ''}</td>
           <td>${actionButtons(record)}</td>
         </tr>
       `;
@@ -279,7 +291,7 @@ async function persistEditor(event) {
       });
     }
     closeEditor();
-    rosterCache = await fetchPersonnelRoster();
+    rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
     renderFilterPanel();
     renderTable();
     showStatus('Personnel record updated.');
@@ -298,7 +310,7 @@ async function changeAdminRole(personnelId, nextRole) {
       details: `Changed role for ${personnelId} to ${nextRole}`
     });
   }
-  rosterCache = await fetchPersonnelRoster();
+  rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
   renderFilterPanel();
   renderTable();
 }
@@ -311,7 +323,7 @@ requireCommandAdmin()
       return;
     }
     currentAdmin = result.personnel;
-    rosterCache = await fetchPersonnelRoster();
+    rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
     renderFilterPanel();
     renderTable();
   })
@@ -347,6 +359,27 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
       await changeAdminRole(personnelId, 'user');
       showStatus('Admin role removed.');
     }
+    if (action === 'grant-dev') {
+      // Dev check: only an existing Dev can grant the hidden Dev status.
+      if (!isDev(currentAdmin)) {
+        return;
+      }
+      await updatePersonnelRecord(personnelId, { is_dev: true });
+      rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
+      renderFilterPanel();
+      renderTable();
+      showStatus(t('admin.grantDev'));
+    }
+    if (action === 'revoke-dev') {
+      if (!isDev(currentAdmin)) {
+        return;
+      }
+      await updatePersonnelRecord(personnelId, { is_dev: false });
+      rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
+      renderFilterPanel();
+      renderTable();
+      showStatus(t('admin.revokeDev'));
+    }
     if (action === 'delete-user') {
       if (!isAdmin()) {
         return;
@@ -355,7 +388,7 @@ document.querySelector('#personnel-table-body').addEventListener('click', async 
         return;
       }
       await deletePersonnelAccount(personnelId);
-      rosterCache = await fetchPersonnelRoster();
+      rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
       renderFilterPanel();
       renderTable();
       showStatus(t('admin.deletedUser'));
@@ -385,7 +418,7 @@ document.querySelector('#edit-avatar-crop')?.addEventListener('click', async () 
     const updated = await uploadPersonnelImage(editingRecord.id, result.file, 'avatar_url');
     editingRecord = { ...editingRecord, ...updated };
     document.querySelector('#edit-avatar-url').value = updated.avatar_url || '';
-    rosterCache = await fetchPersonnelRoster();
+    rosterCache = visiblePersonnel(await fetchPersonnelRoster(), currentAdmin);
     renderFilterPanel();
     renderTable();
     showStatus(t('img.saved'));

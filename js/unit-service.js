@@ -24,7 +24,7 @@ export async function fetchUnitBoard() {
     supabaseClient.from('command_unit_ranks').select('*').order('sort_order', { ascending: true }),
     supabaseClient.from('command_unit_announcements').select('*'),
     supabaseClient.from('command_unit_applications').select('*'),
-    supabaseClient.from('oc_personnel').select('id, first_name, middle_name, last_name, role, military_rank, unit_id, unit_rank_id, honor_ranks'),
+    supabaseClient.from('oc_personnel').select('id, first_name, middle_name, last_name, role, military_rank, unit_id, unit_rank_id, honor_ranks, is_dev'),
     supabaseClient.from('announcements').select('id, title').order('created_at', { ascending: false })
   ]);
 
