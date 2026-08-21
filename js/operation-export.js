@@ -66,12 +66,29 @@ async function loadExportLibs() {
   const [imageMod, jsPdfMod] = await Promise.all([import(HTML_TO_IMAGE_URL), import(JSPDF_URL)]);
   const toCanvas = imageMod.toCanvas || imageMod.default?.toCanvas;
   const toJpeg = imageMod.toJpeg || imageMod.default?.toJpeg;
+  const getFontEmbedCSS = imageMod.getFontEmbedCSS || imageMod.default?.getFontEmbedCSS;
   const jsPDF =
     jsPdfMod.jsPDF || jsPdfMod.default?.jsPDF || (typeof jsPdfMod.default === 'function' ? jsPdfMod.default : null);
   if ((!toCanvas && !toJpeg) || !jsPDF) {
     throw new Error('Export libraries could not be loaded.');
   }
-  return { toCanvas, toJpeg, jsPDF };
+  return { toCanvas, toJpeg, getFontEmbedCSS, jsPDF };
+}
+
+async function waitForExportLayout() {
+  try {
+    if (document.fonts?.load) {
+      await Promise.all([
+        document.fonts.load('600 32px Caveat'),
+        document.fonts.load('400 32px Sriracha'),
+        document.fonts.ready
+      ]);
+    }
+  } catch {
+    /* Continue capture even if a handwriting font is still warming up. */
+  }
+  await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+  await new Promise((resolve) => setTimeout(resolve, 120));
 }
 
 async function prepareExportView(root, mapUrl, drawings) {
@@ -161,6 +178,13 @@ async function captureDossier(root, libs) {
       backgroundImage: 'none'
     }
   };
+  if (libs.getFontEmbedCSS) {
+    try {
+      options.fontEmbedCSS = await libs.getFontEmbedCSS(root);
+    } catch {
+      /* Fall back to live stylesheet fonts if embed fails. */
+    }
+  }
   if (libs.toCanvas) {
     try {
       return await libs.toCanvas(root, options);
@@ -198,9 +222,10 @@ async function runExport({ title, mapUrl, drawings, format }) {
   document.body.classList.add('is-exporting');
   let prep = null;
   try {
+    await waitForExportLayout();
     prep = await prepareExportView(root, mapUrl, drawings);
     await waitForImages(root);
-    await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+    await waitForExportLayout();
     const libs = await loadExportLibs();
     const shot = await captureDossier(root, libs);
     const name = safeFileName(title);

@@ -4,7 +4,7 @@ import { escapeHtml, showToast, withOverlay } from './ui.js';
 import { getLang, setLang, t } from './i18n.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { canEditOperation, fetchOperationBoard, saveOperationAar } from './operation-service.js';
-import { authorizationMarkup, briefingHtml, docId, filedDate, overviewGridMarkup, unitsForSide } from './operation-ui.js';
+import { authorizationMarkup, briefingHtml, docId, filedDate, overviewGridMarkup, statusBadge, unitsForSide } from './operation-ui.js';
 import { mountMapViewer } from './tactical-map.js';
 import { handleExportJPG, handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
@@ -109,6 +109,8 @@ function renderAar() {
 }
 
 function renderHeader() {
+  document.querySelector('#op-status-badge').innerHTML = statusBadge(operation.status);
+  document.querySelector('#op-title').textContent = operation.title;
   document.querySelector('#op-doc-id').textContent = docId(operation);
   document.querySelector('#op-doc-class').textContent = t('ops.doc.restricted');
   document.querySelector('#op-doc-date').textContent = filedDate(operation.created_at);
