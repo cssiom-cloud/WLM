@@ -116,6 +116,7 @@ function seedPersonnel() {
       completed_missions: ['Amphibious Landing Exercise'],
       honor_ranks: [],
       owner_user_id: '00000000-0000-4000-8000-000000000002'
+    },
     {
       id: '00000000-0000-4000-8000-000000000003',
       email: 'roster-a@local.test',
