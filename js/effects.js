@@ -108,8 +108,6 @@ function initInteractiveGrid() {
 
     if (prefersReducedMotion()) {
       canvas.style.transform = '';
-    } else {
-      canvas.style.transform = `translate3d(0, ${scrollY * -0.08}px, 0)`;
     }
     window.requestAnimationFrame(paint);
   }
@@ -150,21 +148,10 @@ function initInteractiveGrid() {
 
 function initParallax() {
   const shell = document.querySelector('.page-shell');
-  if (!shell || prefersReducedMotion()) {
+  if (!shell) {
     return;
   }
-
-  const apply = () => {
-    if (isTouchUi()) {
-      shell.style.transform = '';
-      return;
-    }
-    const shift = Math.min(window.scrollY, 480) * 0.035;
-    shell.style.transform = `translate3d(0, ${shift * -1}px, 0)`;
-  };
-
-  window.addEventListener('scroll', apply, { passive: true });
-  apply();
+  shell.style.transform = '';
 }
 
 function clearTilt(element) {

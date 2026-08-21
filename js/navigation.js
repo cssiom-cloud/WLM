@@ -146,12 +146,14 @@ export async function initCommandNavbar(activePage) {
       <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
       <span class="clan-title">WHITE LION REGIMENT</span>
     </a>
+    <div class="command-drawer-body">
     ${groupMarkup(t('nav.group.personnel'), personnelLinks, activePage)}
     ${groupMarkup(t('nav.group.operations'), operationsLinks, activePage)}
     ${groupMarkup(t('nav.group.archive'), archiveLinks, activePage)}
     ${groupMarkup(t('nav.group.support'), supportLinks, activePage)}
     ${groupMarkup(t('nav.group.command'), commandLinks, activePage)}
-    <button class="linkish" type="button" id="sign-out-control"${isAuthed ? '' : ' hidden'}>${t('nav.signOut')}</button>`;
+    <button class="linkish" type="button" id="sign-out-control"${isAuthed ? '' : ' hidden'}>${t('nav.signOut')}</button>
+    </div>`;
 
   const desktopNav = header.querySelector('.command-nav-desktop');
   const desktopLinks = [
@@ -182,7 +184,9 @@ export async function initCommandNavbar(activePage) {
         `<a href="${link.href}"${link.page === activePage ? ' class="is-active" aria-current="page"' : ''}>${link.label}</a>`
     )
     .join('')}
-    <button type="button" data-open-drawer>${t('nav.menu')}</button>`;
+    <button class="hamburger hamburger-dock" type="button" data-open-drawer aria-label="${t('nav.menu')}">
+      ${hamburgerIcon()}
+    </button>`;
 
   const setOpen = (open) => {
     if (usesNavRail()) {

@@ -62,6 +62,8 @@ html,
 body {
   margin: 0;
   min-height: 100%;
+  min-height: 100dvh;
+  background: var(--bg);
 }
 
 body {
@@ -97,6 +99,7 @@ p {
 
 .page-shell {
   min-height: 100vh;
+  min-height: 100dvh;
   padding-top: var(--nav-height);
 }
 
@@ -203,11 +206,11 @@ p {
 
 .hamburger span {
   position: absolute;
-  left: 13px;
+  left: 12px;
   top: 50%;
   display: block;
-  width: 18px;
-  height: 2px;
+  width: 20px;
+  height: 2.5px;
   background: var(--text);
   border-radius: 1px;
   transition: transform 0.32s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.32s cubic-bezier(0.4, 0, 0.2, 1);
@@ -244,6 +247,7 @@ p {
   right: 0;
   z-index: 39;
   width: min(320px, 100%);
+  height: calc(100dvh - var(--nav-height));
   height: calc(100vh - var(--nav-height));
   background: var(--bg-elevated);
   border-left: 1px solid var(--border);
@@ -254,7 +258,16 @@ p {
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow: hidden;
+}
+
+.command-drawer-body {
+  flex: 1 1 auto;
+  min-height: 0;
   overflow: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
 }
 
 .command-drawer.is-open {
@@ -386,6 +399,17 @@ p {
     cursor: pointer;
   }
 
+  .command-bottom-nav .hamburger-dock {
+    position: relative;
+    width: 44px;
+    height: 44px;
+    margin: 0 auto;
+    border: 0;
+    border-radius: 10px;
+    background: transparent;
+    box-shadow: none;
+  }
+
   .command-bottom-nav a.is-active {
     color: var(--accent);
   }
@@ -412,8 +436,7 @@ p {
     left: var(--sidebar-width);
   }
 
-  body.has-nav-rail .command-nav-desktop,
-  body.has-nav-rail .hamburger {
+  body.has-nav-rail .command-nav-desktop {
     display: none;
   }
 
@@ -422,12 +445,13 @@ p {
     left: 0;
     right: auto;
     width: var(--sidebar-width);
+    height: 100dvh;
     height: 100vh;
     transform: none;
     border-left: 0;
     border-right: 1px solid var(--border);
     box-shadow: none;
-    background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+    background: var(--bg-elevated);
     backdrop-filter: blur(18px);
     -webkit-backdrop-filter: blur(18px);
   }
