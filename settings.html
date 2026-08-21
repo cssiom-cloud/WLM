@@ -25,17 +25,22 @@
       <main class="page-content">
         <div class="toolbar-row">
           <div>
-            <p class="page-kicker">Account</p>
-            <h1 class="page-title">Settings</h1>
+            <p class="page-kicker" data-i18n="settings.kicker">Personnel dossier</p>
+            <h1 class="page-title" data-i18n="settings.title">Account Preferences</h1>
           </div>
         </div>
         <p id="status-banner" class="status-banner" role="status"></p>
         <section class="settings-list">
           <article class="settings-row" data-aos="fade-up">
-            <h2>Theme Customization</h2>
+            <h2 data-i18n="settings.connected">Connected Accounts</h2>
+            <p class="settings-lead" data-i18n="settings.connectedHint">Link Discord to this personnel file so you can sign in with either method.</p>
+            <div id="connected-accounts" class="connected-accounts"></div>
+          </article>
+          <article class="settings-row" data-aos="fade-up">
+            <h2 data-i18n="settings.theme">Theme Customization</h2>
             <div class="settings-actions">
               <button id="add-theme" class="btn" type="button">+</button>
-              <span>Create a personal color tone</span>
+              <span data-i18n="settings.createTheme">Create a personal color tone</span>
             </div>
             <div id="theme-picker" class="theme-picker" hidden>
               <canvas id="color-wheel" class="color-wheel" width="220" height="220"></canvas>
@@ -49,17 +54,17 @@
             </div>
           </article>
           <article class="settings-row" data-aos="fade-up">
-            <h2>Privacy Settings</h2>
+            <h2 data-i18n="settings.privacy">Privacy Settings</h2>
             <label class="switch">
               <input id="bio-public" type="checkbox" checked>
               <span class="switch-track"></span>
-              <span>Allow others to view my biography</span>
+              <span data-i18n="settings.bioPublic">Allow others to view my biography</span>
             </label>
           </article>
         </section>
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/settings.js"></script>
+    <script type="module" src="./js/settings.js?v=discord-auth"></script>
   </body>
 </html>

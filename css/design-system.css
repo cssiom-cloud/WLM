@@ -894,6 +894,110 @@ body.is-local-test .page-shell {
   line-height: 1.45;
 }
 
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 1.15rem 0 0.9rem;
+  color: var(--text-muted);
+  font-size: 0.74rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: var(--border);
+}
+
+.btn-discord {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+}
+
+.discord-mark {
+  width: 1.2rem;
+  height: 1.2rem;
+  flex-shrink: 0;
+  color: #5865f2;
+  fill: currentColor;
+}
+
+.settings-lead {
+  margin: -0.25rem 0 1rem;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.connected-accounts {
+  display: grid;
+  gap: 0.85rem;
+}
+
+.connected-account {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.9rem 0 0.15rem;
+}
+
+.connected-account .btn-discord {
+  width: auto;
+  min-width: 12.5rem;
+}
+
+.connected-avatar {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  object-fit: cover;
+  border: 1px solid var(--border);
+  background: var(--bg-muted);
+}
+
+.connected-avatar-fallback {
+  display: grid;
+  place-items: center;
+}
+
+.connected-meta {
+  flex: 1;
+  min-width: 12rem;
+}
+
+.connected-meta strong {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.connected-meta small {
+  display: block;
+  margin-top: 0.2rem;
+  color: var(--text-muted);
+}
+
+.badge-connected {
+  display: inline-block;
+  padding: 0.12rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
 .modal-backdrop {
   position: fixed;
   inset: 0;

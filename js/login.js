@@ -1,6 +1,14 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { isLocalTestMode } from './config.js';
-import { readSession, signInWithEmail, signUpWithEmail } from './session.js';
+import { t } from './i18n.js';
+import {
+  clearAuthRedirectParams,
+  readAuthRedirectError,
+  readSession,
+  signInWithDiscord,
+  signInWithEmail,
+  signUpWithEmail
+} from './session.js';
 import { LOCAL_TEST_ACCOUNTS, resetLocalStation } from './local-station.js';
 import { showStatus } from './ui.js';
 
@@ -12,16 +20,16 @@ function syncAuthMode() {
   const title = document.querySelector('#auth-title');
   const hint = document.querySelector('#signup-email-hint');
   if (mode === 'signup') {
-    title.textContent = 'Create account';
-    submit.textContent = 'Sign Up';
-    toggle.textContent = 'Already registered? Sign In';
+    title.textContent = t('auth.signupTitle');
+    submit.textContent = t('auth.signupSubmit');
+    toggle.textContent = t('auth.switchSignin');
     if (hint) {
       hint.hidden = false;
     }
   } else {
-    title.textContent = 'Sign In';
-    submit.textContent = 'Sign In';
-    toggle.textContent = 'Create an account';
+    title.textContent = t('auth.signinTitle');
+    submit.textContent = t('auth.signinSubmit');
+    toggle.textContent = t('auth.switchSignup');
     if (hint) {
       hint.hidden = true;
     }
@@ -66,19 +74,44 @@ syncAuthMode();
 initAos();
 renderLocalTestNotes();
 
+const redirectError = readAuthRedirectError();
 readSession()
   .then((session) => {
+    clearAuthRedirectParams();
+    if (redirectError) {
+      showStatus(redirectError, true);
+      return;
+    }
     if (session) {
       window.location.replace('./index.html');
     }
   })
   .catch((error) => {
-    showStatus(error.message, true);
+    clearAuthRedirectParams();
+    showStatus(error.message || t('auth.discordError'), true);
   });
 
 document.querySelector('#auth-toggle').addEventListener('click', () => {
   mode = mode === 'signin' ? 'signup' : 'signin';
   syncAuthMode();
+});
+
+window.addEventListener('wlr-lang-changed', () => {
+  syncAuthMode();
+});
+
+document.querySelector('#auth-discord').addEventListener('click', async () => {
+  const button = document.querySelector('#auth-discord');
+  if (button.disabled) {
+    return;
+  }
+  button.disabled = true;
+  try {
+    await signInWithDiscord();
+  } catch (error) {
+    showStatus(error.message || t('auth.discordError'), true);
+    button.disabled = false;
+  }
 });
 
 document.querySelector('#auth-form').addEventListener('submit', async (event) => {
@@ -99,7 +132,7 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
         window.location.replace('./index.html');
         return;
       }
-      showStatus('Account created. Sign In with the same email and password.');
+      showStatus(t('auth.created'));
       mode = 'signin';
       syncAuthMode();
       return;
