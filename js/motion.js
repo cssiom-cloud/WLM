@@ -81,6 +81,15 @@ export function staggerIn(root, selector) {
   });
 }
 
+export function enterPage(element) {
+  if (!element || prefersReducedMotion()) {
+    return;
+  }
+  element.classList.remove('page-enter');
+  void element.offsetWidth;
+  element.classList.add('page-enter');
+}
+
 export function bindSpotlightCards(selector) {
   document.querySelectorAll(selector).forEach(bindSpotlightCard);
 }

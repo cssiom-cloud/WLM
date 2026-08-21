@@ -4,6 +4,7 @@ import { showStatus } from './ui.js';
 
 let lastActivePage = '';
 let langListenerBound = false;
+let railListenerBound = false;
 let navGeneration = 0;
 
 function hamburgerIcon() {
@@ -30,11 +31,37 @@ function groupMarkup(title, links, activePage) {
       ${links
         .map(
           (link) =>
-            `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+            `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active" aria-current="page"' : ''}>${link.label}</a>`
         )
         .join('')}
     </section>
   `;
+}
+
+function usesNavRail() {
+  const page = document.body.dataset.page;
+  if (page === 'auth' || page === 'profiles') {
+    return false;
+  }
+  return window.matchMedia('(min-width: 1025px)').matches;
+}
+
+function syncNavRail(drawer, backdrop, hamburger) {
+  const rail = usesNavRail();
+  document.body.classList.toggle('has-nav-rail', rail);
+  drawer.classList.toggle('is-rail', rail);
+  if (rail) {
+    drawer.classList.remove('is-open');
+    drawer.hidden = false;
+    backdrop.classList.remove('is-open');
+    hamburger.classList.remove('is-open');
+    hamburger.setAttribute('aria-expanded', 'false');
+    hamburger.setAttribute('aria-label', 'Open menu');
+    return;
+  }
+  if (!drawer.classList.contains('is-open')) {
+    drawer.hidden = true;
+  }
 }
 
 export async function initCommandNavbar(activePage) {
@@ -114,7 +141,12 @@ export async function initCommandNavbar(activePage) {
     commandLinks.push({ href: './logs.html', page: 'logs', label: t('nav.logs') });
   }
 
-  drawer.innerHTML = `${groupMarkup(t('nav.group.personnel'), personnelLinks, activePage)}
+  drawer.innerHTML = `
+    <a class="brand brand-rail" href="./index.html">
+      <img class="clan-insignia" src="./assets/1.jpg" alt="WHITE LION REGIMENT">
+      <span class="clan-title">WHITE LION REGIMENT</span>
+    </a>
+    ${groupMarkup(t('nav.group.personnel'), personnelLinks, activePage)}
     ${groupMarkup(t('nav.group.operations'), operationsLinks, activePage)}
     ${groupMarkup(t('nav.group.archive'), archiveLinks, activePage)}
     ${groupMarkup(t('nav.group.support'), supportLinks, activePage)}
@@ -134,7 +166,7 @@ export async function initCommandNavbar(activePage) {
   desktopNav.innerHTML = desktopLinks
     .map(
       (link) =>
-        `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+        `<a href="${link.href}" data-page="${link.page}"${link.page === activePage ? ' class="is-active" aria-current="page"' : ''}>${link.label}</a>`
     )
     .join('');
 
@@ -147,12 +179,16 @@ export async function initCommandNavbar(activePage) {
   bottomNav.innerHTML = `${bottomLinks
     .map(
       (link) =>
-        `<a href="${link.href}"${link.page === activePage ? ' class="is-active"' : ''}>${link.label}</a>`
+        `<a href="${link.href}"${link.page === activePage ? ' class="is-active" aria-current="page"' : ''}>${link.label}</a>`
     )
     .join('')}
     <button type="button" data-open-drawer>${t('nav.menu')}</button>`;
 
   const setOpen = (open) => {
+    if (usesNavRail()) {
+      syncNavRail(drawer, backdrop, hamburger);
+      return;
+    }
     drawer.classList.toggle('is-open', open);
     backdrop.classList.toggle('is-open', open);
     hamburger.classList.toggle('is-open', open);
@@ -182,6 +218,23 @@ export async function initCommandNavbar(activePage) {
         showStatus(error.message, true);
       });
     });
+  }
+
+  syncNavRail(drawer, backdrop, hamburger);
+  if (!railListenerBound) {
+    railListenerBound = true;
+    window.addEventListener(
+      'resize',
+      () => {
+        const liveDrawer = document.querySelector('#command-drawer');
+        const liveBackdrop = document.querySelector('.drawer-backdrop');
+        const liveHamburger = document.querySelector('.hamburger');
+        if (liveDrawer && liveBackdrop && liveHamburger) {
+          syncNavRail(liveDrawer, liveBackdrop, liveHamburger);
+        }
+      },
+      { passive: true }
+    );
   }
 
   if (!langListenerBound) {

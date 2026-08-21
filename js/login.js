@@ -1,4 +1,4 @@
-import { bootCommandShell, initAos } from './shell.js';
+import { bootCommandShell } from './shell.js';
 import { isLocalTestMode } from './config.js';
 import { t } from './i18n.js';
 import {
@@ -12,6 +12,7 @@ import {
 } from './session.js';
 import { LOCAL_TEST_ACCOUNTS, resetLocalStation } from './local-station.js';
 import { showStatus } from './ui.js';
+import { revealBlurText } from './motion.js';
 
 let mode = 'signin';
 
@@ -72,7 +73,7 @@ function renderLocalTestNotes() {
 
 bootCommandShell('');
 syncAuthMode();
-initAos();
+revealBlurText(document.querySelector('#auth-title'));
 renderLocalTestNotes();
 
 const redirectError = readAuthRedirectError();
@@ -95,10 +96,12 @@ readSession()
 document.querySelector('#auth-toggle').addEventListener('click', () => {
   mode = mode === 'signin' ? 'signup' : 'signin';
   syncAuthMode();
+  revealBlurText(document.querySelector('#auth-title'));
 });
 
 window.addEventListener('wlr-lang-changed', () => {
   syncAuthMode();
+  revealBlurText(document.querySelector('#auth-title'));
 });
 
 document.querySelector('#auth-discord').addEventListener('click', async () => {

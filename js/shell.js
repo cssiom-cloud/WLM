@@ -7,6 +7,7 @@ import { fetchOwnSettings } from './command-services.js';
 import { applyTranslations, getLang, t } from './i18n.js';
 import { installCrestIcon, showStatus, upgradeSelects } from './ui.js';
 import { bindImageEditorHost } from './image-editor.js';
+import { enterPage } from './motion.js';
 
 export function bootCommandShell(activePage) {
   document.body.dataset.page = activePage || 'auth';
@@ -27,6 +28,7 @@ export function bootCommandShell(activePage) {
     }
   }
   hydrateRemoteAccent();
+  enterPage(document.querySelector('.page-content'));
   const ready = Promise.resolve(initCommandNavbar(activePage)).finally(() => {
     upgradeSelects();
   });

@@ -211,10 +211,21 @@
   to { background-position: 0 56px; }
 }
 
-.blur-reveal {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.28em;
+.page-enter {
+  animation: page-enter 0.58s var(--motion) both;
+}
+
+@keyframes page-enter {
+  from {
+    opacity: 0;
+    transform: translate3d(0, 14px, 0);
+    filter: blur(8px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+    filter: none;
+  }
 }
 
 .blur-word {
@@ -319,5 +330,9 @@
     filter: none !important;
     opacity: 1 !important;
     will-change: auto;
+  }
+
+  .page-enter {
+    animation: none !important;
   }
 }

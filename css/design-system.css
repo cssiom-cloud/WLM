@@ -399,6 +399,67 @@ p {
   .clan-title {
     max-width: min(28vw, 280px);
   }
+
+  body.has-nav-rail {
+    --sidebar-width: 268px;
+  }
+
+  body.has-nav-rail .page-shell {
+    padding-left: var(--sidebar-width);
+  }
+
+  body.has-nav-rail .command-navbar {
+    left: var(--sidebar-width);
+  }
+
+  body.has-nav-rail .command-nav-desktop,
+  body.has-nav-rail .hamburger {
+    display: none;
+  }
+
+  body.has-nav-rail .command-drawer {
+    top: 0;
+    left: 0;
+    right: auto;
+    width: var(--sidebar-width);
+    height: 100vh;
+    transform: none;
+    border-left: 0;
+    border-right: 1px solid var(--border);
+    box-shadow: none;
+    background: color-mix(in srgb, var(--bg-elevated) 88%, transparent);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+  }
+
+  body.has-nav-rail .drawer-backdrop {
+    display: none !important;
+  }
+
+  body.has-nav-rail .brand-rail {
+    display: flex;
+    margin-bottom: 1rem;
+    padding: 0.15rem 0.35rem 1rem;
+    border-bottom: 1px solid var(--border);
+  }
+
+  body.has-nav-rail .brand-rail .clan-title {
+    max-width: 11.5rem;
+    white-space: normal;
+    line-height: 1.25;
+  }
+
+  body.has-nav-rail .local-test-banner {
+    left: var(--sidebar-width);
+  }
+}
+
+.brand-rail {
+  display: none;
+}
+
+body.is-exporting.has-nav-rail .page-shell {
+  padding-left: 0;
 }
 
 .local-test-banner {
@@ -1004,17 +1065,53 @@ body.is-local-test .page-shell {
 }
 
 .profile-select {
-  width: min(920px, 100%);
+  width: min(1080px, 100%);
   margin: 1.5rem auto 2rem;
   text-align: center;
 }
 
 .profile-select-grid {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 1.1rem;
-  margin: 1.6rem 0 2rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1.15rem;
+  margin: 1.8rem 0 2.2rem;
+  text-align: left;
+}
+
+@media (min-width: 640px) {
+  .profile-select-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (min-width: 1024px) {
+  .profile-select-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+
+.profile-pick-card {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.profile-pick-card .gallery-card-media {
+  height: 240px;
+}
+
+.profile-pick-card.is-active {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.profile-pick-card.is-selecting {
+  opacity: 0.72;
 }
 
 .profile-id-card {
