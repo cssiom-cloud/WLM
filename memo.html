@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=memo">
+    <link rel="stylesheet" href="./css/components.css?v=memo-th">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -65,8 +65,16 @@
                 <input class="text-field" id="memo-to" type="text" maxlength="200">
               </label>
               <label class="full">
-                <span data-i18n="memo.field.body">Content</span>
-                <textarea class="text-field" id="memo-body" rows="10" maxlength="12000"></textarea>
+                <span data-i18n="memo.field.p1">Paragraph 1</span>
+                <textarea class="text-field" id="memo-p1" rows="4" maxlength="4000"></textarea>
+              </label>
+              <label class="full">
+                <span data-i18n="memo.field.p2">Paragraph 2</span>
+                <textarea class="text-field" id="memo-p2" rows="4" maxlength="4000"></textarea>
+              </label>
+              <label class="full">
+                <span data-i18n="memo.field.closing">Closing paragraph</span>
+                <textarea class="text-field" id="memo-closing" rows="3" maxlength="2000"></textarea>
               </label>
               <label>
                 <span data-i18n="memo.field.signName">Signatory name</span>

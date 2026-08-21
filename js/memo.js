@@ -18,6 +18,15 @@ const FOLDER_META = {
   dev: { key: 'memo.folder.dev', hint: 'memo.folder.devHint' }
 };
 
+const DOC_PREFIX = {
+  normal: 'ธด.',
+  unit_leader: 'หน.',
+  admin: 'อด.',
+  dev: 'พธ.'
+};
+
+const DEFAULT_CLOSING = 'จึงเรียนมาด้วยเพื่อให้ทราบ และกรุณาแจ้งให้ส่วนราชการในสังกัดทราบ';
+
 let actor = null;
 let units = [];
 let folders = [];
@@ -31,10 +40,64 @@ function fields() {
     date: document.querySelector('#memo-doc-date'),
     subject: document.querySelector('#memo-subject'),
     to: document.querySelector('#memo-to'),
-    body: document.querySelector('#memo-body'),
+    p1: document.querySelector('#memo-p1'),
+    p2: document.querySelector('#memo-p2'),
+    closing: document.querySelector('#memo-closing'),
     signName: document.querySelector('#memo-sign-name'),
     signTitle: document.querySelector('#memo-sign-title')
   };
+}
+
+function buddhistYear() {
+  return new Date().getFullYear() + 543;
+}
+
+function nextDocNo(folderKey) {
+  const prefix = DOC_PREFIX[folderKey] || DOC_PREFIX.normal;
+  const year = buddhistYear();
+  const escaped = prefix.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+  const pattern = new RegExp(`^${escaped}\\s*(\\d+)\\/(\\d+)$`);
+  let max = 0;
+  docs
+    .filter((row) => row.folder === folderKey)
+    .forEach((row) => {
+      const match = String(row.doc_no || '').trim().match(pattern);
+      if (match && Number(match[2]) === year) {
+        max = Math.max(max, Number(match[1]));
+      }
+    });
+  return `${prefix} ${String(max + 1).padStart(3, '0')}/${year}`;
+}
+
+function parseBody(raw) {
+  const text = String(raw || '').trim();
+  if (text.startsWith('{')) {
+    try {
+      const parsed = JSON.parse(text);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          paragraph1: parsed.paragraph1 || '',
+          paragraph2: parsed.paragraph2 || '',
+          closingParagraph: parsed.closingParagraph || DEFAULT_CLOSING
+        };
+      }
+    } catch {
+      /* Fall through and treat the stored body as a single paragraph. */
+    }
+  }
+  return {
+    paragraph1: text,
+    paragraph2: '',
+    closingParagraph: DEFAULT_CLOSING
+  };
+}
+
+function encodeBody(paragraph1, paragraph2, closingParagraph) {
+  return JSON.stringify({
+    paragraph1: paragraph1 || '',
+    paragraph2: paragraph2 || '',
+    closingParagraph: closingParagraph || ''
+  });
 }
 
 function emptyDraft() {
@@ -42,11 +105,13 @@ function emptyDraft() {
   return {
     id: null,
     folder,
-    doc_no: '',
+    doc_no: nextDocNo(folder),
     doc_date: defaultThaiDate(),
     subject: '',
     addressed_to: '',
-    body: '',
+    paragraph1: '',
+    paragraph2: '',
+    closingParagraph: DEFAULT_CLOSING,
     sign_name: name,
     sign_title: actor?.organization_role || actor?.military_rank || '',
     logo_url: './assets/1.jpg',
@@ -101,14 +166,20 @@ function docsInFolder() {
 
 function formValues() {
   const input = fields();
+  const paragraph1 = input.p1.value.trim();
+  const paragraph2 = input.p2.value.trim();
+  const closingParagraph = input.closing.value.trim();
   return {
     id: selectedId,
     folder,
-    doc_no: input.docNo.value.trim(),
+    doc_no: input.docNo.value.trim() || nextDocNo(folder),
     doc_date: input.date.value.trim(),
     subject: input.subject.value.trim(),
     addressed_to: input.to.value.trim(),
-    body: input.body.value.trim(),
+    paragraph1,
+    paragraph2,
+    closingParagraph,
+    body: encodeBody(paragraph1, paragraph2, closingParagraph),
     sign_name: input.signName.value.trim(),
     sign_title: input.signTitle.value.trim(),
     logo_url: selectedDoc()?.logo_url || './assets/1.jpg',
@@ -118,36 +189,42 @@ function formValues() {
 
 function fillForm(doc) {
   const input = fields();
-  input.docNo.value = doc.doc_no || '';
+  const parts = doc.paragraph1 != null ? doc : { ...doc, ...parseBody(doc.body) };
+  input.docNo.value = doc.doc_no || nextDocNo(folder);
   input.date.value = doc.doc_date || defaultThaiDate();
   input.subject.value = doc.subject || '';
   input.to.value = doc.addressed_to || '';
-  input.body.value = doc.body || '';
+  input.p1.value = parts.paragraph1 || '';
+  input.p2.value = parts.paragraph2 || '';
+  input.closing.value = parts.closingParagraph || DEFAULT_CLOSING;
   input.signName.value = doc.sign_name || '';
   input.signTitle.value = doc.sign_title || '';
   const canEdit = canEditMemo(actor, { ...doc, folder }, units) || !doc.id;
   document.querySelector('#memo-form').querySelectorAll('input, textarea, button[type="submit"]').forEach((node) => {
-    if (node.id === 'memo-export-pdf' || node.id === 'memo-export-jpg') {
-      return;
-    }
     node.disabled = !canEdit && Boolean(doc.id);
   });
   const del = document.querySelector('#memo-delete');
   del.hidden = !doc.id || !canEditMemo(actor, doc, units);
 }
 
-function bodyHtml(text) {
-  const blocks = escapeHtml(text || '').split(/\n{2,}/);
-  if (!blocks.filter(Boolean).length) {
-    return `<p class="memo-empty">${escapeHtml(t('memo.paper.empty'))}</p>`;
+function paragraphHtml(text, fallback) {
+  const value = String(text || '').trim();
+  if (!value) {
+    return fallback ? `<p class="memo-empty">${escapeHtml(fallback)}</p>` : '';
   }
-  return blocks.map((block) => `<p>${block.replace(/\n/g, '<br>')}</p>`).join('');
+  return `<p>${escapeHtml(value).replace(/\n/g, '<br>')}</p>`;
 }
 
 function renderPaper(doc) {
   const host = document.querySelector('#memo-paper');
   const logo = doc.logo_url || './assets/1.jpg';
+  const parts = {
+    paragraph1: doc.paragraph1 ?? parseBody(doc.body).paragraph1,
+    paragraph2: doc.paragraph2 ?? parseBody(doc.body).paragraph2,
+    closingParagraph: doc.closingParagraph ?? parseBody(doc.body).closingParagraph
+  };
   host.innerHTML = `
+    <p class="memo-office">สำนักงานเอกสาร WLC</p>
     <img class="memo-crest" src="${escapeHtml(logo)}" alt="W.L.R">
     <header class="memo-meta">
       <p class="memo-no"><span>${escapeHtml(t('memo.paper.no'))}</span> ${escapeHtml(doc.doc_no || '....................')}</p>
@@ -155,13 +232,18 @@ function renderPaper(doc) {
     </header>
     <p class="memo-line"><span>${escapeHtml(t('memo.paper.subject'))}</span> ${escapeHtml(doc.subject || '....................')}</p>
     <p class="memo-line"><span>${escapeHtml(t('memo.paper.to'))}</span> ${escapeHtml(doc.addressed_to || '....................')}</p>
-    <div class="memo-body">${bodyHtml(doc.body)}</div>
+    <div class="memo-body">
+      ${paragraphHtml(parts.paragraph1, t('memo.paper.empty'))}
+      ${paragraphHtml(parts.paragraph2)}
+      ${paragraphHtml(parts.closingParagraph)}
+    </div>
     <div class="memo-sign">
       <p>${escapeHtml(t('memo.paper.sign'))}</p>
       <p class="memo-sign-space">................................</p>
       <p>(${escapeHtml(doc.sign_name || '....................')})</p>
       <p>${escapeHtml(doc.sign_title || '')}</p>
     </div>
+    <p class="memo-foot">W.L.C</p>
   `;
 }
 
