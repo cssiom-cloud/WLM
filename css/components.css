@@ -5,7 +5,7 @@
 .personnel-grid {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
+  gap: 1.15rem;
 }
 
 @media (min-width: 600px) {
@@ -26,70 +26,148 @@
   }
 }
 
+@property --border-angle {
+  syntax: "<angle>";
+  inherits: false;
+  initial-value: 0deg;
+}
+
+.gallery-card,
 .personnel-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  text-align: center;
-  gap: 0.55rem;
-  padding: 1.4rem 1rem 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  background: var(--glass-bg, var(--bg-elevated));
+  overflow: hidden;
+  border-radius: calc(var(--radius) + 4px);
   backdrop-filter: blur(var(--glass-blur, 18px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
   box-shadow: var(--shadow-layered, var(--shadow));
-  transition:
-    transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
-    border-color 0.28s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.personnel-card:hover {
-  transform: translateY(-4px);
-  border-color: var(--accent);
+.gallery-card {
+  --border-angle: 0deg;
+  background:
+    linear-gradient(var(--glass-bg, var(--bg-elevated)), var(--glass-bg, var(--bg-elevated))) padding-box,
+    conic-gradient(
+      from var(--border-angle),
+      color-mix(in srgb, var(--accent) 12%, var(--border)),
+      color-mix(in srgb, var(--accent) 55%, white),
+      color-mix(in srgb, #c9a227 45%, var(--border)),
+      color-mix(in srgb, var(--accent) 12%, var(--border))
+    ) border-box;
+  border: 1px solid transparent;
 }
 
-.personnel-card .card-avatar,
-.personnel-card .card-avatar-fallback {
-  width: 84px;
-  height: 84px;
-  border-radius: 50%;
+.gallery-card:hover {
+  animation: gallery-border-spin 4.5s linear infinite;
+}
+
+@keyframes gallery-border-spin {
+  to {
+    --border-angle: 360deg;
+  }
+}
+
+.personnel-card {
+  border: 1px solid var(--border);
+  background: var(--glass-bg, var(--bg-elevated));
+}
+
+.gallery-card-media {
+  position: relative;
+  height: 220px;
+  overflow: hidden;
+  background:
+    radial-gradient(circle at 28% 18%, color-mix(in srgb, var(--accent) 26%, transparent), transparent 58%),
+    linear-gradient(165deg, var(--bg-muted), var(--bg-elevated));
+}
+
+.gallery-card-media img,
+.gallery-card-media .card-avatar-fallback {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
-  border: 2px solid var(--accent);
-  background: var(--accent-soft);
+  border: 0;
+  border-radius: 0;
 }
 
-.personnel-card .card-avatar-fallback {
+.gallery-card-media .card-avatar-fallback {
   display: grid;
   place-items: center;
   font-weight: 700;
-  font-size: 1.3rem;
-  color: var(--accent);
+  font-size: 2.4rem;
+  letter-spacing: 0.06em;
+  color: var(--text);
+  background: color-mix(in srgb, var(--accent-soft) 80%, var(--bg-elevated));
 }
 
+.gallery-card-glare {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    115deg,
+    transparent 38%,
+    color-mix(in srgb, #ffffff 22%, transparent) 49%,
+    transparent 60%
+  );
+  transform: translateX(-48%);
+  opacity: 0;
+  pointer-events: none;
+  transition:
+    transform 0.7s cubic-bezier(0.4, 0, 0.2, 1),
+    opacity 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.gallery-card:hover .gallery-card-glare {
+  opacity: 1;
+  transform: translateX(36%);
+}
+
+.gallery-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 0.42rem;
+  padding: 1rem 1.05rem 1.1rem;
+  text-align: left;
+}
+
+.gallery-card h2,
 .personnel-card h2 {
-  font-size: 1.02rem;
+  font-size: 1.05rem;
   font-weight: 650;
   line-height: 1.3;
 }
 
+.gallery-card .card-sub,
 .personnel-card .card-sub {
   color: var(--text-muted);
   font-size: 0.85rem;
   min-height: 1.2em;
 }
 
+.gallery-card .card-badges,
 .personnel-card .card-badges {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
   gap: 0.35rem;
 }
 
+.gallery-card .btn,
 .personnel-card .btn {
-  margin-top: 0.35rem;
+  margin-top: 0.45rem;
   width: 100%;
+}
+
+.command-hero {
+  margin-bottom: 1.4rem;
+}
+
+.command-hero .page-title {
+  letter-spacing: -0.03em;
+}
+
+.command-hero .page-lead {
+  margin-top: 0.35rem;
+  max-width: 38rem;
 }
 
 /* ---------- Color-coded badges ---------- */
@@ -184,12 +262,16 @@
 .skeleton-card {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  gap: 0.7rem;
-  padding: 1.4rem 1rem 1.15rem;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: var(--radius);
+  border-radius: calc(var(--radius) + 4px);
   background: var(--bg-elevated);
+}
+
+.skeleton-card .skeleton-avatar {
+  width: 100%;
+  height: 220px;
+  border-radius: 0;
 }
 
 .skeleton {
@@ -222,6 +304,7 @@
 .skeleton-line {
   height: 0.85rem;
   width: 70%;
+  margin: 0.85rem 1.05rem 0;
 }
 
 .skeleton-line-short {
@@ -231,6 +314,7 @@
 .skeleton-pill {
   height: 1.35rem;
   width: 58%;
+  margin: 0.55rem 1.05rem 1.1rem;
   border-radius: 999px;
 }
 
@@ -241,8 +325,15 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton::after {
+  .skeleton::after,
+  .gallery-card-glare,
+  .gallery-card {
     animation: none;
+    transition: none;
+  }
+
+  .gallery-card-glare {
+    opacity: 0;
   }
 }
 

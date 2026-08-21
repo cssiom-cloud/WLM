@@ -1,4 +1,4 @@
-import { bootCommandShell, initAos } from './shell.js';
+import { bootCommandShell } from './shell.js';
 import {
   MILITARY_BRANCHES,
   RANK_STRUCTURE,
@@ -15,6 +15,7 @@ import { t } from './i18n.js';
 import { fetchPersonnelRoster, updatePersonnelRecord, uploadPersonnelImage } from './personnel-service.js';
 import { fetchSettingsMap } from './command-services.js';
 import { bindTiltTargets } from './effects.js';
+import { bindSpotlightCards, revealBlurText, staggerIn } from './motion.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { readCurrentPersonnel } from './session.js';
 import { visiblePersonnel } from './access.js';
@@ -122,18 +123,23 @@ function avatarMarkup(record, className = 'card-avatar') {
 function cardMarkup(record, index) {
   const name = formatPersonnelName(record) || 'Unassigned name';
   return `
-    <article class="personnel-card" data-aos="fade-up" data-aos-delay="${Math.min(index * 40, 240)}">
-      ${avatarMarkup(record)}
-      <h2>${escapeHtml(name)}</h2>
-      <p class="card-sub">${escapeHtml(unitNameFor(record) || record.organization_role || '')}</p>
-      <div class="card-badges">
-        ${rankBadge(record.military_rank)}
-        ${branchBadge(record.military_branch)}
-        ${honorChips(record)}
+    <article class="gallery-card" style="--stagger:${index}">
+      <div class="gallery-card-media">
+        ${avatarMarkup(record)}
+        <span class="gallery-card-glare" aria-hidden="true"></span>
       </div>
-      <button class="btn" type="button" data-view-id="${escapeHtml(record.id)}" aria-label="${escapeHtml(t('dir.view'))}: ${escapeHtml(name)}">
-        ${t('dir.view')}
-      </button>
+      <div class="gallery-card-body">
+        <h2>${escapeHtml(name)}</h2>
+        <p class="card-sub">${escapeHtml(unitNameFor(record) || record.organization_role || '')}</p>
+        <div class="card-badges">
+          ${rankBadge(record.military_rank)}
+          ${branchBadge(record.military_branch)}
+          ${honorChips(record)}
+        </div>
+        <button class="btn" type="button" data-view-id="${escapeHtml(record.id)}" aria-label="${escapeHtml(t('dir.view'))}: ${escapeHtml(name)}">
+          ${t('dir.view')}
+        </button>
+      </div>
     </article>
   `;
 }
@@ -177,14 +183,18 @@ function renderDirectory(query = '') {
   lastQuery = query;
   const grid = document.querySelector('#directory-grid');
   const empty = document.querySelector('#directory-empty');
+  const title = document.querySelector('.page-title');
   const filtered = rosterCache.filter((record) => matchesQuery(record, query));
 
   grid.setAttribute('aria-busy', 'false');
+  grid.classList.toggle('is-instant', Boolean(query));
   grid.innerHTML = filtered.map(cardMarkup).join('');
   empty.hidden = filtered.length > 0;
 
-  initAos();
-  bindTiltTargets('.personnel-card');
+  revealBlurText(title);
+  staggerIn(grid, '.gallery-card');
+  bindTiltTargets('.gallery-card');
+  bindSpotlightCards('.gallery-card');
 }
 
 /* ---------- Rank insignia ---------- */
@@ -959,6 +969,7 @@ export function bindSharedDossier() {
 
 if (document.querySelector('#directory-grid')) {
   bootCommandShell('directory');
+  revealBlurText(document.querySelector('.page-title'));
   renderSkeletons();
   bindSharedDossier();
 

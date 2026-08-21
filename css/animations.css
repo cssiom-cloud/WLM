@@ -88,14 +88,8 @@
   transition: transform 0.32s var(--motion);
 }
 
-.profile-panel {
-  padding: 2rem 1.5rem 1.75rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  transform-style: preserve-3d;
-  will-change: transform;
-}
-
+.profile-panel,
+.gallery-card,
 .roster-row {
   transform-style: preserve-3d;
   will-change: transform;
@@ -107,6 +101,7 @@
 
 @media (max-width: 768px), (hover: none), (pointer: coarse) {
   .profile-panel,
+  .gallery-card,
   .roster-row {
     transform: none !important;
     will-change: auto;
@@ -118,6 +113,193 @@
   }
 }
 
+.fx-aurora {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+
+.fx-aurora-orb {
+  position: absolute;
+  border-radius: 50%;
+  filter: blur(72px);
+  opacity: 0.42;
+  will-change: transform;
+}
+
+.fx-aurora-a {
+  width: 42vw;
+  height: 42vw;
+  min-width: 280px;
+  min-height: 280px;
+  top: -12vh;
+  left: -8vw;
+  background: color-mix(in srgb, var(--accent) 28%, transparent);
+  animation: aurora-drift-a 28s var(--motion) infinite alternate;
+}
+
+.fx-aurora-b {
+  width: 36vw;
+  height: 36vw;
+  min-width: 240px;
+  min-height: 240px;
+  right: -10vw;
+  top: 18vh;
+  background: color-mix(in srgb, #3d4a63 34%, transparent);
+  animation: aurora-drift-b 34s var(--motion) infinite alternate;
+}
+
+.fx-aurora-c {
+  width: 28vw;
+  height: 28vw;
+  min-width: 200px;
+  min-height: 200px;
+  left: 28vw;
+  bottom: -12vh;
+  background: color-mix(in srgb, #c9a227 16%, transparent);
+  animation: aurora-drift-c 40s var(--motion) infinite alternate;
+}
+
+[data-theme="dark"] .fx-aurora-a {
+  background: color-mix(in srgb, #4b5878 46%, transparent);
+}
+
+[data-theme="dark"] .fx-aurora-b {
+  background: color-mix(in srgb, #1e4e8c 32%, transparent);
+}
+
+[data-theme="dark"] .fx-aurora-c {
+  background: color-mix(in srgb, #8a90ff 14%, transparent);
+}
+
+.fx-retro-grid {
+  position: absolute;
+  left: -10%;
+  right: -10%;
+  bottom: -18%;
+  height: 52vh;
+  background-image:
+    linear-gradient(to right, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px),
+    linear-gradient(to top, color-mix(in srgb, var(--accent) 16%, transparent) 1px, transparent 1px);
+  background-size: 56px 56px;
+  transform: perspective(520px) rotateX(58deg);
+  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 78%);
+  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0.55), transparent 78%);
+  animation: retro-grid-drift 48s linear infinite;
+  opacity: 0.55;
+}
+
+@keyframes aurora-drift-a {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(6vw, 4vh, 0) scale(1.08); }
+}
+
+@keyframes aurora-drift-b {
+  from { transform: translate3d(0, 0, 0) scale(1); }
+  to { transform: translate3d(-5vw, 5vh, 0) scale(1.12); }
+}
+
+@keyframes aurora-drift-c {
+  from { transform: translate3d(0, 0, 0); }
+  to { transform: translate3d(4vw, -3vh, 0); }
+}
+
+@keyframes retro-grid-drift {
+  from { background-position: 0 0; }
+  to { background-position: 0 56px; }
+}
+
+.blur-reveal {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.28em;
+}
+
+.blur-word {
+  display: inline-block;
+  overflow: hidden;
+}
+
+.blur-word-inner {
+  display: inline-block;
+  filter: blur(10px);
+  opacity: 0;
+  transform: translate3d(0, 14px, 0);
+  animation: blur-reveal-in 0.78s var(--motion) forwards;
+  animation-delay: calc(var(--i, 0) * 90ms);
+}
+
+@keyframes blur-reveal-in {
+  to {
+    filter: blur(0);
+    opacity: 1;
+    transform: translate3d(0, 0, 0);
+  }
+}
+
+.stagger-item {
+  opacity: 0;
+  transform: translate3d(0, 18px, 0);
+  filter: blur(6px);
+  transition:
+    opacity 0.7s var(--motion),
+    transform 0.7s var(--motion),
+    filter 0.7s var(--motion);
+  transition-delay: calc(var(--stagger, 0) * 55ms);
+}
+
+.is-staggered .stagger-item,
+.is-instant .stagger-item {
+  opacity: 1;
+  transform: none;
+  filter: none;
+}
+
+.spotlight-card {
+  --spot-x: 50%;
+  --spot-y: 0%;
+  position: relative;
+  isolation: isolate;
+}
+
+.spotlight-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  border-radius: inherit;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      220px circle at var(--spot-x) var(--spot-y),
+      color-mix(in srgb, var(--accent) 28%, transparent),
+      transparent 58%
+    );
+  opacity: 0;
+  transition: opacity 0.45s var(--motion);
+}
+
+.spotlight-card:hover::before {
+  opacity: 1;
+}
+
+@media (max-width: 768px), (hover: none), (pointer: coarse) {
+  .fx-aurora-orb,
+  .fx-retro-grid {
+    animation: none;
+  }
+
+  .fx-aurora-orb {
+    opacity: 0.22;
+  }
+
+  .spotlight-card::before {
+    display: none;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fx-grid-canvas,
   .page-shell,
@@ -126,9 +308,16 @@
   .btn,
   .theme-toggle,
   .avatar-action,
-  .command-drawer {
+  .command-drawer,
+  .fx-aurora-orb,
+  .fx-retro-grid,
+  .blur-word-inner,
+  .stagger-item {
     transition: none !important;
+    animation: none !important;
     transform: none !important;
+    filter: none !important;
+    opacity: 1 !important;
     will-change: auto;
   }
 }
