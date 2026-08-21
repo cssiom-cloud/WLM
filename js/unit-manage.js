@@ -133,7 +133,7 @@ function renderPage() {
   root.innerHTML = `
     ${unitTabsMarkup(unit.code, 'manage', true)}
     <div class="unit-page-hero">
-      ${logoMarkup(unit)}
+      <div class="unit-logo-frame">${logoMarkup(unit)}</div>
       <div>
         <p class="unit-code">${escapeHtml(unit.code)}</p>
         <h1 class="page-title">${escapeHtml(t('units.tabManage'))}</h1>
@@ -144,7 +144,7 @@ function renderPage() {
       ${
         isAdmin(actor)
           ? `
-            <section>
+            <section class="unit-manage-panel">
               <h3>${escapeHtml(t('units.appointHead'))}</h3>
               <div class="btn-row">
                 <select class="select-field" data-head-select="${escapeHtml(unit.id)}">
@@ -157,7 +157,7 @@ function renderPage() {
           `
           : ''
       }
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.logo'))}</h3>
         <label>${escapeHtml(t('units.logoUrl'))}
           <input class="text-field" data-logo-url type="url" value="${escapeHtml(unit.logo_url || '')}">
@@ -173,7 +173,7 @@ function renderPage() {
         </div>
         <button class="btn btn-primary" type="button" data-action="save-logo" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('common.save'))}</button>
       </section>
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.details'))}</h3>
         <label>${escapeHtml(t('units.content'))}
           <textarea class="text-field" data-unit-content="${escapeHtml(unit.id)}" rows="8">${escapeHtml(unit.content || '')}</textarea>
@@ -183,7 +183,7 @@ function renderPage() {
         </label>
         <button class="btn btn-primary" type="button" data-action="save-details" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('common.save'))}</button>
       </section>
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.ranks'))}</h3>
         <ul class="unit-rank-list">${rankRows}</ul>
         <div class="btn-row">
@@ -191,18 +191,18 @@ function renderPage() {
           <button class="btn" type="button" data-action="add-rank" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('common.add'))}</button>
         </div>
       </section>
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.linkedAnnouncements'))}</h3>
         <div class="check-list" data-unit-announcements="${escapeHtml(unit.id)}">
           ${announcementChecks || `<p class="empty-log">${escapeHtml(t('units.noAnnouncements'))}</p>`}
         </div>
         ${board.announcements.length ? `<button class="btn" type="button" data-action="save-announcements" data-unit="${escapeHtml(unit.id)}">${escapeHtml(t('common.save'))}</button>` : ''}
       </section>
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.applications'))}</h3>
         <ul class="unit-app-list">${appRows}</ul>
       </section>
-      <section>
+      <section class="unit-manage-panel">
         <h3>${escapeHtml(t('units.members'))}</h3>
         <ul class="unit-member-list">${memberRows}</ul>
       </section>

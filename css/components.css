@@ -422,34 +422,32 @@
 .announcement-list {
   display: grid;
   grid-template-columns: 1fr;
-  gap: 1rem;
-}
-
-@media (min-width: 700px) {
-  .announcement-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-  }
-}
-
-@media (min-width: 1100px) {
-  .announcement-list {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-  }
+  gap: 1.15rem;
 }
 
 .announcement-card,
 .announcement-skeleton {
-  display: flex;
-  flex-direction: column;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(168px, 240px) minmax(0, 1fr);
+  align-items: stretch;
   gap: 0;
-  padding: 0 0 1.15rem;
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
+  padding: 0;
+  border: 1px solid color-mix(in srgb, var(--accent) 22%, var(--border));
+  border-radius: calc(var(--radius) + 6px);
   overflow: hidden;
-  background: var(--glass-bg, var(--bg-elevated));
+  background:
+    linear-gradient(155deg, color-mix(in srgb, white 10%, transparent), transparent 42%),
+    var(--glass-bg, var(--bg-elevated));
   backdrop-filter: blur(var(--glass-blur, 18px));
   -webkit-backdrop-filter: blur(var(--glass-blur, 18px));
-  box-shadow: var(--shadow-layered, var(--shadow));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 14%, transparent) inset,
+    0 14px 32px color-mix(in srgb, black 28%, transparent),
+    0 2px 0 color-mix(in srgb, black 40%, transparent);
+  transform: perspective(1100px) rotateX(4deg);
+  transform-style: preserve-3d;
   transition:
     transform 0.28s cubic-bezier(0.4, 0, 0.2, 1),
     box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1),
@@ -457,8 +455,19 @@
 }
 
 .announcement-card:hover {
-  transform: translateY(-3px);
+  transform: perspective(1100px) rotateX(7deg) translateY(-6px) translateZ(12px);
   border-color: var(--accent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 20%, transparent) inset,
+    0 22px 44px color-mix(in srgb, black 34%, transparent),
+    0 24px 40px color-mix(in srgb, var(--accent) 16%, transparent);
+}
+
+.announcement-body {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  padding: 0.85rem 1.1rem 1.05rem;
 }
 
 .announcement-head {
@@ -466,7 +475,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 0.6rem;
-  padding: 1.05rem 1.25rem 0.2rem;
+  padding: 0;
 }
 
 .announcement-head h2 {
@@ -479,12 +488,12 @@
 .announcement-honor,
 .announcement-date,
 .capacity-tracker {
-  padding: 0.35rem 1.25rem 0;
+  padding: 0.35rem 0 0;
 }
 
 .announcement-actions {
-  margin-top: 0.85rem;
-  padding: 0 1.25rem;
+  margin-top: auto;
+  padding: 0.85rem 0 0;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
@@ -585,13 +594,13 @@
 
 .announcement-cover {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  height: auto;
+  height: 100%;
+  min-height: 168px;
   margin: 0;
   object-fit: cover;
   object-position: center;
-  border-radius: var(--radius) var(--radius) 0 0;
-  border-bottom: 1px solid var(--border);
+  border-radius: 0;
+  border-right: 1px solid var(--border);
   background: var(--bg-muted);
 }
 
@@ -3631,5 +3640,295 @@ body.is-exporting .memo-paper {
     transform-origin: top center;
   }
 }
+
+/* ---------- Command surface polish ---------- */
+
+.card-glare {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 1;
+  background: linear-gradient(125deg, rgba(255, 255, 255, 0.18), transparent 46%);
+  mix-blend-mode: screen;
+  opacity: 0.55;
+}
+
+.unit-board {
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.15rem;
+}
+
+.unit-card-link {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  gap: 0.85rem;
+  padding: 1.05rem 1.1rem 1.15rem;
+  transform: perspective(1000px) rotateX(5deg);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.28s;
+}
+
+.unit-card-link:hover {
+  transform: perspective(1000px) rotateX(8deg) translateY(-7px) translateZ(10px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 18%, transparent) inset,
+    0 20px 40px color-mix(in srgb, black 32%, transparent),
+    0 18px 32px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.unit-card-media {
+  display: grid;
+  place-items: center;
+  width: 84px;
+  height: 84px;
+  border-radius: 18px;
+  background:
+    radial-gradient(circle at 30% 20%, color-mix(in srgb, var(--accent) 28%, transparent), transparent 62%),
+    var(--bg-muted);
+  box-shadow: 0 10px 22px color-mix(in srgb, black 28%, transparent);
+}
+
+.unit-card-link .unit-logo {
+  width: 72px;
+  height: 72px;
+  border: 0;
+  background: transparent;
+}
+
+.unit-card-copy {
+  display: grid;
+  gap: 0.28rem;
+  min-width: 0;
+}
+
+.unit-page-card {
+  padding: 1.35rem 1.4rem 1.6rem;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 36%),
+    var(--glass-bg, var(--bg-elevated));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 12%, transparent) inset,
+    0 18px 40px color-mix(in srgb, black 26%, transparent);
+}
+
+.unit-page-hero {
+  align-items: center;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.unit-logo-frame {
+  flex: 0 0 auto;
+  padding: 0.45rem;
+  border-radius: 24px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--bg-elevated));
+  box-shadow: 0 16px 32px color-mix(in srgb, black 24%, transparent);
+  transform: rotateX(8deg) rotateY(-8deg);
+}
+
+.unit-logo-lg {
+  box-shadow: 0 8px 18px color-mix(in srgb, black 22%, transparent);
+}
+
+.unit-panel,
+.unit-manage-panel {
+  margin-top: 1.1rem;
+  padding: 1rem 1.05rem 1.15rem;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--bg-elevated) 78%, transparent);
+  box-shadow: 0 10px 24px color-mix(in srgb, black 14%, transparent);
+}
+
+.unit-panel h2,
+.unit-manage-panel h3 {
+  margin: 0 0 0.7rem;
+}
+
+.unit-roster-row,
+.unit-rank-row,
+.unit-app-row,
+.unit-member-row {
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--bg-muted) 55%, transparent);
+}
+
+.ops-list {
+  gap: 1.15rem;
+}
+
+.ops-card {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  padding: 1.15rem 1.2rem 1.25rem;
+  transform: perspective(1100px) rotateX(4deg);
+  transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.28s;
+}
+
+.ops-card:hover {
+  transform: perspective(1100px) rotateX(8deg) translateY(-6px);
+  box-shadow:
+    0 20px 40px color-mix(in srgb, black 32%, transparent),
+    0 16px 28px color-mix(in srgb, var(--accent) 14%, transparent);
+}
+
+.ops-create-card,
+.announce-form-card {
+  border-color: color-mix(in srgb, var(--accent) 24%, var(--border));
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 40%),
+    var(--glass-bg, var(--bg-elevated));
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 12%, transparent) inset,
+    0 18px 40px color-mix(in srgb, black 24%, transparent);
+}
+
+.announce-form-card .text-field:focus,
+.ops-create-card .text-field:focus,
+.unit-manage-panel .text-field:focus,
+.memo-form .text-field:focus,
+.doc-editor .text-field:focus {
+  outline: none;
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent), 0 10px 22px color-mix(in srgb, black 16%, transparent);
+}
+
+.ops-view-page .ops-dossier {
+  transform: perspective(1600px) rotateX(1.5deg);
+  background:
+    linear-gradient(180deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 18%),
+    var(--bg-elevated);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 10%, transparent) inset,
+    0 24px 48px color-mix(in srgb, black 28%, transparent);
+}
+
+.ops-doc-head,
+.ops-doc-box,
+.ops-faction,
+.ops-aar-card {
+  border-color: color-mix(in srgb, var(--accent) 18%, var(--border));
+  background:
+    linear-gradient(165deg, color-mix(in srgb, white 7%, transparent), transparent 38%),
+    var(--bg-elevated);
+  box-shadow: 0 12px 24px color-mix(in srgb, black 16%, transparent);
+}
+
+.ops-aar-card {
+  transform: translateZ(8px);
+}
+
+.docs-nav-item {
+  background: var(--glass-bg, var(--bg-elevated));
+  backdrop-filter: blur(12px);
+  transition: transform 0.22s ease, border-color 0.22s ease, box-shadow 0.22s ease;
+}
+
+.docs-nav-item:hover {
+  transform: translateX(3px);
+  border-color: var(--accent);
+}
+
+.docs-content {
+  min-height: 28rem;
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 8%, transparent), transparent 34%),
+    var(--glass-bg, var(--bg-elevated));
+}
+
+.doc-editor {
+  padding: 0.2rem 0.1rem;
+}
+
+.doc-markdown-input {
+  min-height: 22rem;
+  padding: 0.95rem 1rem;
+  border-radius: 14px;
+  background: color-mix(in srgb, var(--bg) 55%, var(--bg-elevated));
+  line-height: 1.75;
+}
+
+.memo-form {
+  background:
+    linear-gradient(160deg, color-mix(in srgb, var(--accent) 10%, transparent), transparent 42%),
+    var(--glass-bg, var(--bg-elevated));
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, white 12%, transparent) inset,
+    0 16px 34px color-mix(in srgb, black 22%, transparent);
+}
+
+.memo-form textarea.text-field {
+  min-height: 7.5rem;
+  line-height: 1.75;
+  resize: vertical;
+  background: color-mix(in srgb, var(--bg) 42%, var(--bg-elevated));
+}
+
+.memo-paper-wrap {
+  padding: 1.2rem 0.6rem 2rem;
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at 50% 0%, color-mix(in srgb, var(--accent) 14%, transparent), transparent 46%),
+    color-mix(in srgb, var(--bg-muted) 70%, transparent);
+  perspective: 1400px;
+}
+
+.memo-paper {
+  transform: rotateX(3deg);
+  box-shadow:
+    0 2px 0 rgba(0, 0, 0, 0.08),
+    0 18px 46px rgba(18, 32, 51, 0.22),
+    0 40px 70px rgba(18, 32, 51, 0.16);
+}
+
+.memo-item {
+  background: var(--glass-bg, var(--bg-muted));
+  transition: transform 0.2s ease, border-color 0.2s ease;
+}
+
+.memo-item:hover,
+.memo-item.is-active {
+  transform: translateX(3px);
+}
+
+body.is-exporting .memo-paper,
+body.is-exporting .ops-view-page .ops-dossier {
+  transform: none !important;
+}
+
+@media (max-width: 760px) {
+  .announcement-card,
+  .announcement-skeleton {
+    grid-template-columns: 1fr;
+    transform: none;
+  }
+
+  .announcement-card:hover {
+    transform: none;
+  }
+
+  .announcement-cover {
+    min-height: 0;
+    aspect-ratio: 16 / 9;
+    height: auto;
+    border-right: 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .unit-card-link,
+  .ops-card,
+  .ops-view-page .ops-dossier,
+  .memo-paper {
+    transform: none;
+  }
+
+  .unit-logo-frame {
+    transform: none;
+  }
+}
+
 
 

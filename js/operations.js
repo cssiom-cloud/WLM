@@ -1,4 +1,5 @@
 import { bootCommandShell, initAos } from './shell.js';
+import { bindTiltTargets } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
 import { confirmNotice, escapeHtml, showToast, withOverlay } from './ui.js';
 import { t } from './i18n.js';
@@ -42,6 +43,7 @@ function render() {
       const canDelete = canDeleteOperation(actor, item);
       return `
         <article class="unit-card ops-card" data-aos="fade-up">
+          <span class="card-glare" aria-hidden="true"></span>
           <div class="ops-card-head">
             ${statusBadge(item.status)}
             <h2>${escapeHtml(item.title)}</h2>
@@ -65,6 +67,7 @@ function render() {
       `;
     })
     .join('');
+  bindTiltTargets('.ops-card');
 }
 
 async function loadBoard() {

@@ -93,7 +93,10 @@
 
 .profile-panel,
 .gallery-card,
-.roster-row {
+.roster-row,
+.announcement-card,
+.unit-card-link,
+.ops-card {
   transform-style: preserve-3d;
   will-change: transform;
 }
@@ -105,7 +108,10 @@
 @media (max-width: 768px), (hover: none), (pointer: coarse) {
   .profile-panel,
   .gallery-card,
-  .roster-row {
+  .roster-row,
+  .announcement-card,
+  .unit-card-link,
+  .ops-card {
     transform: none !important;
     will-change: auto;
   }

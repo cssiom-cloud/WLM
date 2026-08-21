@@ -71,7 +71,7 @@ function renderPage() {
   root.innerHTML = `
     ${unitTabsMarkup(unit.code, 'home', manage)}
     <div class="unit-page-hero">
-      ${logoMarkup(unit)}
+      <div class="unit-logo-frame">${logoMarkup(unit)}</div>
       <div>
         <p class="unit-code">${escapeHtml(unit.code)}</p>
         <h1 class="page-title">${escapeHtml(unit.name)}</h1>
@@ -83,6 +83,7 @@ function renderPage() {
       </div>
     </div>
     <div class="unit-card-actions">${applyAction(unit)}</div>
+    <section class="unit-panel">
     <h2>${escapeHtml(t('units.content'))}</h2>
     ${
       unit.content
@@ -96,8 +97,11 @@ function renderPage() {
             .join('')}</ul>`
         : `<p class="empty-log">${escapeHtml(t('units.noAnnouncements'))}</p>`
     }
+    </section>
+    <section class="unit-panel">
     <h2>${escapeHtml(t('units.members'))}</h2>
     ${rosterMarkup(unit, members, board)}
+    </section>
   `;
   if (!aosReady) {
     initAos();

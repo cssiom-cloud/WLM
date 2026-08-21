@@ -1,4 +1,5 @@
 import { bootCommandShell, initAos } from './shell.js';
+import { bindTiltTargets } from './effects.js';
 import { requireAuthenticatedPersonnel } from './session.js';
 import { escapeHtml, showStatus, withOverlay } from './ui.js';
 import { t } from './i18n.js';
@@ -17,18 +18,20 @@ function renderBoard() {
       const excerpt = excerptText(unit.content, 90);
       return `
         <a class="unit-card unit-card-link" href="./unit.html?code=${encodeURIComponent(unit.code)}" data-aos="fade-up">
-          ${logoMarkup(unit, 'unit-logo', false)}
-          <div>
+          <span class="card-glare" aria-hidden="true"></span>
+          <div class="unit-card-media">${logoMarkup(unit, 'unit-logo', false)}</div>
+          <div class="unit-card-copy">
             <p class="unit-code">${escapeHtml(unit.code)}</p>
             <h2>${escapeHtml(unit.name)}</h2>
+            <p class="unit-content${excerpt ? '' : ' is-empty'}">${escapeHtml(excerpt || t('units.noContent'))}</p>
+            <p class="unit-head-meta">${escapeHtml(t('units.capacity'))}: ${members.length}/${unit.max_capacity}</p>
+            <p class="unit-head-meta">${escapeHtml(t('units.head'))}: ${escapeHtml(unit.head_user_id ? personName(board, unit.head_user_id) : t('units.unassigned'))}</p>
           </div>
-          <p class="unit-content${excerpt ? '' : ' is-empty'}">${escapeHtml(excerpt || t('units.noContent'))}</p>
-          <p class="unit-head-meta">${escapeHtml(t('units.capacity'))}: ${members.length}/${unit.max_capacity}</p>
-          <p class="unit-head-meta">${escapeHtml(t('units.head'))}: ${escapeHtml(unit.head_user_id ? personName(board, unit.head_user_id) : t('units.unassigned'))}</p>
         </a>
       `;
     })
     .join('');
+  bindTiltTargets('.unit-card-link');
   initAos();
 }
 

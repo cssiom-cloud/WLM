@@ -1,4 +1,5 @@
 import { bootCommandShell, initAos } from './shell.js';
+import { bindTiltTargets } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
 import { confirmNotice, escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
@@ -23,10 +24,12 @@ function isAdmin() {
 function skeletonMarkup() {
   return `
     <div class="skeleton-card announcement-skeleton" aria-hidden="true">
-      <div class="skeleton" style="width: 100%; height: 140px;"></div>
-      <div class="skeleton skeleton-line" style="width: 55%;"></div>
-      <div class="skeleton skeleton-line"></div>
-      <div class="skeleton skeleton-pill" style="width: 100%;"></div>
+      <div class="skeleton announcement-cover"></div>
+      <div class="announcement-body">
+        <div class="skeleton skeleton-line" style="width: 55%;"></div>
+        <div class="skeleton skeleton-line"></div>
+        <div class="skeleton skeleton-pill" style="width: 40%;"></div>
+      </div>
     </div>
   `;
 }
@@ -103,26 +106,29 @@ function announcementCard(item, index) {
   const isFull = item.signed_count >= item.max_capacity;
   return `
     <article class="announcement-card"${window.AOS ? ` data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}"` : ''}>
+      <span class="card-glare" aria-hidden="true"></span>
       ${coverMarkup(item)}
-      <div class="announcement-head">
-        <h2>${escapeHtml(item.title)}</h2>
-        ${statusBadge(item)}
-      </div>
-      <p class="announcement-content">${escapeHtml(item.content)}</p>
-      ${honorNote(item)}
-      <p class="announcement-date">${escapeHtml(new Date(item.created_at).toLocaleString())}</p>
-      <div class="capacity-tracker" role="group" aria-label="Registration tracker">
-        <div class="capacity-line">
-          <span>${t('ann.signedUp')}: <strong>${item.signed_count}</strong></span>
-          <span>${t('ann.max')}: <strong>${item.max_capacity}</strong></span>
+      <div class="announcement-body">
+        <div class="announcement-head">
+          <h2>${escapeHtml(item.title)}</h2>
+          ${statusBadge(item)}
         </div>
-        <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${item.max_capacity}" aria-valuenow="${item.signed_count}">
-          <div class="progress-fill${isFull ? ' is-full' : ''}" style="width: ${percent}%;"></div>
+        <p class="announcement-content">${escapeHtml(item.content)}</p>
+        ${honorNote(item)}
+        <p class="announcement-date">${escapeHtml(new Date(item.created_at).toLocaleString())}</p>
+        <div class="capacity-tracker" role="group" aria-label="Registration tracker">
+          <div class="capacity-line">
+            <span>${t('ann.signedUp')}: <strong>${item.signed_count}</strong></span>
+            <span>${t('ann.max')}: <strong>${item.max_capacity}</strong></span>
+          </div>
+          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${item.max_capacity}" aria-valuenow="${item.signed_count}">
+            <div class="progress-fill${isFull ? ' is-full' : ''}" style="width: ${percent}%;"></div>
+          </div>
         </div>
-      </div>
-      <div class="announcement-actions">
-        ${signupControl(item)}
-        ${adminControls(item)}
+        <div class="announcement-actions">
+          ${signupControl(item)}
+          ${adminControls(item)}
+        </div>
       </div>
     </article>
   `;
@@ -134,6 +140,7 @@ function renderBoard() {
   list.setAttribute('aria-busy', 'false');
   list.innerHTML = boardCache.map(announcementCard).join('');
   empty.hidden = boardCache.length > 0;
+  bindTiltTargets('.announcement-card');
   if (window.AOS) {
     window.requestAnimationFrame(() => {
       initAos();
