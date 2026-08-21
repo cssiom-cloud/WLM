@@ -2527,10 +2527,28 @@
 }
 
 .ops-export-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
   letter-spacing: 0.08em;
   text-transform: uppercase;
   font-weight: 700;
   font-size: 0.76rem;
+}
+
+.ops-export-spin {
+  width: 0.85rem;
+  height: 0.85rem;
+  border: 2px solid currentColor;
+  border-right-color: transparent;
+  border-radius: 50%;
+  animation: ops-export-spin 0.7s linear infinite;
+}
+
+@keyframes ops-export-spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .ops-export-masthead,
@@ -2543,7 +2561,7 @@
   height: 56px;
   object-fit: cover;
   border-radius: 10px;
-  border: 1px solid var(--border);
+  border: 1px solid #d5e0ee;
 }
 
 .ops-export-regiment {
@@ -2559,7 +2577,7 @@
   font-size: 0.75rem;
   letter-spacing: 0.06em;
   text-transform: uppercase;
-  color: var(--text-muted);
+  color: #5b6b80;
 }
 
 .tac-export-still {
@@ -2578,13 +2596,67 @@ body.is-exporting .command-bottom-nav {
   display: none !important;
 }
 
+body.is-exporting .ops-view-page,
+body.is-exporting .ops-dossier,
+body.is-exporting .ops-dossier .unit-card,
+body.is-exporting .ops-dossier .ops-faction,
+body.is-exporting .ops-dossier .ops-aar-card,
+body.is-exporting .ops-dossier .tac-viewport,
+body.is-exporting .ops-dossier .tac-stage,
+body.is-exporting .ops-dossier .text-field {
+  background: #ffffff !important;
+  background-image: none !important;
+  color: #122033 !important;
+  border-color: #d5e0ee !important;
+  box-shadow: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  filter: none !important;
+}
+
+body.is-exporting .ops-dossier {
+  background: #f4f6f8 !important;
+  padding: 1.1rem 1.15rem 1.25rem;
+  color: #122033 !important;
+}
+
+body.is-exporting .ops-dossier .page-title,
+body.is-exporting .ops-dossier h2,
+body.is-exporting .ops-dossier strong,
+body.is-exporting .ops-export-regiment {
+  color: #122033 !important;
+}
+
+body.is-exporting .ops-dossier .form-hint,
+body.is-exporting .ops-dossier small,
+body.is-exporting .ops-dossier .ops-section-head h2,
+body.is-exporting .ops-export-footer {
+  color: #5b6b80 !important;
+}
+
+body.is-exporting .badge-op-planning {
+  background: #e8edf3 !important;
+  color: #5b6b80 !important;
+}
+
+body.is-exporting .badge-op-active {
+  background: #e8f0fa !important;
+  color: #1e4e8c !important;
+}
+
+body.is-exporting .badge-op-completed {
+  background: #e7f4ec !important;
+  color: #1c6b46 !important;
+}
+
 body.is-exporting .ops-export-masthead {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   margin-bottom: 1.1rem;
   padding-bottom: 0.9rem;
-  border-bottom: 2px solid var(--accent);
+  border-bottom: 2px solid #1e4e8c;
+  color: #122033;
 }
 
 body.is-exporting .ops-export-footer {
@@ -2622,11 +2694,7 @@ body.is-exporting .ops-aar-form textarea {
   box-shadow: none;
   padding: 0;
   min-height: 0;
-}
-
-body.is-exporting .ops-dossier {
-  background: var(--bg);
-  padding: 0.2rem 0 1rem;
+  color: #122033 !important;
 }
 
 @media print {
@@ -2639,13 +2707,18 @@ body.is-exporting .ops-dossier {
     display: none !important;
   }
 
+  .ops-dossier {
+    background: #f4f6f8;
+    color: #122033;
+  }
+
   .ops-export-masthead {
     display: flex;
     align-items: center;
     gap: 0.85rem;
     margin-bottom: 1rem;
     padding-bottom: 0.8rem;
-    border-bottom: 2px solid var(--accent);
+    border-bottom: 2px solid #1e4e8c;
   }
 
   .ops-export-footer {

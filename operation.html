@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=ops-export">
+    <link rel="stylesheet" href="./css/components.css?v=ops-html-to-image">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -24,6 +24,26 @@
     <div class="page-shell">
       <header id="command-header"></header>
       <main class="page-content ops-view-page">
+        <div class="toolbar-row ops-chrome">
+          <div>
+            <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
+          </div>
+          <div class="btn-row">
+            <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
+            <a id="op-edit-link" class="btn" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
+            <div class="ops-export" role="group" aria-label="Export dossier">
+              <button class="btn btn-primary ops-export-btn" id="op-export-pdf" type="button" data-export="pdf">
+                <span class="ops-export-spin" hidden aria-hidden="true"></span>
+                <span class="ops-export-label" data-i18n="ops.export.pdf">Export as PDF</span>
+              </button>
+              <button class="btn ops-export-btn" id="op-export-jpg" type="button" data-export="jpg">
+                <span class="ops-export-spin" hidden aria-hidden="true"></span>
+                <span class="ops-export-label" data-i18n="ops.export.jpg">Save as JPG</span>
+              </button>
+            </div>
+          </div>
+        </div>
+        <p id="status-banner" class="status-banner ops-chrome" role="status"></p>
         <article id="op-dossier" class="ops-dossier">
           <header class="ops-export-masthead">
             <img src="./assets/1.jpg" alt="WHITE LION REGIMENT">
@@ -32,24 +52,10 @@
               <p data-i18n="ops.export.masthead">Official Operation Dossier</p>
             </div>
           </header>
-          <div class="toolbar-row">
-            <div>
-              <p class="page-kicker" data-i18n="ops.kicker">Operations</p>
-              <div class="ops-title-row">
-                <span id="op-status-badge"></span>
-                <h1 class="page-title" id="op-title">Operation</h1>
-              </div>
-            </div>
-            <div class="btn-row ops-chrome">
-              <a class="btn" href="./operations.html" data-i18n="ops.back">Back to Operations</a>
-              <a id="op-edit-link" class="btn" href="./operation-create.html" data-i18n="ops.edit" hidden>Edit</a>
-              <div class="ops-export" role="group" aria-label="Export dossier">
-                <button class="btn btn-primary ops-export-btn" id="op-export-pdf" type="button" data-export="pdf" data-i18n="ops.export.pdf">Export Dossier · PDF</button>
-                <button class="btn ops-export-btn" id="op-export-jpg" type="button" data-export="jpg" data-i18n="ops.export.jpg">JPG</button>
-              </div>
-            </div>
+          <div class="ops-title-row">
+            <span id="op-status-badge"></span>
+            <h1 class="page-title" id="op-title">Operation</h1>
           </div>
-          <p id="status-banner" class="status-banner ops-chrome" role="status"></p>
           <section class="unit-card ops-brief-card">
             <h2 data-i18n="ops.briefingLabel">Briefing</h2>
             <div id="op-briefing" class="ops-briefing"></div>

@@ -6,7 +6,7 @@ import { fetchUnitBoard } from './unit-service.js';
 import { canEditOperation, fetchOperationBoard, saveOperationAar } from './operation-service.js';
 import { briefingHtml, factionBoardMarkup, statusBadge, unitsForSide } from './operation-ui.js';
 import { mountMapViewer } from './tactical-map.js';
-import { handleExportPDF } from './operation-export.js';
+import { handleExportJPG, handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
 
 bootCommandShell('operations');
@@ -155,12 +155,16 @@ document.querySelector('.ops-export')?.addEventListener('click', async (event) =
     return;
   }
   mapViewer?.resetView();
-  await handleExportPDF({
+  const payload = {
     title: operation.title,
     mapUrl: operation.map_url || '',
-    drawings: operation.drawings || [],
-    format: button.getAttribute('data-export')
-  });
+    drawings: operation.drawings || []
+  };
+  if (button.getAttribute('data-export') === 'jpg') {
+    await handleExportJPG(payload);
+  } else {
+    await handleExportPDF(payload);
+  }
 });
 
 document.querySelector('#aar-board')?.addEventListener('submit', async (event) => {
