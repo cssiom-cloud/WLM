@@ -268,6 +268,35 @@ function NavGroups({ onNavigate }) {
   );
 }
 
+function HamburgerButton({ open, onToggle, labels }) {
+  return (
+    <button
+      type="button"
+      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-xl lg:hidden dark:border-slate-700/80 dark:bg-slate-900/80"
+      aria-expanded={open}
+      aria-label={open ? labels.close : labels.menu}
+      onClick={onToggle}
+    >
+      <span className="relative block h-3.5 w-4">
+        <motion.span
+          className="absolute left-0 top-0 block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
+          animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
+          transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+        />
+        <motion.span
+          className="absolute left-0 top-[6px] block h-0.5 w-4 rounded-full bg-slate-800 dark:bg-slate-100"
+          animate={open ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+        />
+        <motion.span
+          className="absolute left-0 top-[12px] block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
+          animate={open ? { y: -6, rotate: -45 } : { y: 0, rotate: 0 }}
+          transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+        />
+      </span>
+    </button>
+  );
+}
 function LangThemeControls() {
   const { lang, setLang, theme, setTheme } = useCommand();
   return (
@@ -337,19 +366,7 @@ export function GlobalLayout() {
         </p>
         <div className="flex items-center gap-2">
           <LangThemeControls />
-          <button
-            type="button"
-            className="grid h-11 w-11 place-items-center rounded-xl border border-slate-200 bg-white lg:hidden dark:border-slate-700 dark:bg-slate-900"
-            aria-expanded={open}
-            aria-label={open ? copy.close : copy.menu}
-            onClick={() => setOpen((value) => !value)}
-          >
-            <span className="flex w-4 flex-col gap-1">
-              <span className={`block h-0.5 bg-slate-800 transition dark:bg-slate-100 ${open ? 'translate-y-1.5 rotate-45' : ''}`} />
-              <span className={`block h-0.5 bg-slate-800 transition dark:bg-slate-100 ${open ? 'opacity-0' : ''}`} />
-              <span className={`block h-0.5 bg-slate-800 transition dark:bg-slate-100 ${open ? '-translate-y-1.5 -rotate-45' : ''}`} />
-            </span>
-          </button>
+          <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} labels={copy} />
         </div>
       </header>
 
@@ -357,26 +374,29 @@ export function GlobalLayout() {
         {open ? (
           <>
             <motion.button
+              key="drawer-backdrop"
               type="button"
               aria-label={copy.close}
-              className="fixed inset-0 z-40 bg-slate-950/30 lg:hidden"
+              className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
+              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
               onClick={() => setOpen(false)}
             />
             <motion.nav
-              className="fixed bottom-0 right-0 top-[72px] z-50 flex w-[min(320px,100%)] flex-col gap-4 overflow-y-auto border-l border-slate-200 bg-white/95 p-4 shadow-2xl backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/95"
-              initial={{ x: 24, opacity: 0 }}
-              animate={{ x: 0, opacity: 1 }}
-              exit={{ x: 24, opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              key="drawer-panel"
+              className="fixed bottom-0 right-0 top-[72px] z-50 flex w-[min(320px,100%)] flex-col gap-4 overflow-y-auto border-l border-white/40 bg-white/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-slate-900/80"
+              initial={{ x: '100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '100%' }}
+              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
               <NavGroups onNavigate={() => setOpen(false)} />
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/5"
               >
                 {copy.signOut}
               </button>
