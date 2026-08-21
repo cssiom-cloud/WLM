@@ -1256,6 +1256,7 @@ export async function localSaveOperation(payload) {
       status: payload.status,
       drawings: payload.drawings || [],
       map_url: payload.map_url || row.map_url || '',
+      commanding_officer: payload.commanding_officer || '',
       updated_at: now
     });
     writeJson(STORAGE_OPERATIONS, rows);
@@ -1275,6 +1276,7 @@ export async function localSaveOperation(payload) {
     status: payload.status || 'planning',
     drawings: payload.drawings || [],
     map_url: payload.map_url || '',
+    commanding_officer: payload.commanding_officer || '',
     created_by: actor.id,
     created_at: now,
     updated_at: now

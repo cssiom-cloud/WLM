@@ -21,6 +21,7 @@ let editor = null;
 const titleInput = document.querySelector('#op-title');
 const briefingInput = document.querySelector('#op-briefing');
 const statusInput = document.querySelector('#op-status');
+const officerInput = document.querySelector('#op-officer');
 const submitButton = document.querySelector('#op-submit');
 const pageTitle = document.querySelector('.page-title');
 
@@ -120,6 +121,9 @@ async function boot() {
     titleInput.value = existing.title || '';
     briefingInput.value = existing.briefing || '';
     statusInput.value = existing.status || 'planning';
+    if (officerInput) {
+      officerInput.value = existing.commanding_officer || '';
+    }
     mapUrl = existing.map_url || '';
     assignments = operationBoard.sides
       .filter((row) => row.operation_id === existing.id)
@@ -157,6 +161,7 @@ document.querySelector('#operation-form')?.addEventListener('submit', async (eve
           title,
           briefing: briefingInput.value.trim(),
           status: statusInput.value,
+          commandingOfficer: officerInput?.value.trim() || '',
           drawings: editor?.getDrawings() || [],
           sides: assignments,
           mapFile,

@@ -2697,6 +2697,109 @@ body.is-exporting .ops-aar-form textarea {
   color: #122033 !important;
 }
 
+.ops-auth {
+  margin: 1.4rem 0 0;
+  padding: 1.15rem 1.2rem 1.25rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg-elevated);
+}
+
+.ops-auth h2 {
+  margin: 0 0 1rem;
+  font-size: 0.82rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ops-auth-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(160px, 0.8fr);
+  gap: 1.2rem;
+  align-items: center;
+}
+
+.ops-auth-kicker,
+.ops-auth-role {
+  margin: 0;
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ops-auth-name {
+  margin: 0.35rem 0 0.15rem;
+  font-size: 1.35rem;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--text);
+}
+
+.ops-auth-rule {
+  margin: 0 0 0.45rem;
+  width: min(100%, 280px);
+  border-bottom: 1px solid var(--text);
+  height: 2.4rem;
+}
+
+.ops-auth-stamp-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 110px;
+}
+
+.ops-stamp {
+  display: grid;
+  place-items: center;
+  min-width: 148px;
+  padding: 0.55rem 0.7rem;
+  border: 3px solid #9b1c2c;
+  box-shadow: inset 0 0 0 2px #9b1c2c;
+  color: #9b1c2c;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-align: center;
+  text-transform: uppercase;
+  transform: rotate(-12deg);
+  background: rgba(255, 255, 255, 0.72);
+}
+
+.ops-stamp-approved {
+  border-color: #1c6b46;
+  box-shadow: inset 0 0 0 2px #1c6b46;
+  color: #1c6b46;
+}
+
+body.is-exporting .ops-auth,
+body.is-exporting .ops-auth .ops-stamp {
+  background: #ffffff !important;
+  color: #122033;
+  border-color: #d5e0ee;
+  box-shadow: none;
+}
+
+body.is-exporting .ops-stamp {
+  background: #ffffff !important;
+  border: 3px solid #9b1c2c !important;
+  box-shadow: inset 0 0 0 2px #9b1c2c !important;
+  color: #9b1c2c !important;
+}
+
+body.is-exporting .ops-stamp-approved {
+  border-color: #1c6b46 !important;
+  box-shadow: inset 0 0 0 2px #1c6b46 !important;
+  color: #1c6b46 !important;
+}
+
+@media (max-width: 900px) {
+  .ops-auth-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
 @media print {
   #command-header,
   .ops-chrome,

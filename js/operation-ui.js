@@ -65,3 +65,26 @@ export function factionBoardMarkup(allies, objectives, { compact = false } = {})
     </div>
   `;
 }
+
+export function authorizationMarkup(operation) {
+  const name = String(operation?.commanding_officer || '').trim();
+  const approved = operation?.status === 'completed' && Boolean(name);
+  const stampClass = approved ? 'ops-stamp-approved' : 'ops-stamp-restricted';
+  const stampLabel = approved ? t('ops.auth.approved') : t('ops.auth.restricted');
+  return `
+    <section class="ops-auth" aria-label="${escapeHtml(t('ops.auth.title'))}">
+      <h2>${escapeHtml(t('ops.auth.title'))}</h2>
+      <div class="ops-auth-grid">
+        <div class="ops-auth-sign">
+          <p class="ops-auth-kicker">${escapeHtml(t('ops.auth.officer'))}</p>
+          <p class="ops-auth-name">${escapeHtml(name || t('ops.auth.unsigned'))}</p>
+          <p class="ops-auth-rule" aria-hidden="true"></p>
+          <p class="ops-auth-role">${escapeHtml(t('ops.auth.role'))}</p>
+        </div>
+        <div class="ops-auth-stamp-wrap">
+          <div class="ops-stamp ${stampClass}">${escapeHtml(stampLabel)}</div>
+        </div>
+      </div>
+    </section>
+  `;
+}

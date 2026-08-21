@@ -103,7 +103,8 @@ export async function saveOperation(payload) {
     sides,
     mapFile,
     mapUrl,
-    createdBy
+    createdBy,
+    commandingOfficer
   } = payload;
 
   if (isLocalTestMode()) {
@@ -119,7 +120,8 @@ export async function saveOperation(payload) {
       drawings: normalizeDrawings(drawings),
       sides,
       map_url: storedMap,
-      created_by: createdBy
+      created_by: createdBy,
+      commanding_officer: commandingOfficer || ''
     });
   }
 
@@ -135,7 +137,8 @@ export async function saveOperation(payload) {
     briefing: briefing || '',
     status: OPERATION_STATUSES.includes(status) ? status : 'planning',
     drawings: normalizeDrawings(drawings),
-    map_url: nextMapUrl
+    map_url: nextMapUrl,
+    commanding_officer: commandingOfficer || ''
   };
 
   if (id) {

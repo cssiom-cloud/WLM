@@ -4,7 +4,7 @@ import { escapeHtml, showToast, withOverlay } from './ui.js';
 import { t } from './i18n.js';
 import { fetchUnitBoard } from './unit-service.js';
 import { canEditOperation, fetchOperationBoard, saveOperationAar } from './operation-service.js';
-import { briefingHtml, factionBoardMarkup, statusBadge, unitsForSide } from './operation-ui.js';
+import { authorizationMarkup, briefingHtml, factionBoardMarkup, statusBadge, unitsForSide } from './operation-ui.js';
 import { mountMapViewer } from './tactical-map.js';
 import { handleExportJPG, handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
@@ -118,6 +118,10 @@ function renderHeader() {
   const allies = unitsForSide(units, sides, operation.id, 'allies');
   const objectives = unitsForSide(units, sides, operation.id, 'objectives');
   document.querySelector('#op-factions').innerHTML = factionBoardMarkup(allies, objectives);
+  const authHost = document.querySelector('#op-auth');
+  if (authHost) {
+    authHost.innerHTML = authorizationMarkup(operation);
+  }
 }
 
 async function boot() {

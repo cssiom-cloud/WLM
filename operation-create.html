@@ -10,7 +10,7 @@
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
     <link rel="stylesheet" href="./css/design-system.css">
     <link rel="stylesheet" href="./css/animations.css">
-    <link rel="stylesheet" href="./css/components.css?v=ops-board">
+    <link rel="stylesheet" href="./css/components.css?v=ops-auth">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -48,6 +48,10 @@
                 <option value="completed" data-i18n="ops.status.completed">Completed</option>
               </select>
             </label>
+            <label for="op-officer"><span data-i18n="ops.auth.officer">Commanding Officer Name</span>
+              <input id="op-officer" class="text-field" type="text" maxlength="120" autocomplete="name">
+            </label>
+            <p class="form-hint" data-i18n="ops.auth.hint">Printed on the dossier sign-off with an official stamp. Required for a completed authorization block.</p>
             <div class="ops-section-head">
               <h2 data-i18n="ops.factions">Faction assignment</h2>
               <p class="form-hint" data-i18n="ops.factionsHint">Assign units to Allies or Objectives. Each unit crest appears on the public board.</p>
