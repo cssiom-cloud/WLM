@@ -23,7 +23,7 @@ const THEME_KEY = 'wlr-command-theme';
 const COPY = {
   en: {
     brand: 'WHITE LION REGIMENT',
-    menu: 'Menu',
+    menu: 'Open menu',
     close: 'Close menu',
     signOut: 'Sign Out',
     personnel: 'Personnel',
@@ -35,11 +35,11 @@ const COPY = {
     documents: 'Official Documents',
     settings: 'Settings',
     switch: 'Switch personnel',
-    home: 'Dashboard'
+    home: 'Command Home'
   },
   th: {
     brand: 'WHITE LION REGIMENT',
-    menu: 'เมนู',
+    menu: 'เปิดเมนู',
     close: 'ปิดเมนู',
     signOut: 'ออกจากระบบ',
     personnel: 'กำลังพล',
@@ -47,11 +47,11 @@ const COPY = {
     archive: 'คลังเอกสาร',
     command: 'ศูนย์บัญชาการ',
     dashboard: 'ทำเนียบ',
-    board: 'กระดานยุทธวิธี',
-    documents: 'หนังสือราชการ',
+    board: 'บอร์ดปฏิบัติการ',
+    documents: 'เอกสารราชการ',
     settings: 'การตั้งค่า',
     switch: 'สลับแฟ้มกำลังพล',
-    home: 'แดชบอร์ด'
+    home: 'หน้าหลัก'
   }
 };
 
@@ -83,6 +83,7 @@ export function CommandProvider({ children }) {
   const [activePersonnel, setActivePersonnelState] = useState(null);
   const [lang, setLangState] = useState(() => (window.localStorage.getItem(LANG_KEY) === 'th' ? 'th' : 'en'));
   const [theme, setThemeState] = useState(readStoredTheme);
+  const [zenMode, setZenMode] = useState(false);
 
   const loadRoster = useCallback(async (authSession) => {
     if (!authSession?.user) {
@@ -152,14 +153,17 @@ export function CommandProvider({ children }) {
     window.localStorage.setItem(THEME_KEY, theme);
   }, [lang, theme]);
 
-  const setActivePersonnel = useCallback(async (personnelId) => {
-    window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, personnelId);
-    const { error } = await supabase.rpc('set_active_personnel', { p_personnel_id: personnelId });
-    if (error) {
-      throw error;
-    }
-    setActivePersonnelState(profiles.find((row) => row.id === personnelId) || null);
-  }, [profiles]);
+  const setActivePersonnel = useCallback(
+    async (personnelId) => {
+      window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, personnelId);
+      const { error } = await supabase.rpc('set_active_personnel', { p_personnel_id: personnelId });
+      if (error) {
+        throw error;
+      }
+      setActivePersonnelState(profiles.find((row) => row.id === personnelId) || null);
+    },
+    [profiles]
+  );
 
   const signOut = useCallback(async () => {
     window.localStorage.removeItem(ACTIVE_PERSONNEL_KEY);
@@ -177,16 +181,18 @@ export function CommandProvider({ children }) {
       activePersonnel,
       lang,
       theme,
+      zenMode,
       copy: COPY[lang],
       formatPersonnelName,
       setLang: setLangState,
       setTheme: setThemeState,
+      setZenMode,
       setActivePersonnel,
       refresh: () => loadRoster(session),
       signOut,
       supabase
     }),
-    [activePersonnel, bootstrapping, lang, loadRoster, profiles, session, setActivePersonnel, signOut, theme]
+    [activePersonnel, bootstrapping, lang, loadRoster, profiles, session, setActivePersonnel, signOut, theme, zenMode]
   );
 
   return <CommandContext.Provider value={value}>{children}</CommandContext.Provider>;
@@ -225,9 +231,13 @@ function BrandMark({ compact = false }) {
       <img
         src={`${import.meta.env.BASE_URL}assets/1.jpg`}
         alt={copy.brand}
-        className="h-12 w-12 rounded-xl border border-slate-200 bg-white object-contain p-0.5 dark:border-slate-700 dark:bg-slate-900"
+        className="h-12 w-12 rounded-xl border border-stone-200/80 bg-white object-contain p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
       />
-      <span className={`font-semibold tracking-[0.12em] text-slate-800 dark:text-slate-100 ${compact ? 'max-w-[9.5rem] text-xs leading-snug' : 'text-sm'}`}>
+      <span
+        className={`font-semibold tracking-[0.14em] text-slate-800 dark:text-slate-100 ${
+          compact ? 'max-w-[9.5rem] text-xs leading-snug' : 'truncate text-sm'
+        }`}
+      >
         {copy.brand}
       </span>
     </NavLink>
@@ -240,7 +250,7 @@ function NavGroups({ onNavigate }) {
     <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
       {NAV.map((group) => (
         <section key={group.id}>
-          <h2 className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-slate-500">
+          <h2 className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
             {copy[group.labelKey]}
           </h2>
           <div className="grid gap-1">
@@ -251,10 +261,10 @@ function NavGroups({ onNavigate }) {
                 end={Boolean(link.end)}
                 onClick={onNavigate}
                 className={({ isActive }) =>
-                  `rounded-xl px-3 py-2.5 text-sm font-semibold no-underline transition ${
+                  `rounded-xl px-3 py-2.5 text-sm font-semibold no-underline transition duration-300 ${
                     isActive
-                      ? 'bg-indigo-500/10 text-indigo-700 dark:bg-indigo-400/15 dark:text-indigo-200'
-                      : 'text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5'
+                      ? 'bg-indigo-600/10 text-indigo-800 shadow-sm dark:bg-indigo-400/15 dark:text-indigo-200'
+                      : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5'
                   }`
                 }
               >
@@ -272,8 +282,9 @@ function HamburgerButton({ open, onToggle, labels }) {
   return (
     <button
       type="button"
-      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-slate-200/80 bg-white/70 backdrop-blur-xl lg:hidden dark:border-slate-700/80 dark:bg-slate-900/80"
+      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-stone-200/80 bg-white/70 shadow-sm backdrop-blur-xl lg:hidden dark:border-slate-700/80 dark:bg-slate-900/75"
       aria-expanded={open}
+      aria-controls="command-drawer"
       aria-label={open ? labels.close : labels.menu}
       onClick={onToggle}
     >
@@ -281,34 +292,35 @@ function HamburgerButton({ open, onToggle, labels }) {
         <motion.span
           className="absolute left-0 top-0 block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
           animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
-          transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
         />
         <motion.span
           className="absolute left-0 top-[6px] block h-0.5 w-4 rounded-full bg-slate-800 dark:bg-slate-100"
           animate={open ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.22, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
         />
         <motion.span
           className="absolute left-0 top-[12px] block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
           animate={open ? { y: -6, rotate: -45 } : { y: 0, rotate: 0 }}
-          transition={{ duration: 0.32, ease: [0.4, 0, 0.2, 1] }}
+          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
         />
       </span>
     </button>
   );
 }
+
 function LangThemeControls() {
   const { lang, setLang, theme, setTheme } = useCommand();
   return (
     <div className="flex items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-xl border border-slate-200 bg-white dark:border-slate-700 dark:bg-slate-900">
+      <div className="inline-flex overflow-hidden rounded-xl border border-stone-200/80 bg-white/80 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
         {['th', 'en'].map((code) => (
           <button
             key={code}
             type="button"
             onClick={() => setLang(code)}
-            className={`min-h-11 px-3 text-xs font-semibold uppercase tracking-[0.08em] ${
-              lang === code ? 'bg-indigo-600 text-white dark:bg-indigo-400 dark:text-slate-900' : 'text-slate-500'
+            className={`min-h-11 px-3 text-xs font-semibold uppercase tracking-[0.08em] transition ${
+              lang === code ? 'bg-indigo-700 text-white dark:bg-indigo-300 dark:text-slate-900' : 'text-slate-500'
             }`}
           >
             {code}
@@ -318,7 +330,7 @@ function LangThemeControls() {
       <button
         type="button"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="min-h-11 rounded-xl border border-slate-200 bg-white px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-600 dark:border-slate-700 dark:bg-slate-900 dark:text-slate-300"
+        className="min-h-11 rounded-xl border border-stone-200/80 bg-white/80 px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-600 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300"
       >
         {theme === 'dark' ? 'Light' : 'Dark'}
       </button>
@@ -327,7 +339,7 @@ function LangThemeControls() {
 }
 
 export function GlobalLayout() {
-  const { copy, activePersonnel, formatPersonnelName, signOut } = useCommand();
+  const { copy, activePersonnel, formatPersonnelName, signOut, zenMode } = useCommand();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -343,32 +355,40 @@ export function GlobalLayout() {
 
   return (
     <div className="min-h-screen lg:pl-[268px]">
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[268px] lg:flex-col lg:border-r lg:border-slate-200 lg:bg-white/80 lg:px-4 lg:py-5 lg:backdrop-blur-xl dark:lg:border-slate-800 dark:lg:bg-slate-950/70">
-        <div className="mb-6 border-b border-slate-200 pb-5 dark:border-slate-800">
+      <motion.aside
+        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[268px] lg:flex-col lg:border-r lg:border-stone-200/70 lg:bg-white/55 lg:px-4 lg:py-5 lg:backdrop-blur-xl dark:lg:border-slate-800/80 dark:lg:bg-slate-950/55"
+        animate={{ opacity: zenMode ? 0.28 : 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="mb-6 border-b border-stone-200/80 pb-5 dark:border-slate-800">
           <BrandMark compact />
         </div>
         <NavGroups />
         <button
           type="button"
           onClick={handleSignOut}
-          className="mt-4 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-white/5"
+          className="mt-4 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5"
         >
           {copy.signOut}
         </button>
-      </aside>
+      </motion.aside>
 
-      <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-slate-200 bg-white/80 px-4 backdrop-blur-xl sm:px-6 dark:border-slate-800 dark:bg-slate-950/70">
-        <div className="lg:hidden">
-          <BrandMark />
-        </div>
-        <p className="hidden min-w-0 truncate text-sm font-medium text-slate-500 lg:block">
-          {formatPersonnelName(activePersonnel) || copy.home}
-        </p>
-        <div className="flex items-center gap-2">
-          <LangThemeControls />
+      <motion.header
+        className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-stone-200/70 bg-white/55 px-4 backdrop-blur-xl sm:px-6 dark:border-slate-800/80 dark:bg-slate-950/55"
+        animate={{ opacity: zenMode ? 0.22 : 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
+        <div className="flex min-w-0 items-center gap-3">
           <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} labels={copy} />
+          <div className="lg:hidden">
+            <BrandMark />
+          </div>
+          <p className="hidden min-w-0 truncate text-sm font-medium text-slate-500 lg:block">
+            {formatPersonnelName(activePersonnel) || copy.home}
+          </p>
         </div>
-      </header>
+        <LangThemeControls />
+      </motion.header>
 
       <AnimatePresence>
         {open ? (
@@ -377,7 +397,7 @@ export function GlobalLayout() {
               key="drawer-backdrop"
               type="button"
               aria-label={copy.close}
-              className="fixed inset-0 z-40 bg-slate-950/35 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -385,18 +405,19 @@ export function GlobalLayout() {
               onClick={() => setOpen(false)}
             />
             <motion.nav
+              id="command-drawer"
               key="drawer-panel"
-              className="fixed bottom-0 right-0 top-[72px] z-50 flex w-[min(320px,100%)] flex-col gap-4 overflow-y-auto border-l border-white/40 bg-white/70 p-4 shadow-[0_24px_80px_rgba(15,23,42,0.18)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-slate-900/80"
-              initial={{ x: '100%' }}
-              animate={{ x: 0 }}
-              exit={{ x: '100%' }}
+              className="fixed left-0 top-[72px] z-50 flex max-h-[min(78dvh,calc(100dvh-72px))] w-[min(320px,100%)] flex-col gap-4 overflow-y-auto rounded-br-2xl border-b border-r border-white/50 bg-white/70 p-4 shadow-[0_28px_80px_rgba(28,25,23,0.16)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-slate-900/80"
+              initial={{ y: -24, opacity: 0 }}
+              animate={{ y: 0, opacity: 1 }}
+              exit={{ y: -20, opacity: 0 }}
               transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
             >
               <NavGroups onNavigate={() => setOpen(false)} />
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/50 dark:text-slate-300 dark:hover:bg-white/5"
+                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/5"
               >
                 {copy.signOut}
               </button>
@@ -409,7 +430,11 @@ export function GlobalLayout() {
         <Outlet />
       </main>
 
-      <nav className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-slate-200 bg-white/90 py-1 backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/90">
+      <motion.nav
+        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-200/80 bg-white/80 py-1 backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/80"
+        animate={{ opacity: zenMode ? 0.18 : 1 }}
+        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
+      >
         {[
           { to: '/', label: copy.dashboard, end: true },
           { to: '/operations', label: copy.board },
@@ -422,14 +447,14 @@ export function GlobalLayout() {
             end={Boolean(item.end)}
             className={({ isActive }) =>
               `grid min-h-11 place-items-center px-1 text-center text-[0.7rem] font-semibold no-underline ${
-                isActive ? 'text-indigo-600 dark:text-indigo-300' : 'text-slate-500'
+                isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500'
               }`
             }
           >
             {item.label}
           </NavLink>
         ))}
-      </nav>
+      </motion.nav>
     </div>
   );
 }

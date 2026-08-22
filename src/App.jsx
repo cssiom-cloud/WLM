@@ -9,11 +9,15 @@ import OfficialDocument from './pages/OfficialDocument.jsx';
 import Settings from './pages/Settings.jsx';
 
 const pageMotion = {
-  initial: { opacity: 0, y: 16, filter: 'blur(8px)' },
+  initial: { opacity: 0, y: 18, filter: 'blur(10px)' },
   animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-  exit: { opacity: 0, y: -10, filter: 'blur(6px)' },
-  transition: { duration: 0.45, ease: [0.4, 0, 0.2, 1] }
+  exit: { opacity: 0, y: -12, filter: 'blur(8px)' },
+  transition: { duration: 0.46, ease: [0.22, 1, 0.36, 1] }
 };
+
+const routerBasename = String(import.meta.env.BASE_URL || '/')
+  .replace(/\/$/, '')
+  .replace(/^\.$/, '');
 
 function PageFrame({ children }) {
   const location = useLocation();
@@ -36,8 +40,10 @@ function Guarded({ children, allowGuest = false, requireSelection = false }) {
 
   if (bootstrapping) {
     return (
-      <div className="grid min-h-[50vh] place-items-center text-sm tracking-[0.18em] text-slate-500 uppercase">
-        Establishing command channel
+      <div className="grid min-h-[56vh] place-items-center">
+        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">
+          Establishing command channel
+        </p>
       </div>
     );
   }
@@ -138,9 +144,9 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={routerBasename || undefined}>
       <CommandProvider>
-        <div className="min-h-screen bg-slate-50 text-slate-900 antialiased dark:bg-[#1c1c1c] dark:text-slate-100">
+        <div className="min-h-screen bg-[#f4f1ea] text-slate-900 antialiased dark:bg-[#16181d] dark:text-slate-100">
           <AnimatedRoutes />
         </div>
       </CommandProvider>
