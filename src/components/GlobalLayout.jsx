@@ -22,7 +22,7 @@ import {
 import CommandAtmosphere from './CommandAtmosphere.jsx';
 import TacticalDock from './TacticalDock.jsx';
 import { SITE_LOGO } from '../lib/brand.js';
-import { isAdmin as roleIsAdmin, isDev } from '../lib/access.js';
+import { isAdmin as roleIsAdmin, isDev, markLoginSeal } from '../lib/access.js';
 import { t as translate } from '../lib/i18n.js';
 import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings, saveOwnSettings } from '../lib/services.js';
 import { supabase } from '../lib/supabase.js';
@@ -203,6 +203,12 @@ export function CommandProvider({ children }) {
         clean.hash = '';
       }
       window.history.replaceState(null, '', `${clean.pathname}${clean.search}${clean.hash}`);
+      const { data: authed } = await supabase.auth.getSession();
+      const onLogin = /\/login$/.test(clean.pathname.replace(/\/+$/, ''));
+      if (authed.session && onLogin) {
+        markLoginSeal();
+        setAuthHold(true);
+      }
     }
     async function boot() {
       await consumeOAuthCode();

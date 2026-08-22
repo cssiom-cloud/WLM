@@ -23,6 +23,7 @@ import Accounts from './pages/Accounts.jsx';
 import Logs from './pages/Logs.jsx';
 import Lore from './pages/Lore.jsx';
 import { getJsxBase } from '../js/ui-mode.js';
+import { hasLoginSeal } from './lib/access.js';
 import { SITE_LOGO } from './lib/brand.js';
 
 function BootScreen() {
@@ -35,13 +36,14 @@ function BootScreen() {
 
 function Guarded({ children, allowGuest = false }) {
   const { bootstrapping, session, authHold } = useCommand();
+  const holdLogin = authHold || (allowGuest && hasLoginSeal());
 
-  if (bootstrapping) {
+  if (bootstrapping && !holdLogin) {
     return <BootScreen />;
   }
 
   if (allowGuest && session) {
-    if (authHold) {
+    if (holdLogin) {
       return children;
     }
     return <Navigate to="/" replace />;

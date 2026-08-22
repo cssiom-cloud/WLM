@@ -147,3 +147,29 @@ export function oauthRedirectTo(path = '/') {
   const site = getSiteBasePath();
   return `${origin}${site}${suffix}`;
 }
+
+const LOGIN_SEAL_KEY = 'wlr-login-seal';
+
+export function markLoginSeal() {
+  try {
+    window.sessionStorage.setItem(LOGIN_SEAL_KEY, '1');
+  } catch {
+    /* ignore storage errors */
+  }
+}
+
+export function hasLoginSeal() {
+  try {
+    return window.sessionStorage.getItem(LOGIN_SEAL_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function clearLoginSeal() {
+  try {
+    window.sessionStorage.removeItem(LOGIN_SEAL_KEY);
+  } catch {
+    /* ignore storage errors */
+  }
+}

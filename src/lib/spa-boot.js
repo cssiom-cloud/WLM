@@ -39,10 +39,8 @@ export function leaveReactHtmlShell() {
   if (!window.location.pathname.endsWith('/react.html')) {
     return;
   }
-  const params = new URLSearchParams(window.location.search);
   const base = getJsxBase();
-  const route = params.has('code') || /access_token|refresh_token/.test(window.location.hash) ? '' : '/login';
-  window.history.replaceState(null, '', `${base}${route}${window.location.search}${window.location.hash}`);
+  window.history.replaceState(null, '', `${base}/login${window.location.search}${window.location.hash}`);
 }
 
 restoreSpaPath();

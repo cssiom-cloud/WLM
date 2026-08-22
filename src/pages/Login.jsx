@@ -5,7 +5,7 @@ import { Check, Umbrella } from 'lucide-react';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import CommandAtmosphere from '../components/CommandAtmosphere.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
-import { oauthRedirectTo } from '../lib/access.js';
+import { clearLoginSeal, hasLoginSeal, markLoginSeal, oauthRedirectTo } from '../lib/access.js';
 import { SITE_LOGO } from '../lib/brand.js';
 
 const EASE = [0.22, 1, 0.36, 1];
@@ -112,7 +112,7 @@ function MagneticDiscordButton({ label, hint, disabled, onClick }) {
 }
 
 export default function Login({ onAuthenticated } = {}) {
-  const { lang, setLang, theme, setTheme, t, supabase, refresh, rain, glassVisible, glassMotion, setAuthHold } = useCommand();
+  const { lang, setLang, theme, setTheme, t, supabase, refresh, session, rain, glassVisible, glassMotion, setAuthHold } = useCommand();
   const toast = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState('signin');
@@ -121,7 +121,8 @@ export default function Login({ onAuthenticated } = {}) {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
   const [status, setStatus] = useState('');
-  const [loginState, setLoginState] = useState('idle');
+  const [loginState, setLoginState] = useState(() => (hasLoginSeal() ? 'scanning' : 'idle'));
+  const sealPlayed = useRef(false);
   const brandSrc = SITE_LOGO;
   const showLocal = isLocalHost();
 
@@ -132,6 +133,7 @@ export default function Login({ onAuthenticated } = {}) {
       params.get('error_description') || params.get('error') || hash.get('error_description') || hash.get('error') || '';
     if (redirectError) {
       setError(redirectError);
+      clearLoginSeal();
     }
   }, []);
 
@@ -158,17 +160,20 @@ export default function Login({ onAuthenticated } = {}) {
     setError(message);
     setLoginState('error');
     setAuthHold?.(false);
+    clearLoginSeal();
     await sleep(prefersReducedMotion() ? 0 : ERROR_HOLD_MS);
     setLoginState('idle');
     setBusy(false);
   }
 
   async function finishSuccess(sessionOverride) {
+    setAuthHold?.(true);
     setLoginState('success');
     await sleep(prefersReducedMotion() ? 0 : SUCCESS_HOLD_MS);
     setLoginState('enter');
     await sleep(prefersReducedMotion() ? 0 : ENTER_MS);
     await refresh?.(sessionOverride);
+    clearLoginSeal();
     if (typeof onAuthenticated === 'function') {
       setAuthHold?.(false);
       await onAuthenticated();
@@ -178,25 +183,60 @@ export default function Login({ onAuthenticated } = {}) {
     setAuthHold?.(false);
   }
 
+  useEffect(() => {
+    if (sealPlayed.current || !session || !hasLoginSeal()) {
+      return undefined;
+    }
+    sealPlayed.current = true;
+    setBusy(true);
+    setAuthHold?.(true);
+    setLoginState('scanning');
+    const reduced = prefersReducedMotion();
+    let cancelled = false;
+    (async () => {
+      if (!reduced) {
+        await sleep(SCAN_MS);
+      }
+      if (cancelled) {
+        return;
+      }
+      await finishSuccess(session);
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [session]);
+
   async function handleDiscord() {
     if (busy) {
       return;
     }
     setError('');
     setBusy(true);
+    setAuthHold?.(true);
+    setLoginState('scanning');
+    const started = Date.now();
+    const reduced = prefersReducedMotion();
     try {
-      const { error: authError } = await spinThen(() =>
-        supabase.auth.signInWithOAuth({
-          provider: 'discord',
-          options: { redirectTo: oauthRedirectTo('/'), scopes: 'identify email' }
-        })
-      );
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
+        provider: 'discord',
+        options: {
+          redirectTo: oauthRedirectTo('/login'),
+          skipBrowserRedirect: true,
+          scopes: 'identify email'
+        }
+      });
       if (authError) {
         throw authError;
       }
-      setAuthHold?.(false);
-      setLoginState('idle');
-      setBusy(false);
+      if (!data?.url) {
+        throw new Error(t('auth.discordError'));
+      }
+      if (!reduced) {
+        await sleep(Math.max(0, SCAN_MS - (Date.now() - started)));
+      }
+      markLoginSeal();
+      window.location.assign(data.url);
     } catch (authError) {
       await showAuthError(authError?.message || t('auth.discordError'));
     }
