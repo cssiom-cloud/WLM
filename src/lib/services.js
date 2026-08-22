@@ -1,5 +1,6 @@
 import { comparePersonnelByRank } from '../../js/domain.js';
 import { emptySettingsRow } from '../../js/user-prefs.js';
+import { decorateAnnouncement } from '../../js/announce-meta.js';
 
 export async function fetchPersonnelRoster(supabase) {
   const { data, error } = await supabase.from('oc_personnel').select('*');
@@ -372,9 +373,12 @@ export async function saveOperationAar(supabase, operationId, unitId, evaluation
 }
 
 export async function fetchAnnouncementBoard(supabase, currentUserId) {
-  const [announcementResult, signupResult] = await Promise.all([
+  const [announcementResult, signupResult, peopleResult] = await Promise.all([
     supabase.from('announcements').select('*').order('created_at', { ascending: false }),
-    supabase.from('announcement_signups').select('announcement_id, user_id')
+    supabase.from('announcement_signups').select('announcement_id, user_id'),
+    supabase
+      .from('oc_personnel')
+      .select('id, first_name, middle_name, last_name, avatar_url, military_rank, organization_role, is_dev, owner_user_id')
   ]);
   if (announcementResult.error) {
     throw announcementResult.error;
@@ -384,14 +388,8 @@ export async function fetchAnnouncementBoard(supabase, currentUserId) {
   }
   const announcements = announcementResult.data || [];
   const signups = signupResult.data || [];
-  return announcements.map((announcement) => {
-    const related = signups.filter((row) => row.announcement_id === announcement.id);
-    return {
-      ...announcement,
-      signed_count: related.length,
-      is_signed: Boolean(currentUserId && related.some((row) => row.user_id === currentUserId))
-    };
-  });
+  const peopleById = new Map((peopleResult.data || []).map((row) => [row.id, row]));
+  return announcements.map((announcement) => decorateAnnouncement(announcement, signups, peopleById, currentUserId));
 }
 
 async function uploadCoverImage(supabase, imageFile, announcementId) {
@@ -414,7 +412,9 @@ async function uploadCoverImage(supabase, imageFile, announcementId) {
 export async function createAnnouncement(supabase, payload) {
   const honorPayload = {
     award_honor_enabled: Boolean(payload.awardHonorEnabled),
-    honor_rank_title: payload.awardHonorEnabled ? String(payload.honorRankTitle || '').trim() || null : null
+    honor_rank_title: payload.awardHonorEnabled ? String(payload.honorRankTitle || '').trim() || null : null,
+    show_participants: payload.showParticipants !== false,
+    capacity_limited: payload.capacityLimited !== false
   };
   const imageUrl = payload.imageFile ? await uploadCoverImage(supabase, payload.imageFile) : null;
   const { data, error } = await supabase
@@ -422,7 +422,7 @@ export async function createAnnouncement(supabase, payload) {
     .insert({
       title: payload.title,
       content: payload.content,
-      max_capacity: payload.maxCapacity,
+      max_capacity: Math.max(1, Number(payload.maxCapacity) || 1),
       created_by: payload.createdBy,
       image_url: imageUrl,
       ...honorPayload
@@ -439,9 +439,11 @@ export async function updateAnnouncement(supabase, announcementId, payload) {
   const next = {
     title: payload.title,
     content: payload.content,
-    max_capacity: payload.maxCapacity,
+    max_capacity: Math.max(1, Number(payload.maxCapacity) || 1),
     award_honor_enabled: Boolean(payload.awardHonorEnabled),
-    honor_rank_title: payload.awardHonorEnabled ? String(payload.honorRankTitle || '').trim() || null : null
+    honor_rank_title: payload.awardHonorEnabled ? String(payload.honorRankTitle || '').trim() || null : null,
+    show_participants: payload.showParticipants !== false,
+    capacity_limited: payload.capacityLimited !== false
   };
   if (payload.imageFile) {
     next.image_url = await uploadCoverImage(supabase, payload.imageFile, announcementId);

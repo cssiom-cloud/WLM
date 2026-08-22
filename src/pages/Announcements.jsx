@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
-import { isAdmin } from '../lib/access.js';
+import CapacityGlass from '../components/CapacityGlass.jsx';
+import AnnouncementRoster from '../components/AnnouncementRoster.jsx';
+import { isAdmin, visiblePersonnel } from '../lib/access.js';
+import { isAnnouncementFull } from '../../js/announce-meta.js';
 import { closeAnnouncement, deleteAnnouncement, fetchAnnouncementBoard, joinAnnouncement, leaveAnnouncement } from '../lib/services.js';
 import { PageHeader, StatusBadge, btnDanger, btnGhost, btnPrimary, glassClass } from '../lib/ui.jsx';
 
@@ -37,7 +40,9 @@ export default function Announcements() {
         {board.length ? (
           board.map((item) => {
             const closed = Boolean(item.ended_at);
-            const full = item.signed_count >= item.max_capacity;
+            const full = isAnnouncementFull(item);
+            const participants = visiblePersonnel(item.participants || [], activePersonnel);
+            const canSeeRoster = item.show_participants !== false || admin;
             return (
               <article key={item.id} className={`${glassClass} flex flex-col overflow-hidden`}>
                 {item.image_url ? (
@@ -62,9 +67,14 @@ export default function Announcements() {
                     ) : null}
                   </div>
                   <p className="line-clamp-4 flex-1 whitespace-pre-wrap text-sm leading-6 text-stone-700 dark:text-slate-300">{item.content}</p>
-                  <p className="mt-3 text-sm text-stone-600 dark:text-slate-400">
-                    {t('ann.signedUp')}: {item.signed_count} · {t('ann.max')}: {item.max_capacity}
-                  </p>
+                  <div className="mt-4">
+                    <CapacityGlass item={item} t={t} size="sm" />
+                  </div>
+                  {canSeeRoster ? (
+                    <AnnouncementRoster people={participants} t={t} compact />
+                  ) : (
+                    <p className="mt-3 text-xs text-slate-500">{t('ann.hiddenSignups')}</p>
+                  )}
                   <div className="mt-auto flex flex-wrap gap-2 pt-4">
                     <Link to={`/announcements/${item.id}`} className={`${btnGhost} no-underline`}>
                       {t('ann.readFull')}

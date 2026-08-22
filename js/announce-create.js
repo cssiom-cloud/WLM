@@ -20,6 +20,10 @@ const honorTitleInput = document.querySelector('#announce-honor-title');
 const titleInput = document.querySelector('#announce-title');
 const contentInput = document.querySelector('#announce-content');
 const capacityInput = document.querySelector('#announce-capacity');
+const capacityLimitedInput = document.querySelector('#announce-capacity-limited');
+const capacityWrap = document.querySelector('#announce-capacity-wrap');
+const capacityHint = document.querySelector('#announce-capacity-hint');
+const showParticipantsInput = document.querySelector('#announce-show-participants');
 const submitButton = document.querySelector('#announce-submit');
 const pageTitle = document.querySelector('.page-title');
 
@@ -27,6 +31,20 @@ function syncHonorTitleField() {
   honorTitleInput.disabled = !honorEnabledInput.checked;
   if (!honorEnabledInput.checked) {
     honorTitleInput.value = '';
+  }
+}
+
+function syncCapacityField() {
+  const limited = capacityLimitedInput?.checked !== false;
+  if (capacityWrap) {
+    capacityWrap.hidden = !limited;
+  }
+  if (capacityInput) {
+    capacityInput.required = limited;
+    capacityInput.disabled = !limited;
+  }
+  if (capacityHint) {
+    capacityHint.hidden = limited;
   }
 }
 
@@ -50,6 +68,7 @@ function refreshCopy() {
 }
 
 honorEnabledInput.addEventListener('change', syncHonorTitleField);
+capacityLimitedInput?.addEventListener('change', syncCapacityField);
 
 document.querySelector('#announce-crop')?.addEventListener('click', async () => {
   const source = imageInput.files?.[0] || currentCoverUrl || null;
@@ -87,7 +106,14 @@ document.querySelector('#announce-form').addEventListener('reset', () => {
   currentCoverUrl = '';
   showPreview('');
   honorEnabledInput.checked = false;
+  if (capacityLimitedInput) {
+    capacityLimitedInput.checked = true;
+  }
+  if (showParticipantsInput) {
+    showParticipantsInput.checked = true;
+  }
   syncHonorTitleField();
+  syncCapacityField();
 });
 
 document.querySelector('#announce-form').addEventListener('submit', async (event) => {
@@ -102,8 +128,10 @@ document.querySelector('#announce-form').addEventListener('submit', async (event
   const imageFile = imageInput.files?.[0] || null;
   const awardHonorEnabled = honorEnabledInput.checked;
   const honorRankTitle = honorTitleInput.value.trim();
+  const capacityLimited = capacityLimitedInput?.checked !== false;
+  const showParticipants = showParticipantsInput?.checked !== false;
 
-  if (!title || !content || !Number.isInteger(maxCapacity) || maxCapacity < 1) {
+  if (!title || !content || (capacityLimited && (!Number.isInteger(maxCapacity) || maxCapacity < 1))) {
     showToast(t('create.invalid'), 'error');
     return;
   }
@@ -117,11 +145,13 @@ document.querySelector('#announce-form').addEventListener('submit', async (event
     const payload = {
       title,
       content,
-      maxCapacity,
+      maxCapacity: capacityLimited ? maxCapacity : 1,
       createdBy: currentAdmin.id,
       imageFile,
       awardHonorEnabled,
-      honorRankTitle: awardHonorEnabled ? honorRankTitle : null
+      honorRankTitle: awardHonorEnabled ? honorRankTitle : null,
+      showParticipants,
+      capacityLimited
     };
     const saved = editingId
       ? await updateAnnouncement(editingId, payload)
@@ -157,6 +187,8 @@ requireCommandAdmin()
     }
     currentAdmin = result.personnel;
     refreshCopy();
+    syncHonorTitleField();
+    syncCapacityField();
     if (!editingId) {
       return;
     }
@@ -173,9 +205,16 @@ requireCommandAdmin()
     capacityInput.value = item.max_capacity || 1;
     honorEnabledInput.checked = Boolean(item.award_honor_enabled);
     honorTitleInput.value = item.honor_rank_title || '';
+    if (capacityLimitedInput) {
+      capacityLimitedInput.checked = item.capacity_limited !== false;
+    }
+    if (showParticipantsInput) {
+      showParticipantsInput.checked = item.show_participants !== false;
+    }
     currentCoverUrl = item.image_url || '';
     showPreview(currentCoverUrl);
     syncHonorTitleField();
+    syncCapacityField();
     refreshCopy();
   })
   .catch((error) => {

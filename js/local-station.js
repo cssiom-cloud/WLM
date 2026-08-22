@@ -748,7 +748,9 @@ export async function localCreateAnnouncement({
   createdBy,
   imageUrl = null,
   award_honor_enabled = false,
-  honor_rank_title = null
+  honor_rank_title = null,
+  show_participants = true,
+  capacity_limited = true
 }) {
   const rows = announcementRows();
   const entry = {
@@ -760,6 +762,8 @@ export async function localCreateAnnouncement({
     image_url: imageUrl,
     award_honor_enabled: Boolean(award_honor_enabled),
     honor_rank_title: honor_rank_title || null,
+    show_participants: show_participants !== false,
+    capacity_limited: capacity_limited !== false,
     ended_at: null,
     created_at: new Date().toISOString()
   };
@@ -803,7 +807,7 @@ export async function localJoinAnnouncement(announcementId, userId) {
     throw new Error('Announcement is closed.');
   }
   const currentCount = signups.filter((row) => row.announcement_id === announcementId).length;
-  if (currentCount >= announcement.max_capacity) {
+  if (announcement.capacity_limited !== false && currentCount >= announcement.max_capacity) {
     throw new Error('Announcement is at full capacity.');
   }
   signups.push({ announcement_id: announcementId, user_id: userId, created_at: new Date().toISOString() });

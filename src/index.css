@@ -1458,10 +1458,192 @@ input[type='checkbox']:checked::after {
   transform: rotate(45deg) translate(-1px, -1px);
 }
 
+.ann-glass {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ann-glass-cup {
+  position: relative;
+  width: 4.4rem;
+  height: 5.6rem;
+  overflow: hidden;
+  border: 2.5px solid color-mix(in srgb, var(--text) 28%, transparent);
+  border-top-width: 3px;
+  border-radius: 10px 10px 22px 22px / 8px 8px 28px 28px;
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.22), transparent 18%, transparent 78%, rgba(255, 255, 255, 0.08)),
+    color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 255, 255, 0.2),
+    0 10px 22px rgba(15, 23, 42, 0.12);
+}
+
+.ann-glass.is-sm .ann-glass-cup {
+  width: 2.7rem;
+  height: 3.4rem;
+  border-radius: 7px 7px 14px 14px / 6px 6px 18px 18px;
+}
+
+.ann-glass-water {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--fill, 0%);
+  overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #7dd3fc) 0%, color-mix(in srgb, var(--accent) 88%, #0369a1) 100%);
+  transition: height 0.7s var(--motion);
+}
+
+.ann-glass.is-full .ann-glass-water {
+  background: linear-gradient(180deg, #fb7185, #be123c);
+}
+
+.ann-glass-wave,
+.ann-glass-wave.is-late {
+  position: absolute;
+  top: -0.7rem;
+  left: -50%;
+  width: 200%;
+  height: 1.1rem;
+  background: radial-gradient(closest-side at 25% 100%, transparent 62%, rgba(255, 255, 255, 0.55) 63% 78%, transparent 79%)
+      0 0 / 50% 100%,
+    radial-gradient(closest-side at 75% 100%, transparent 62%, rgba(255, 255, 255, 0.38) 63% 78%, transparent 79%) 0 0 /
+      50% 100%;
+  animation: ann-wave 2.8s linear infinite;
+}
+
+.ann-glass-wave.is-late {
+  top: -0.45rem;
+  opacity: 0.65;
+  animation-duration: 4.2s;
+  animation-direction: reverse;
+}
+
+.ann-glass-shine {
+  position: absolute;
+  top: 8%;
+  bottom: 12%;
+  left: 12%;
+  width: 18%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.55), transparent);
+}
+
+.ann-glass-copy {
+  min-width: 0;
+}
+
+.ann-glass-count {
+  margin: 0;
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.ann-glass.is-sm .ann-glass-count {
+  font-size: 0.95rem;
+}
+
+.ann-glass-count span {
+  font-weight: 500;
+  color: var(--text-muted);
+}
+
+.ann-glass-label {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ann-roster {
+  display: grid;
+  gap: 0.55rem;
+}
+
+.ann-roster-person {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 3.2rem;
+  padding: 0.4rem 0.55rem;
+  border: 1px solid var(--border);
+  border-radius: 1rem;
+  background: color-mix(in srgb, var(--bg-muted) 55%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ann-roster-person:hover {
+  border-color: color-mix(in srgb, var(--accent) 45%, var(--border));
+}
+
+.ann-roster-avatar {
+  width: 2.4rem;
+  height: 2.4rem;
+  flex: none;
+  overflow: hidden;
+  border-radius: 0.8rem;
+  object-fit: cover;
+  background: var(--bg-elevated);
+}
+
+.ann-roster-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+}
+
+.ann-roster-name {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 650;
+}
+
+.ann-roster-rank {
+  margin: 0.1rem 0 0;
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+.ann-roster-faces {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.ann-roster-face {
+  width: 2rem;
+  height: 2rem;
+  overflow: hidden;
+  border-radius: 999px;
+  border: 2px solid var(--bg-elevated);
+  object-fit: cover;
+  background: var(--bg-muted);
+}
+
+@keyframes ann-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .fx-aurora-orb,
   .fx-retro-grid,
-  .fx-glass-field.is-falling .fx-glass-shard {
+  .fx-glass-field.is-falling .fx-glass-shard,
+  .ann-glass-wave {
     animation: none !important;
   }
 }

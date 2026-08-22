@@ -2,7 +2,10 @@ import { useCallback, useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
-import { isAdmin } from '../lib/access.js';
+import CapacityGlass from '../components/CapacityGlass.jsx';
+import AnnouncementRoster from '../components/AnnouncementRoster.jsx';
+import { isAdmin, visiblePersonnel } from '../lib/access.js';
+import { isAnnouncementFull } from '../../js/announce-meta.js';
 import { closeAnnouncement, deleteAnnouncement, fetchAnnouncementBoard, joinAnnouncement, leaveAnnouncement } from '../lib/services.js';
 import { BackLink, PageHeader, StatusBadge, btnDanger, btnGhost, btnPrimary, glassClass } from '../lib/ui.jsx';
 
@@ -44,7 +47,9 @@ export default function AnnouncementDetail() {
   }
 
   const closed = Boolean(item.ended_at);
-  const full = item.signed_count >= item.max_capacity;
+  const full = isAnnouncementFull(item);
+  const participants = visiblePersonnel(item.participants || [], activePersonnel);
+  const canSeeRoster = item.show_participants !== false || admin;
 
   return (
     <section className="mx-auto max-w-3xl">
@@ -67,9 +72,14 @@ export default function AnnouncementDetail() {
             <p className="mt-2 text-sm text-slate-500">{item.ended_at ? t('ann.honorAwarded') : t('ann.honorPending')}</p>
           ) : null}
           <div className="mt-6 whitespace-pre-wrap text-base leading-7 text-stone-800 dark:text-slate-200">{item.content}</div>
-          <p className="mt-6 text-sm text-stone-600 dark:text-slate-400">
-            {t('ann.signedUp')}: {item.signed_count} · {t('ann.max')}: {item.max_capacity}
-          </p>
+          <div className="mt-6">
+            <CapacityGlass item={item} t={t} />
+          </div>
+          {canSeeRoster ? (
+            <AnnouncementRoster people={participants} t={t} />
+          ) : (
+            <p className="mt-6 text-sm text-slate-500">{t('ann.hiddenSignups')}</p>
+          )}
           <div className="mt-6 flex flex-wrap gap-2">
             {closed ? (
               <button type="button" className={btnGhost} disabled>

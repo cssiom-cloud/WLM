@@ -40,8 +40,17 @@
             <label for="announce-content"><span data-i18n="create.contentLabel">Content</span>
               <textarea id="announce-content" class="text-field" rows="7" required></textarea>
             </label>
-            <label for="announce-capacity"><span data-i18n="create.capacityLabel">Max Capacity</span>
+            <label class="announce-honor-toggle" for="announce-capacity-limited">
+              <input id="announce-capacity-limited" type="checkbox" checked>
+              <span data-i18n="create.capacityLimited">Limit the number of personnel who can join</span>
+            </label>
+            <label for="announce-capacity" id="announce-capacity-wrap"><span data-i18n="create.capacityLabel">Max Capacity</span>
               <input id="announce-capacity" class="text-field" type="number" min="1" max="500" required>
+            </label>
+            <p class="form-hint" id="announce-capacity-hint" data-i18n="create.capacityHint" hidden>Turn this off for an open signup with no maximum.</p>
+            <label class="announce-honor-toggle" for="announce-show-participants">
+              <input id="announce-show-participants" type="checkbox" checked>
+              <span data-i18n="create.showParticipants">Show the names and profiles of personnel who joined</span>
             </label>
             <label for="announce-image"><span data-i18n="create.imageLabel">Cover Image</span>
               <input id="announce-image" class="text-field" type="file" accept="image/*">

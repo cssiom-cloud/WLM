@@ -580,6 +580,141 @@
   background: var(--danger);
 }
 
+.ann-glass {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+}
+
+.ann-glass-cup {
+  position: relative;
+  width: 4.2rem;
+  height: 5.4rem;
+  overflow: hidden;
+  border: 2.5px solid color-mix(in srgb, var(--text) 28%, transparent);
+  border-top-width: 3px;
+  border-radius: 10px 10px 22px 22px / 8px 8px 28px 28px;
+  background: color-mix(in srgb, var(--bg-elevated) 70%, transparent);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.2);
+}
+
+.ann-glass.is-sm .ann-glass-cup {
+  width: 2.6rem;
+  height: 3.3rem;
+}
+
+.ann-glass-water {
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  height: var(--fill, 0%);
+  overflow: hidden;
+  background: linear-gradient(180deg, color-mix(in srgb, var(--accent) 78%, #7dd3fc), color-mix(in srgb, var(--accent) 88%, #0369a1));
+}
+
+.ann-glass.is-full .ann-glass-water {
+  background: linear-gradient(180deg, #fb7185, #be123c);
+}
+
+.ann-glass-wave {
+  position: absolute;
+  top: -0.7rem;
+  left: -50%;
+  width: 200%;
+  height: 1.1rem;
+  background: radial-gradient(closest-side at 25% 100%, transparent 62%, rgba(255, 255, 255, 0.5) 63% 78%, transparent 79%)
+    0 0 / 50% 100%;
+  animation: ann-wave 2.8s linear infinite;
+}
+
+.ann-glass-wave.is-late {
+  top: -0.4rem;
+  opacity: 0.6;
+  animation-duration: 4.2s;
+  animation-direction: reverse;
+}
+
+.ann-glass-shine {
+  position: absolute;
+  top: 8%;
+  bottom: 12%;
+  left: 12%;
+  width: 18%;
+  border-radius: 999px;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.5), transparent);
+}
+
+.ann-glass-count {
+  margin: 0;
+  font-weight: 700;
+}
+
+.ann-glass-label {
+  margin: 0.15rem 0 0;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ann-roster {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.ann-roster-person {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+  min-height: 3rem;
+  padding: 0.35rem 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: color-mix(in srgb, var(--bg-muted) 55%, transparent);
+  color: inherit;
+  text-decoration: none;
+}
+
+.ann-roster-avatar,
+.ann-roster-fallback {
+  width: 2.3rem;
+  height: 2.3rem;
+  flex: none;
+  border-radius: 0.75rem;
+  object-fit: cover;
+}
+
+.ann-roster-fallback {
+  display: grid;
+  place-items: center;
+  font-size: 0.7rem;
+  font-weight: 700;
+  background: var(--bg-elevated);
+}
+
+.ann-roster-name {
+  margin: 0;
+  font-weight: 650;
+}
+
+.ann-roster-rank {
+  margin: 0.1rem 0 0;
+  font-size: 0.75rem;
+  color: var(--text-muted);
+}
+
+@keyframes ann-wave {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(50%);
+  }
+}
+
 .announcement-actions .btn {
   flex: 1 1 140px;
   width: auto;

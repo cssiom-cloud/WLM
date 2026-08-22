@@ -1,5 +1,7 @@
 import { isLocalTestMode } from './config.js';
 import { supabaseClient } from './supabase-client.js';
+import { decorateAnnouncement } from './announce-meta.js';
+import { fetchPersonnelRoster } from './personnel-service.js';
 import {
   localCreateAnnouncement,
   localDeleteAnnouncement,
@@ -10,8 +12,7 @@ import {
   localUpdateAnnouncement
 } from './local-station.js';
 
-// Returns announcements with { signed_count, is_signed } computed per record.
-// SUPABASE INJECT POINT: reads public.announcements and public.announcement_signups.
+// Returns announcements with { signed_count, is_signed, participants } computed per record.
 export async function fetchAnnouncementBoard(currentUserId) {
   let announcements;
   let signups;
@@ -33,14 +34,9 @@ export async function fetchAnnouncementBoard(currentUserId) {
     signups = signupResult.data ?? [];
   }
 
-  return announcements.map((announcement) => {
-    const related = signups.filter((row) => row.announcement_id === announcement.id);
-    return {
-      ...announcement,
-      signed_count: related.length,
-      is_signed: Boolean(currentUserId && related.some((row) => row.user_id === currentUserId))
-    };
-  });
+  const roster = await fetchPersonnelRoster().catch(() => []);
+  const peopleById = new Map(roster.map((row) => [row.id, row]));
+  return announcements.map((announcement) => decorateAnnouncement(announcement, signups, peopleById, currentUserId));
 }
 
 // SUPABASE STORAGE INJECT POINT: cover image goes to the public
@@ -77,6 +73,20 @@ function fileToDataUrl(file) {
 }
 
 // SUPABASE INJECT POINT: insert into public.announcements (RLS allows admins only).
+function honorPayload({
+  awardHonorEnabled = false,
+  honorRankTitle = null,
+  showParticipants = true,
+  capacityLimited = true
+}) {
+  return {
+    award_honor_enabled: Boolean(awardHonorEnabled),
+    honor_rank_title: awardHonorEnabled ? String(honorRankTitle || '').trim() || null : null,
+    show_participants: showParticipants !== false,
+    capacity_limited: capacityLimited !== false
+  };
+}
+
 export async function createAnnouncement({
   title,
   content,
@@ -84,22 +94,22 @@ export async function createAnnouncement({
   createdBy,
   imageFile,
   awardHonorEnabled = false,
-  honorRankTitle = null
+  honorRankTitle = null,
+  showParticipants = true,
+  capacityLimited = true
 }) {
-  const honorPayload = {
-    award_honor_enabled: Boolean(awardHonorEnabled),
-    honor_rank_title: awardHonorEnabled ? String(honorRankTitle || '').trim() || null : null
-  };
+  const extra = honorPayload({ awardHonorEnabled, honorRankTitle, showParticipants, capacityLimited });
+  const safeCapacity = Math.max(1, Number(maxCapacity) || 1);
 
   if (isLocalTestMode()) {
     const imageUrl = imageFile ? await fileToDataUrl(imageFile) : null;
     return localCreateAnnouncement({
       title,
       content,
-      maxCapacity,
+      maxCapacity: safeCapacity,
       createdBy,
       imageUrl,
-      ...honorPayload
+      ...extra
     });
   }
 
@@ -110,10 +120,10 @@ export async function createAnnouncement({
     .insert({
       title,
       content,
-      max_capacity: maxCapacity,
+      max_capacity: safeCapacity,
       created_by: createdBy,
       image_url: imageUrl,
-      ...honorPayload
+      ...extra
     })
     .select()
     .single();
@@ -123,26 +133,21 @@ export async function createAnnouncement({
   return data;
 }
 
-function honorPayload({ awardHonorEnabled = false, honorRankTitle = null }) {
-  return {
-    award_honor_enabled: Boolean(awardHonorEnabled),
-    honor_rank_title: awardHonorEnabled ? String(honorRankTitle || '').trim() || null : null
-  };
-}
-
 export async function updateAnnouncement(announcementId, {
   title,
   content,
   maxCapacity,
   imageFile,
   awardHonorEnabled = false,
-  honorRankTitle = null
+  honorRankTitle = null,
+  showParticipants = true,
+  capacityLimited = true
 }) {
   const payload = {
     title,
     content,
-    max_capacity: maxCapacity,
-    ...honorPayload({ awardHonorEnabled, honorRankTitle })
+    max_capacity: Math.max(1, Number(maxCapacity) || 1),
+    ...honorPayload({ awardHonorEnabled, honorRankTitle, showParticipants, capacityLimited })
   };
 
   if (isLocalTestMode()) {

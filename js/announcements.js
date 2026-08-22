@@ -1,8 +1,11 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { bindTiltTargets } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
-import { confirmNotice, escapeHtml, showToast } from './ui.js';
+import { confirmNotice, escapeHtml, initialsFromName, showToast } from './ui.js';
 import { t } from './i18n.js';
+import { formatPersonnelName } from './domain.js';
+import { visiblePersonnel } from './access.js';
+import { capacityFillRatio, isAnnouncementFull, isCapacityLimited } from './announce-meta.js';
 // SUPABASE INJECT POINT: all reads and writes go through js/announcement-service.js
 import {
   closeAnnouncement,
@@ -62,7 +65,7 @@ function signupControl(item) {
   if (item.is_signed) {
     return `<button class="btn" type="button" data-leave-id="${escapeHtml(item.id)}">${t('ann.withdraw')}</button>`;
   }
-  if (item.signed_count >= item.max_capacity) {
+  if (isAnnouncementFull(item)) {
     return `<button class="btn" type="button" disabled>${t('ann.full')}</button>`;
   }
   return `<button class="btn btn-primary" type="button" data-join-id="${escapeHtml(item.id)}">${t('ann.join')}</button>`;
@@ -72,7 +75,7 @@ function statusBadge(item) {
   if (isClosed(item)) {
     return `<span class="badge badge-capacity-closed">${t('ann.closed')}</span>`;
   }
-  if (item.signed_count >= item.max_capacity) {
+  if (isAnnouncementFull(item)) {
     return `<span class="badge badge-capacity-full">${t('ann.full')}</span>`;
   }
   return `<span class="badge badge-capacity-open">${t('ann.open')}</span>`;
@@ -101,9 +104,58 @@ function honorNote(item) {
   return `<p class="announcement-honor">${escapeHtml(label)}: <strong>${escapeHtml(item.honor_rank_title)}</strong></p>`;
 }
 
+function capacityGlass(item) {
+  const limited = isCapacityLimited(item);
+  const fill = Math.round(capacityFillRatio(item) * 100);
+  const full = isAnnouncementFull(item);
+  const count = limited
+    ? `<strong>${item.signed_count}</strong><span> / ${item.max_capacity}</span>`
+    : `<strong>${item.signed_count}</strong>`;
+  return `
+    <div class="ann-glass is-sm${full ? ' is-full' : ''}">
+      <div class="ann-glass-cup" role="progressbar" aria-valuemin="0" aria-valuenow="${item.signed_count}"${
+        limited ? ` aria-valuemax="${item.max_capacity}"` : ''
+      }>
+        <div class="ann-glass-water" style="--fill: ${fill}%">
+          <span class="ann-glass-wave" aria-hidden="true"></span>
+          <span class="ann-glass-wave is-late" aria-hidden="true"></span>
+        </div>
+        <span class="ann-glass-shine" aria-hidden="true"></span>
+      </div>
+      <div>
+        <p class="ann-glass-count">${count}</p>
+        <p class="ann-glass-label">${escapeHtml(limited ? t('ann.signedUp') : t('ann.unlimited'))}</p>
+      </div>
+    </div>
+  `;
+}
+
+function participantRoster(item) {
+  if (item.show_participants === false && !isAdmin()) {
+    return `<p class="announcement-date">${escapeHtml(t('ann.hiddenSignups'))}</p>`;
+  }
+  const people = visiblePersonnel(item.participants || [], currentUser);
+  if (!people.length) {
+    return `<p class="announcement-date">${escapeHtml(t('ann.noSignups'))}</p>`;
+  }
+  return `
+    <ul class="ann-roster">
+      ${people
+        .map((person) => {
+          const name = formatPersonnelName(person) || t('profiles.empty');
+          const avatar = person.avatar_url
+            ? `<img class="ann-roster-avatar" src="${escapeHtml(person.avatar_url)}" alt="">`
+            : `<span class="ann-roster-avatar ann-roster-fallback">${escapeHtml(initialsFromName(name))}</span>`;
+          return `<li><a class="ann-roster-person" href="./directory.html"><span>${avatar}</span><span><p class="ann-roster-name">${escapeHtml(
+            name
+          )}</p><p class="ann-roster-rank">${escapeHtml(person.military_rank || person.organization_role || '—')}</p></span></a></li>`;
+        })
+        .join('')}
+    </ul>
+  `;
+}
+
 function announcementCard(item, index) {
-  const percent = Math.min(100, Math.round((item.signed_count / item.max_capacity) * 100));
-  const isFull = item.signed_count >= item.max_capacity;
   return `
     <article class="announcement-card"${window.AOS ? ` data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}"` : ''}>
       <span class="card-glare" aria-hidden="true"></span>
@@ -116,15 +168,8 @@ function announcementCard(item, index) {
         <p class="announcement-content">${escapeHtml(item.content)}</p>
         ${honorNote(item)}
         <p class="announcement-date">${escapeHtml(new Date(item.created_at).toLocaleString())}</p>
-        <div class="capacity-tracker" role="group" aria-label="Registration tracker">
-          <div class="capacity-line">
-            <span>${t('ann.signedUp')}: <strong>${item.signed_count}</strong></span>
-            <span>${t('ann.max')}: <strong>${item.max_capacity}</strong></span>
-          </div>
-          <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="${item.max_capacity}" aria-valuenow="${item.signed_count}">
-            <div class="progress-fill${isFull ? ' is-full' : ''}" style="width: ${percent}%;"></div>
-          </div>
-        </div>
+        ${capacityGlass(item)}
+        ${participantRoster(item)}
         <div class="announcement-actions">
           ${signupControl(item)}
           ${adminControls(item)}

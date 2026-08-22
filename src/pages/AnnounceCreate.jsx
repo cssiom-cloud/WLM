@@ -21,6 +21,8 @@ export default function AnnounceCreate() {
   const [cropFile, setCropFile] = useState(null);
   const [honorEnabled, setHonorEnabled] = useState(false);
   const [honorTitle, setHonorTitle] = useState('');
+  const [showParticipants, setShowParticipants] = useState(true);
+  const [capacityLimited, setCapacityLimited] = useState(true);
 
   const load = useCallback(async () => {
     if (!editId) {
@@ -37,6 +39,8 @@ export default function AnnounceCreate() {
     setPreview(found.image_url || '');
     setHonorEnabled(Boolean(found.award_honor_enabled));
     setHonorTitle(found.honor_rank_title || '');
+    setShowParticipants(found.show_participants !== false);
+    setCapacityLimited(found.capacity_limited !== false);
   }, [activePersonnel, editId, supabase]);
 
   useEffect(() => {
@@ -49,7 +53,7 @@ export default function AnnounceCreate() {
 
   async function handleSubmit(event) {
     event.preventDefault();
-    if (!title.trim() || !content.trim() || Number(capacity) < 1) {
+    if (!title.trim() || !content.trim() || (capacityLimited && Number(capacity) < 1)) {
       toast.alert(t('create.invalid'));
       return;
     }
@@ -61,11 +65,13 @@ export default function AnnounceCreate() {
       const payload = {
         title: title.trim(),
         content: content.trim(),
-        maxCapacity: Number(capacity),
+        maxCapacity: Number(capacity) || 1,
         createdBy: activePersonnel.id,
         imageFile,
         awardHonorEnabled: honorEnabled,
-        honorRankTitle: honorTitle
+        honorRankTitle: honorTitle,
+        showParticipants,
+        capacityLimited
       };
       if (editId) {
         await updateAnnouncement(supabase, editId, payload);
@@ -99,6 +105,8 @@ export default function AnnounceCreate() {
         setPreview('');
         setHonorEnabled(false);
         setHonorTitle('');
+        setShowParticipants(true);
+        setCapacityLimited(true);
       }}>
         <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
           {t('create.titleLabel')}
@@ -108,10 +116,20 @@ export default function AnnounceCreate() {
           {t('create.contentLabel')}
           <textarea className={`${fieldClass} min-h-36 py-3`} rows={7} required value={content} onChange={(event) => setContent(event.target.value)} />
         </label>
-        <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
-          {t('create.capacityLabel')}
-          <input className={fieldClass} type="number" min={1} max={500} required value={capacity} onChange={(event) => setCapacity(event.target.value)} />
-        </label>
+        <CommandCheck checked={capacityLimited} onChange={setCapacityLimited}>
+          {t('create.capacityLimited')}
+        </CommandCheck>
+        {capacityLimited ? (
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {t('create.capacityLabel')}
+            <input className={fieldClass} type="number" min={1} max={500} required value={capacity} onChange={(event) => setCapacity(event.target.value)} />
+          </label>
+        ) : (
+          <p className="text-sm text-slate-500">{t('create.capacityHint')}</p>
+        )}
+        <CommandCheck checked={showParticipants} onChange={setShowParticipants}>
+          {t('create.showParticipants')}
+        </CommandCheck>
         <FileUploadButton
           label={t('create.imageLabel')}
           hint={imageFile?.name || t('upload.choose')}
