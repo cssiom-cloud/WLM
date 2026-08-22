@@ -134,7 +134,8 @@ export function DossierOverlay({
   bioPublic = true,
   canEdit = false,
   onClose,
-  onEdit
+  onEdit,
+  onExport
 }) {
   const row = record || person;
   const translate = t || ((key) => key);
@@ -352,6 +353,18 @@ export function DossierOverlay({
                       className="inline-flex min-h-11 items-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
                     >
                       {translate('common.edit')}
+                    </button>
+                  ) : null}
+                  {onExport && row?.id ? (
+                    <button
+                      type="button"
+                      onClick={(event) => {
+                        event.stopPropagation();
+                        onExport(row);
+                      }}
+                      className="inline-flex min-h-11 items-center rounded-xl border border-stone-300 bg-white px-4 text-sm font-semibold text-stone-800 dark:border-white/10 dark:bg-white/5 dark:text-slate-200"
+                    >
+                      {translate('dir.export')}
                     </button>
                   ) : null}
                   <button type="button" onClick={closeOverlay} className="inline-flex min-h-11 items-center rounded-xl px-4 text-sm font-semibold text-stone-700 dark:text-slate-300">

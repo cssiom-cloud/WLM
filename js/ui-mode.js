@@ -363,8 +363,82 @@ export function completeOpsExportHandoff(result = {}) {
   }
 }
 
+const DOSSIER_EXPORT_HANDOFF_KEY = 'wlr-dossier-export-handoff';
+
+export function readDossierExportHandoff() {
+  try {
+    const raw = window.sessionStorage.getItem(DOSSIER_EXPORT_HANDOFF_KEY);
+    if (!raw) {
+      return null;
+    }
+    const job = JSON.parse(raw);
+    if (!job?.id) {
+      window.sessionStorage.removeItem(DOSSIER_EXPORT_HANDOFF_KEY);
+      return null;
+    }
+    if (Date.now() - Number(job.startedAt || 0) > 180000) {
+      window.sessionStorage.removeItem(DOSSIER_EXPORT_HANDOFF_KEY);
+      return null;
+    }
+    return job;
+  } catch {
+    return null;
+  }
+}
+
+export function isDossierExportHandoffActive() {
+  const job = readDossierExportHandoff();
+  if (!job) {
+    return false;
+  }
+  const file = (window.location.pathname.split('/').pop() || '').toLowerCase();
+  if (file !== 'directory.html') {
+    return false;
+  }
+  const id = new URLSearchParams(window.location.search).get('id');
+  return !id || id === String(job.id);
+}
+
+export function startDossierExportFromJsx({ id }) {
+  const here = new URL(window.location.href);
+  here.searchParams.set('dossier', String(id || ''));
+  const job = {
+    id: String(id || ''),
+    returnUrl: here.href,
+    startedAt: Date.now()
+  };
+  window.sessionStorage.setItem(DOSSIER_EXPORT_HANDOFF_KEY, JSON.stringify(job));
+  const html = new URL(
+    `directory.html?id=${encodeURIComponent(job.id)}&handoff=1&export=pdf`,
+    siteRootUrl()
+  );
+  window.location.assign(html.href);
+}
+
+export function completeDossierExportHandoff(result = {}) {
+  const job = readDossierExportHandoff();
+  window.sessionStorage.removeItem(DOSSIER_EXPORT_HANDOFF_KEY);
+  if (!job?.returnUrl) {
+    return false;
+  }
+  try {
+    const url = new URL(job.returnUrl, window.location.origin);
+    if (result.ok) {
+      url.searchParams.set('exported', 'pdf');
+      url.searchParams.delete('exportError');
+    } else {
+      url.searchParams.set('exportError', '1');
+      url.searchParams.delete('exported');
+    }
+    window.location.replace(url.href);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function maybeRedirectForUiMode() {
-  if (isOpsExportHandoffActive()) {
+  if (isOpsExportHandoffActive() || isDossierExportHandoffActive()) {
     return false;
   }
   const mode = readUiMode();

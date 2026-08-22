@@ -8,7 +8,7 @@ import { applyTranslations, getLang, t } from './i18n.js';
 import { installCrestIcon, showStatus, upgradeCheckboxes, upgradeSelects } from './ui.js';
 import { bindImageEditorHost } from './image-editor.js';
 import { enterPage } from './motion.js';
-import { isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
+import { isDossierExportHandoffActive, isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
@@ -68,7 +68,7 @@ async function hydrateRemotePrefs() {
     if (!settings?.prefs_synced) {
       saveOwnSettings(personnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
     }
-    if (prefs.ui_skin === 'jsx' && !isOpsExportHandoffActive()) {
+    if (prefs.ui_skin === 'jsx' && !isOpsExportHandoffActive() && !isDossierExportHandoffActive()) {
       writeUiMode('jsx');
       maybeRedirectForUiMode();
     } else {

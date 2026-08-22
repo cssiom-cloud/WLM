@@ -8,6 +8,8 @@ import { isAdmin, visiblePersonnel } from '../lib/access.js';
 import { fetchPersonnelRoster, fetchSettingsMap, fetchUnitBoard, updatePersonnelRecord, uploadPersonnelImage, writeActivityLog } from '../lib/services.js';
 import { btnPrimary, fieldClass, glassClass, CommandSelect } from '../lib/ui.jsx';
 import DossierEditor from '../components/DossierEditor.jsx';
+import DossierHandoffBridge from '../components/DossierHandoffBridge.jsx';
+import { startDossierExportFromJsx } from '../../js/ui-mode.js';
 
 function visibleName(row, fallback) {
   return [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(' ').trim() || fallback || 'Unassigned name';
@@ -145,6 +147,7 @@ export default function Dashboard() {
 
   return (
     <section className="mx-auto max-w-6xl">
+      <DossierHandoffBridge roster={roster} onOpen={(row) => setSelected({ row, origin: null })} />
       <header className="mb-8">
         <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('home.kicker')}</p>
         <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">{t('home.commandTitle')}</h1>
@@ -266,8 +269,7 @@ export default function Dashboard() {
           ))}
         </div>
       ) : filtered.length ? (
-        <>
-          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ perspective: 1200 }}>
+        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ perspective: 1200 }}>
             {filtered.map((row) => (
               <AnimatedCard
                 key={row.id}
@@ -280,26 +282,29 @@ export default function Dashboard() {
                 onClick={(event) => setSelected({ row, origin: originFromEvent(event) })}
               />
             ))}
-          </div>
-          <DossierOverlay
-            record={selected?.row}
-            origin={selected?.origin}
-            lang={lang}
-            t={t}
-            units={units}
-            ranks={ranks}
-            bioPublic={settingsMap[selected?.row?.id]?.bio_public !== false}
-            canEdit={admin}
-            onClose={() => setSelected(null)}
-            onEdit={() => {
-              setDossierEdit(selected?.row);
-              setSelected(null);
-            }}
-          />
-        </>
+        </div>
       ) : (
         <p className="text-sm text-slate-500">{t('dir.empty')}</p>
       )}
+      <DossierOverlay
+        record={selected?.row}
+        origin={selected?.origin}
+        lang={lang}
+        t={t}
+        units={units}
+        ranks={ranks}
+        bioPublic={settingsMap[selected?.row?.id]?.bio_public !== false}
+        canEdit={admin}
+        onClose={() => setSelected(null)}
+        onEdit={() => {
+          setDossierEdit(selected?.row);
+          setSelected(null);
+        }}
+        onExport={(row) => {
+          toast.success(t('dir.handoff'));
+          startDossierExportFromJsx({ id: row.id });
+        }}
+      />
       {dossierEdit ? (
         <DossierEditor
           record={dossierEdit}

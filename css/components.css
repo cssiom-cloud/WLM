@@ -3921,6 +3921,21 @@ body.is-exporting .ops-view-page .ops-dossier {
   transform: none !important;
 }
 
+body.is-dossier-handoff #command-header,
+body.is-dossier-handoff .page-content,
+body.is-dossier-handoff .command-bottom-nav,
+body.is-dossier-handoff .hamburger,
+body.is-dossier-handoff .theme-toggle,
+body.is-dossier-handoff .local-test-banner {
+  display: none !important;
+}
+
+body.is-dossier-handoff #profile-modal.dossier-modal {
+  position: static !important;
+  display: block !important;
+  background: #fff;
+}
+
 body.is-ops-handoff #command-header,
 body.is-ops-handoff .ops-web-hero,
 body.is-ops-handoff .ops-chrome,

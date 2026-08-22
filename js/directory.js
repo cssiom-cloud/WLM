@@ -20,6 +20,11 @@ import { fetchUnitBoard } from './unit-service.js';
 import { readCurrentPersonnel } from './session.js';
 import { visiblePersonnel } from './access.js';
 import { openImageEditor } from './image-editor.js';
+import {
+  completeDossierExportHandoff,
+  isDossierExportHandoffActive,
+  readDossierExportHandoff
+} from './ui-mode.js';
 
 const SKELETON_COUNT = 8;
 const SKILL_KEYS = ['tactical', 'engineering', 'combat', 'command', 'logistics', 'discipline'];
@@ -734,13 +739,55 @@ function closeProfileModal() {
   document.querySelector('#profile-modal')?.classList.remove('is-open');
 }
 
-function exportDossier() {
+function exportDossier(options = {}) {
   document.body.classList.add('is-printing-dossier');
-  showToast(t('dir.exported'), 'info', 2800);
+  if (!options.silent) {
+    showToast(t('dir.exported'), 'info', 2800);
+  }
   window.setTimeout(() => {
     window.print();
     document.body.classList.remove('is-printing-dossier');
   }, 80);
+}
+
+async function waitForDossierImages() {
+  const images = [...document.querySelectorAll('#profile-modal img')];
+  await Promise.all(
+    images.map(
+      (image) =>
+        image.complete
+          ? Promise.resolve()
+          : new Promise((resolve) => {
+              image.addEventListener('load', resolve, { once: true });
+              image.addEventListener('error', resolve, { once: true });
+            })
+    )
+  );
+}
+
+async function runDossierHandoffIfNeeded(allRecords = []) {
+  const job = readDossierExportHandoff();
+  if (!job) {
+    return;
+  }
+  const record =
+    rosterCache.find((item) => item.id === job.id) || allRecords.find((item) => item.id === job.id) || null;
+  if (!record) {
+    completeDossierExportHandoff({ ok: false });
+    return;
+  }
+  if (!rosterCache.some((item) => item.id === record.id)) {
+    rosterCache = [record, ...rosterCache];
+  }
+  document.body.classList.add('is-dossier-handoff');
+  openProfileModal(record);
+  try {
+    await waitForDossierImages();
+    await new Promise((resolve) => window.setTimeout(resolve, 280));
+    exportDossier({ silent: true });
+  } catch {
+    completeDossierExportHandoff({ ok: false });
+  }
 }
 
 function openProfileModal(record) {
@@ -964,6 +1011,9 @@ export function bindSharedDossier() {
 
   window.addEventListener('afterprint', () => {
     document.body.classList.remove('is-printing-dossier');
+    if (isDossierExportHandoffActive()) {
+      completeDossierExportHandoff({ ok: true });
+    }
   });
 }
 
@@ -986,12 +1036,13 @@ if (document.querySelector('#directory-grid')) {
       ]),
     t('notice.loading')
   )
-    .then(([records, settings, board, session]) => {
+    .then(async ([records, settings, board, session]) => {
       rosterCache = visiblePersonnel(records, session?.personnel);
       settingsMap = settings;
       unitBoard = board;
       viewerIsAdmin = session?.personnel?.role === 'admin';
       renderDirectory('');
+      await runDossierHandoffIfNeeded(records);
     })
     .catch((error) => {
       document.querySelector('#directory-grid').innerHTML = '';

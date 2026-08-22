@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { DossierOverlay, originFromEvent } from '../components/AnimatedCard.jsx';
 import DossierEditor from '../components/DossierEditor.jsx';
+import DossierHandoffBridge from '../components/DossierHandoffBridge.jsx';
 import ImageCropper from '../components/ImageCropper.jsx';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
@@ -8,6 +9,7 @@ import { isAdmin, visiblePersonnel } from '../lib/access.js';
 import { fetchPersonnelRoster, fetchRankStructure, fetchUnitBoard, updatePersonnelRecord, uploadPersonnelImage } from '../lib/services.js';
 import { buildHierarchyTree } from '../../js/hierarchy.js';
 import { PageHeader, btnGhost } from '../lib/ui.jsx';
+import { startDossierExportFromJsx } from '../../js/ui-mode.js';
 
 const COLLAPSE_FROM_SORT = 8;
 
@@ -194,6 +196,7 @@ export default function OrgChart() {
 
   return (
     <section className="mx-auto max-w-7xl">
+      <DossierHandoffBridge roster={roster} onOpen={(row) => setSelected({ row, origin: null })} />
       <PageHeader kicker={t('org.kicker')} title={t('org.title')} lead={t('org.lead')} />
       <p className="mb-4 text-sm text-stone-700 dark:text-slate-300">{t('org.hint')}</p>
       {roster.length ? (
@@ -292,6 +295,10 @@ export default function OrgChart() {
         onEdit={() => {
           setEditing(selected?.row);
           setSelected(null);
+        }}
+        onExport={(row) => {
+          toast.success(t('dir.handoff'));
+          startDossierExportFromJsx({ id: row.id });
         }}
       />
       {editing ? (
