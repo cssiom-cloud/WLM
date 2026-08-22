@@ -1,345 +1,340 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { createClient } from '@supabase/supabase-js';
+import { ClipboardList, FileText, LogOut, Settings, UserRoundCog, Users } from 'lucide-react';
 
-const SUPABASE_URL = 'https://ltfiluaddwebijhbipdb.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0ZmlsdWFkZHdlYmlqaGJpcGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjQwNDEsImV4cCI6MjEwMjY0MDA0MX0.9ba9eaFDA6IlyJNRZYrj5txZPffZC-OoJ5VK-RN4SMI';
+const AUTH_STORAGE_KEY = 'wlr-command-auth-v1';
+const spring = { type: 'spring', stiffness: 300, damping: 30 };
+const pageTransition = { duration: 0.4, ease: 'easeInOut' };
 
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window === 'undefined' ? undefined : window.localStorage
-  }
-});
-
-const ACTIVE_PERSONNEL_KEY = 'wlr-active-personnel-id';
-const LANG_KEY = 'wlr-command-lang';
-const THEME_KEY = 'wlr-command-theme';
-
-const COPY = {
-  en: {
-    brand: 'WHITE LION REGIMENT',
-    menu: 'Open menu',
-    close: 'Close menu',
-    signOut: 'Sign Out',
-    personnel: 'Personnel',
-    operations: 'Operations',
-    archive: 'Archive',
-    command: 'Command',
-    dashboard: 'Directory',
-    board: 'Tactical Board',
-    documents: 'Official Documents',
-    settings: 'Settings',
-    switch: 'Switch personnel',
-    home: 'Command Home'
+const PLACEHOLDER_ROSTER = [
+  {
+    id: 'p-somchai',
+    first_name: 'Somchai',
+    middle_name: '',
+    last_name: '',
+    military_rank: 'CPL.',
+    organization_role: 'Personnel',
+    initials: 'CS',
+    avatar_url: '',
+    is_dev: false,
+    owner_user_id: 'local-command'
   },
-  th: {
-    brand: 'WHITE LION REGIMENT',
-    menu: 'เปิดเมนู',
-    close: 'ปิดเมนู',
-    signOut: 'ออกจากระบบ',
-    personnel: 'กำลังพล',
-    operations: 'ปฏิบัติการ',
-    archive: 'คลังเอกสาร',
-    command: 'ศูนย์บัญชาการ',
-    dashboard: 'ทำเนียบ',
-    board: 'บอร์ดปฏิบัติการ',
-    documents: 'เอกสารราชการ',
-    settings: 'การตั้งค่า',
-    switch: 'สลับแฟ้มกำลังพล',
-    home: 'หน้าหลัก'
+  {
+    id: 'p-arthit',
+    first_name: 'Arthit',
+    middle_name: '',
+    last_name: '',
+    military_rank: 'SGT.',
+    organization_role: 'Operations',
+    initials: 'SA',
+    avatar_url: '',
+    is_dev: false,
+    owner_user_id: 'local-command'
   }
-};
+];
 
-const CommandContext = createContext(null);
+const NAV_ITEMS = [
+  { to: '/dashboard', label: 'Dashboard', detail: 'Personnel', icon: Users, end: true },
+  { to: '/operations', label: 'Operations Board', detail: 'Operations', icon: ClipboardList },
+  { to: '/documents', label: 'Official Documents', detail: 'Archive', icon: FileText },
+  { to: '/settings', label: 'Settings', detail: 'Command', icon: Settings }
+];
 
-export function useCommand() {
-  const value = useContext(CommandContext);
-  if (!value) {
-    throw new Error('useCommand must be used inside CommandProvider.');
+const AuthContext = createContext(null);
+
+function readStoredAuth() {
+  try {
+    const parsed = JSON.parse(window.localStorage.getItem(AUTH_STORAGE_KEY) || 'null');
+    if (!parsed || typeof parsed !== 'object') {
+      return { isAuthenticated: false, activePersonnelId: null };
+    }
+    return {
+      isAuthenticated: Boolean(parsed.isAuthenticated),
+      activePersonnelId: parsed.activePersonnelId || null
+    };
+  } catch {
+    return { isAuthenticated: false, activePersonnelId: null };
   }
-  return value;
 }
 
-function formatPersonnelName(row) {
+function persistAuth(next) {
+  window.localStorage.setItem(
+    AUTH_STORAGE_KEY,
+    JSON.stringify({
+      isAuthenticated: next.isAuthenticated,
+      activePersonnelId: next.activePersonnelId
+    })
+  );
+}
+
+export function formatPersonnelName(row) {
   if (!row) {
     return '';
   }
   return [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(' ').trim();
 }
 
-function readStoredTheme() {
-  return window.localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
+export function displayRankName(row) {
+  if (!row) {
+    return 'Personnel';
+  }
+  return [row.military_rank, formatPersonnelName(row)].filter(Boolean).join(' ');
 }
 
-export function CommandProvider({ children }) {
-  const [bootstrapping, setBootstrapping] = useState(true);
-  const [session, setSession] = useState(null);
-  const [profiles, setProfiles] = useState([]);
-  const [activePersonnel, setActivePersonnelState] = useState(null);
-  const [lang, setLangState] = useState(() => (window.localStorage.getItem(LANG_KEY) === 'th' ? 'th' : 'en'));
-  const [theme, setThemeState] = useState(readStoredTheme);
-  const [zenMode, setZenMode] = useState(false);
+function initialsFromPerson(row) {
+  if (row?.initials) {
+    return row.initials;
+  }
+  return formatPersonnelName(row)
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part[0]?.toUpperCase() || '')
+    .join('') || 'WL';
+}
 
-  const loadRoster = useCallback(async (authSession) => {
-    if (!authSession?.user) {
-      setProfiles([]);
-      setActivePersonnelState(null);
-      return;
+function createRosterClient(roster) {
+  return {
+    from() {
+      return {
+        select() {
+          return {
+            eq() {
+              return this;
+            },
+            order() {
+              return Promise.resolve({ data: roster, error: null });
+            }
+          };
+        }
+      };
     }
-    const { data, error } = await supabase
-      .from('oc_personnel')
-      .select('*')
-      .eq('owner_user_id', authSession.user.id)
-      .order('first_name', { ascending: true });
-    if (error) {
-      throw error;
-    }
-    const owned = data || [];
-    setProfiles(owned);
-    const preferred = window.localStorage.getItem(ACTIVE_PERSONNEL_KEY);
-    const { data: state } = await supabase
-      .from('oc_auth_state')
-      .select('active_personnel_id')
-      .eq('auth_user_id', authSession.user.id)
-      .maybeSingle();
-    const activeId = state?.active_personnel_id || preferred;
-    const selected = owned.find((row) => row.id === activeId) || (owned.length === 1 ? owned[0] : null);
-    if (selected) {
-      window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, selected.id);
-    }
-    setActivePersonnelState(selected);
+  };
+}
+
+export function useAuth() {
+  const value = useContext(AuthContext);
+  if (!value) {
+    throw new Error('useAuth must be used inside AuthProvider.');
+  }
+  return value;
+}
+
+export function useCommand() {
+  const auth = useAuth();
+  return {
+    bootstrapping: auth.bootstrapping,
+    session: auth.isAuthenticated ? { user: auth.user } : null,
+    profiles: auth.profiles,
+    activePersonnel: auth.activePersonnel,
+    lang: 'en',
+    theme: 'light',
+    formatPersonnelName,
+    signOut: auth.logout,
+    supabase: auth.supabase,
+    setActivePersonnel: auth.selectProfile,
+    refresh: auth.refresh
+  };
+}
+
+export function AuthProvider({ children }) {
+  const stored = readStoredAuth();
+  const [bootstrapping, setBootstrapping] = useState(true);
+  const [isAuthenticated, setIsAuthenticated] = useState(stored.isAuthenticated);
+  const [profiles] = useState(PLACEHOLDER_ROSTER);
+  const [activePersonnelId, setActivePersonnelId] = useState(stored.activePersonnelId);
+
+  useEffect(() => {
+    setBootstrapping(false);
   }, []);
 
   useEffect(() => {
-    let cancelled = false;
-    async function boot() {
-      const { data } = await supabase.auth.getSession();
-      if (cancelled) {
-        return;
-      }
-      setSession(data.session);
-      try {
-        await loadRoster(data.session);
-      } finally {
-        if (!cancelled) {
-          setBootstrapping(false);
-        }
-      }
-    }
-    boot();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      setSession(nextSession);
-      loadRoster(nextSession).catch(() => {
-        setProfiles([]);
-        setActivePersonnelState(null);
-      });
-    });
-    return () => {
-      cancelled = true;
-      listener.subscription.unsubscribe();
-    };
-  }, [loadRoster]);
+    persistAuth({ isAuthenticated, activePersonnelId });
+  }, [activePersonnelId, isAuthenticated]);
 
-  useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    window.localStorage.setItem(LANG_KEY, lang);
-    window.localStorage.setItem(THEME_KEY, theme);
-  }, [lang, theme]);
-
-  const setActivePersonnel = useCallback(
-    async (personnelId) => {
-      window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, personnelId);
-      const { error } = await supabase.rpc('set_active_personnel', { p_personnel_id: personnelId });
-      if (error) {
-        throw error;
-      }
-      setActivePersonnelState(profiles.find((row) => row.id === personnelId) || null);
-    },
-    [profiles]
+  const activePersonnel = useMemo(
+    () => profiles.find((row) => row.id === activePersonnelId) || null,
+    [activePersonnelId, profiles]
   );
 
-  const signOut = useCallback(async () => {
-    window.localStorage.removeItem(ACTIVE_PERSONNEL_KEY);
-    await supabase.auth.signOut();
-    setSession(null);
-    setProfiles([]);
-    setActivePersonnelState(null);
+  const login = useCallback(() => {
+    setIsAuthenticated(true);
   }, []);
+
+  const logout = useCallback(() => {
+    setIsAuthenticated(false);
+    setActivePersonnelId(null);
+    persistAuth({ isAuthenticated: false, activePersonnelId: null });
+  }, []);
+
+  const selectProfile = useCallback((personnelId) => {
+    setActivePersonnelId(personnelId);
+    return Promise.resolve();
+  }, []);
+
+  const refresh = useCallback(() => Promise.resolve(), []);
+
+  const supabase = useMemo(() => createRosterClient(profiles), [profiles]);
+
+  const user = useMemo(
+    () => ({
+      rank: activePersonnel?.military_rank || 'CPL.',
+      name: formatPersonnelName(activePersonnel) || 'Somchai',
+      initials: initialsFromPerson(activePersonnel || PLACEHOLDER_ROSTER[0])
+    }),
+    [activePersonnel]
+  );
 
   const value = useMemo(
     () => ({
       bootstrapping,
-      session,
+      isAuthenticated,
       profiles,
       activePersonnel,
-      lang,
-      theme,
-      zenMode,
-      copy: COPY[lang],
-      formatPersonnelName,
-      setLang: setLangState,
-      setTheme: setThemeState,
-      setZenMode,
-      setActivePersonnel,
-      refresh: () => loadRoster(session),
-      signOut,
-      supabase
+      user,
+      supabase,
+      login,
+      logout,
+      selectProfile,
+      refresh,
+      formatPersonnelName
     }),
-    [activePersonnel, bootstrapping, lang, loadRoster, profiles, session, setActivePersonnel, signOut, theme, zenMode]
+    [activePersonnel, bootstrapping, isAuthenticated, login, logout, profiles, refresh, selectProfile, supabase, user]
   );
 
-  return <CommandContext.Provider value={value}>{children}</CommandContext.Provider>;
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }
 
-const NAV = [
-  {
-    id: 'personnel',
-    labelKey: 'personnel',
-    links: [
-      { to: '/', labelKey: 'dashboard', end: true },
-      { to: '/select', labelKey: 'switch' }
-    ]
-  },
-  {
-    id: 'operations',
-    labelKey: 'operations',
-    links: [{ to: '/operations', labelKey: 'board' }]
-  },
-  {
-    id: 'archive',
-    labelKey: 'archive',
-    links: [{ to: '/documents', labelKey: 'documents' }]
-  },
-  {
-    id: 'command',
-    labelKey: 'command',
-    links: [{ to: '/settings', labelKey: 'settings' }]
-  }
-];
-
 function BrandMark({ compact = false }) {
-  const { copy } = useCommand();
   return (
-    <NavLink to="/" className="flex min-w-0 items-center gap-3 no-underline">
-      <img
-        src={`${import.meta.env.BASE_URL}assets/1.jpg`}
-        alt={copy.brand}
-        className="h-12 w-12 rounded-xl border border-stone-200/80 bg-white object-contain p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
-      />
-      <span
-        className={`font-semibold tracking-[0.14em] text-slate-800 dark:text-slate-100 ${
-          compact ? 'max-w-[9.5rem] text-xs leading-snug' : 'truncate text-sm'
-        }`}
-      >
-        {copy.brand}
+    <NavLink
+      to="/dashboard"
+      className="group flex min-w-0 items-center gap-3 no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+    >
+      <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-navy/10 bg-navy text-[0.62rem] font-semibold tracking-[0.14em] text-ivory shadow-sm">
+        WLR
+      </span>
+      <span className="min-w-0">
+        <span className={`block font-semibold tracking-[0.08em] text-navy ${compact ? 'text-xs' : 'text-sm'}`}>
+          W.L.R
+        </span>
+        <span className={`block truncate font-medium text-slate-500 ${compact ? 'text-[0.68rem]' : 'text-xs'}`}>
+          Command Personnel
+        </span>
       </span>
     </NavLink>
   );
 }
 
-function NavGroups({ onNavigate }) {
-  const { copy } = useCommand();
+function SidebarNav({ onNavigate }) {
   return (
-    <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-      {NAV.map((group) => (
-        <section key={group.id}>
-          <h2 className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {copy[group.labelKey]}
-          </h2>
-          <div className="grid gap-1">
-            {group.links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={Boolean(link.end)}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `rounded-xl px-3 py-2.5 text-sm font-semibold no-underline transition duration-300 ${
-                    isActive
-                      ? 'bg-indigo-600/10 text-indigo-800 shadow-sm dark:bg-indigo-400/15 dark:text-indigo-200'
-                      : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5'
-                  }`
-                }
-              >
-                {copy[link.labelKey]}
-              </NavLink>
-            ))}
-          </div>
-        </section>
-      ))}
-    </div>
+    <nav aria-label="Command navigation" className="flex flex-1 flex-col gap-6">
+      <div className="grid gap-1">
+        {NAV_ITEMS.map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={Boolean(item.end)}
+              onClick={onNavigate}
+              className="block rounded-xl no-underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+            >
+              {({ isActive }) => (
+                <span
+                  className={`relative flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium transition-colors duration-200 ${
+                    isActive ? 'bg-navy/[0.06] text-navy' : 'text-slate-600 hover:bg-white/70 hover:text-navy'
+                  }`}
+                >
+                  {isActive ? (
+                    <span
+                      aria-hidden="true"
+                      className="absolute left-0 top-1/2 h-6 w-0.5 -translate-y-1/2 rounded-full bg-gold"
+                    />
+                  ) : null}
+                  <Icon className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+                  <span className="min-w-0">
+                    <span className="block truncate">{item.label}</span>
+                    <span className="block text-[0.68rem] font-medium tracking-[0.06em] text-slate-400">
+                      {item.detail}
+                    </span>
+                  </span>
+                </span>
+              )}
+            </NavLink>
+          );
+        })}
+      </div>
+      <div className="border-t border-navy/10 pt-4">
+        <NavLink
+          to="/select"
+          onClick={onNavigate}
+          className="flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-medium text-slate-500 no-underline transition-colors duration-200 hover:bg-white/70 hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+        >
+          <UserRoundCog className="h-4 w-4 shrink-0" strokeWidth={1.75} />
+          Switch profile
+        </NavLink>
+      </div>
+    </nav>
   );
 }
 
-function HamburgerButton({ open, onToggle, labels }) {
+function HamburgerButton({ open, onToggle }) {
   return (
     <button
       type="button"
-      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-stone-200/80 bg-white/70 shadow-sm backdrop-blur-xl lg:hidden dark:border-slate-700/80 dark:bg-slate-900/75"
+      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-navy/10 bg-white/70 shadow-sm backdrop-blur-xl lg:hidden focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
       aria-expanded={open}
       aria-controls="command-drawer"
-      aria-label={open ? labels.close : labels.menu}
+      aria-label={open ? 'Close navigation menu' : 'Open navigation menu'}
       onClick={onToggle}
     >
-      <span className="relative block h-3.5 w-4">
+      <span className="relative block h-3.5 w-[18px]" aria-hidden="true">
         <motion.span
-          className="absolute left-0 top-0 block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
+          className="absolute left-0 top-0 block h-0.5 w-full origin-center rounded-full bg-navy"
           animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          transition={spring}
         />
         <motion.span
-          className="absolute left-0 top-[6px] block h-0.5 w-4 rounded-full bg-slate-800 dark:bg-slate-100"
+          className="absolute left-0 top-[6px] block h-0.5 w-full rounded-full bg-navy"
           animate={open ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+          transition={spring}
         />
         <motion.span
-          className="absolute left-0 top-[12px] block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
+          className="absolute left-0 top-[12px] block h-0.5 w-full origin-center rounded-full bg-navy"
           animate={open ? { y: -6, rotate: -45 } : { y: 0, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+          transition={spring}
         />
       </span>
     </button>
   );
 }
 
-function LangThemeControls() {
-  const { lang, setLang, theme, setTheme } = useCommand();
+function UserChip({ person }) {
+  const label = displayRankName(person);
+  const initials = initialsFromPerson(person);
+
   return (
-    <div className="flex items-center gap-2">
-      <div className="inline-flex overflow-hidden rounded-xl border border-stone-200/80 bg-white/80 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80">
-        {['th', 'en'].map((code) => (
-          <button
-            key={code}
-            type="button"
-            onClick={() => setLang(code)}
-            className={`min-h-11 px-3 text-xs font-semibold uppercase tracking-[0.08em] transition ${
-              lang === code ? 'bg-indigo-700 text-white dark:bg-indigo-300 dark:text-slate-900' : 'text-slate-500'
-            }`}
-          >
-            {code}
-          </button>
-        ))}
-      </div>
-      <button
-        type="button"
-        onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="min-h-11 rounded-xl border border-stone-200/80 bg-white/80 px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-600 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300"
+    <div className="flex min-w-0 items-center gap-3">
+      <span
+        aria-hidden="true"
+        className="grid h-9 w-9 shrink-0 place-items-center rounded-full border border-gold/40 bg-navy text-[0.7rem] font-semibold tracking-[0.08em] text-ivory"
       >
-        {theme === 'dark' ? 'Light' : 'Dark'}
-      </button>
+        {initials}
+      </span>
+      <span className="hidden min-w-0 sm:block">
+        <span className="block truncate text-sm font-semibold text-navy">{label}</span>
+        <span className="block text-[0.68rem] font-medium uppercase tracking-[0.12em] text-slate-400">
+          Active personnel
+        </span>
+      </span>
     </div>
   );
 }
 
 export function GlobalLayout() {
-  const { copy, activePersonnel, formatPersonnelName, signOut, zenMode } = useCommand();
+  const { activePersonnel, logout } = useAuth();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -348,47 +343,72 @@ export function GlobalLayout() {
     setOpen(false);
   }, [location.pathname]);
 
+  useEffect(() => {
+    if (!open) {
+      return undefined;
+    }
+
+    function onKeyDown(event) {
+      if (event.key === 'Escape') {
+        setOpen(false);
+      }
+    }
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = 'hidden';
+    window.addEventListener('keydown', onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener('keydown', onKeyDown);
+    };
+  }, [open]);
+
   async function handleSignOut() {
-    await signOut();
+    setOpen(false);
+    logout();
     navigate('/login', { replace: true });
   }
 
   return (
-    <div className="min-h-screen lg:pl-[268px]">
-      <motion.aside
-        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[268px] lg:flex-col lg:border-r lg:border-stone-200/70 lg:bg-white/55 lg:px-4 lg:py-5 lg:backdrop-blur-xl dark:lg:border-slate-800/80 dark:lg:bg-slate-950/55"
-        animate={{ opacity: zenMode ? 0.28 : 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="mb-6 border-b border-stone-200/80 pb-5 dark:border-slate-800">
+    <div className="min-h-screen bg-ivory lg:pl-[280px]">
+      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[280px] lg:flex-col lg:border-r lg:border-navy/10 lg:bg-white/55 lg:px-4 lg:py-5 lg:shadow-glass lg:backdrop-blur-xl">
+        <div className="mb-6 border-b border-navy/10 pb-5">
           <BrandMark compact />
         </div>
-        <NavGroups />
+        <SidebarNav />
         <button
           type="button"
           onClick={handleSignOut}
-          className="mt-4 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5"
+          className="mt-4 inline-flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-500 transition-colors duration-200 hover:bg-white/70 hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
         >
-          {copy.signOut}
+          <LogOut className="h-4 w-4" strokeWidth={1.75} />
+          Sign out
         </button>
-      </motion.aside>
+      </aside>
 
-      <motion.header
-        className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-stone-200/70 bg-white/55 px-4 backdrop-blur-xl sm:px-6 dark:border-slate-800/80 dark:bg-slate-950/55"
-        animate={{ opacity: zenMode ? 0.22 : 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
+      <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-navy/10 bg-white/55 px-4 shadow-[0_8px_24px_rgba(11,31,58,0.04)] backdrop-blur-xl sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
-          <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} labels={copy} />
+          <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} />
           <div className="lg:hidden">
             <BrandMark />
           </div>
-          <p className="hidden min-w-0 truncate text-sm font-medium text-slate-500 lg:block">
-            {formatPersonnelName(activePersonnel) || copy.home}
+          <p className="hidden truncate text-sm font-medium text-slate-500 lg:block">
+            Personnel command portal
           </p>
         </div>
-        <LangThemeControls />
-      </motion.header>
+        <div className="flex items-center gap-2 sm:gap-3">
+          <UserChip person={activePersonnel} />
+          <button
+            type="button"
+            onClick={handleSignOut}
+            className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-navy/10 bg-white/70 px-3 text-sm font-semibold text-navy backdrop-blur-xl transition-colors duration-200 hover:bg-white focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
+          >
+            <LogOut className="h-4 w-4" strokeWidth={1.75} />
+            <span className="hidden sm:inline">Sign out</span>
+          </button>
+        </div>
+      </header>
 
       <AnimatePresence>
         {open ? (
@@ -396,65 +416,53 @@ export function GlobalLayout() {
             <motion.button
               key="drawer-backdrop"
               type="button"
-              aria-label={copy.close}
-              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm lg:hidden"
+              aria-label="Close navigation menu"
+              className="fixed inset-0 z-40 bg-navy/25 backdrop-blur-sm lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              transition={{ duration: 0.28, ease: [0.4, 0, 0.2, 1] }}
+              transition={pageTransition}
               onClick={() => setOpen(false)}
             />
-            <motion.nav
+            <motion.aside
               id="command-drawer"
               key="drawer-panel"
-              className="fixed left-0 top-[72px] z-50 flex max-h-[min(78dvh,calc(100dvh-72px))] w-[min(320px,100%)] flex-col gap-4 overflow-y-auto rounded-br-2xl border-b border-r border-white/50 bg-white/70 p-4 shadow-[0_28px_80px_rgba(28,25,23,0.16)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-slate-900/80"
-              initial={{ y: -24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,88vw)] flex-col border-r border-navy/10 bg-white/75 px-4 py-5 shadow-glass backdrop-blur-xl lg:hidden"
+              initial={{ x: '-100%' }}
+              animate={{ x: 0 }}
+              exit={{ x: '-100%' }}
+              transition={spring}
             >
-              <NavGroups onNavigate={() => setOpen(false)} />
+              <div className="mb-6 border-b border-navy/10 pb-5">
+                <BrandMark compact />
+              </div>
+              <SidebarNav onNavigate={() => setOpen(false)} />
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/5"
+                className="mt-4 inline-flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-medium text-slate-500 transition-colors duration-200 hover:bg-white/70 hover:text-navy focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gold"
               >
-                {copy.signOut}
+                <LogOut className="h-4 w-4" strokeWidth={1.75} />
+                Sign out
               </button>
-            </motion.nav>
+            </motion.aside>
           </>
         ) : null}
       </AnimatePresence>
 
-      <main className="px-4 py-6 pb-24 sm:px-6 lg:px-8">
-        <Outlet />
-      </main>
-
-      <motion.nav
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-200/80 bg-white/80 py-1 backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/80"
-        animate={{ opacity: zenMode ? 0.18 : 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
-        {[
-          { to: '/', label: copy.dashboard, end: true },
-          { to: '/operations', label: copy.board },
-          { to: '/documents', label: copy.documents },
-          { to: '/settings', label: copy.settings }
-        ].map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={Boolean(item.end)}
-            className={({ isActive }) =>
-              `grid min-h-11 place-items-center px-1 text-center text-[0.7rem] font-semibold no-underline ${
-                isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500'
-              }`
-            }
+      <main className="px-4 py-6 sm:px-6 lg:px-8">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={location.key}
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            transition={pageTransition}
           >
-            {item.label}
-          </NavLink>
-        ))}
-      </motion.nav>
+            <Outlet />
+          </motion.div>
+        </AnimatePresence>
+      </main>
     </div>
   );
 }
