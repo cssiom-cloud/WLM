@@ -16,6 +16,7 @@ import { t } from './i18n.js';
 import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js';
 import { applyAccent, readStoredAccent } from './theme.js';
 import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from './command-services.js';
+import { applyUiMode, persistUiSkin, readUiMode } from './ui-mode.js';
 
 let currentUser = null;
 let currentAuthUser = null;
@@ -221,6 +222,17 @@ function bindColorWheel(canvas, hexInput, preview, onPick) {
   });
 }
 
+function syncUiModeButtons(mode) {
+  const next = mode === 'jsx' ? 'jsx' : 'html';
+  document.querySelectorAll('[data-ui-mode]').forEach((button) => {
+    button.classList.toggle('is-active', button.getAttribute('data-ui-mode') === next);
+  });
+}
+
+function selectedUiMode() {
+  return document.querySelector('[data-ui-mode].is-active')?.getAttribute('data-ui-mode') === 'jsx' ? 'jsx' : 'html';
+}
+
 bootCommandShell('settings');
 
 const redirectError = readAuthRedirectError();
@@ -243,6 +255,8 @@ requireAuthenticatedPersonnel()
     const settings = await fetchOwnSettings(currentUser.id);
     const accent = settings.theme_accent || readStoredAccent() || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#8A90FF' : '#1E4E8C');
     document.querySelector('#bio-public').checked = settings.bio_public !== false;
+    const uiMode = settings.ui_skin === 'jsx' || settings.ui_skin === 'html' ? settings.ui_skin : readUiMode() || 'html';
+    syncUiModeButtons(uiMode);
     document.querySelector('#accent-hex').value = accent;
     document.querySelector('#accent-preview').style.background = accent;
     if (settings.theme_accent) {
@@ -306,6 +320,32 @@ document.querySelector('#bio-public').addEventListener('change', async (event) =
       details: bioPublic ? 'Biography set to public' : 'Biography set to private'
     });
     showStatus('Privacy setting saved.');
+  } catch (error) {
+    showStatus(error.message, true);
+  }
+});
+
+document.querySelectorAll('[data-ui-mode]').forEach((button) => {
+  button.addEventListener('click', () => {
+    syncUiModeButtons(button.getAttribute('data-ui-mode'));
+  });
+});
+
+document.querySelector('#save-ui-mode').addEventListener('click', async () => {
+  if (!currentUser) {
+    return;
+  }
+  const mode = selectedUiMode();
+  try {
+    await persistUiSkin((payload) => saveOwnSettings(currentUser.id, payload), mode);
+    const result = applyUiMode(mode);
+    if (result.unavailable) {
+      showStatus(t('settings.uiUnavailable'));
+      return;
+    }
+    if (!result.navigated) {
+      showStatus(t('settings.uiSaved'));
+    }
   } catch (error) {
     showStatus(error.message, true);
   }

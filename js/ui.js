@@ -238,7 +238,71 @@ function selectedLabel(select) {
   return option ? option.textContent : '';
 }
 
+let openChoiceMenu = null;
+let choiceKeyHandler = null;
+
+function closeChoiceMenu() {
+  if (choiceKeyHandler) {
+    window.removeEventListener('keydown', choiceKeyHandler);
+    choiceKeyHandler = null;
+  }
+  openChoiceMenu?.remove();
+  openChoiceMenu = null;
+}
+
+function openSelectMenu(select, trigger) {
+  closeChoiceMenu();
+  const rect = trigger.getBoundingClientRect();
+  const options = [...select.options];
+  const menuHeight = Math.min(320, options.length * 42 + 12);
+  const spaceBelow = window.innerHeight - rect.bottom;
+  const top = spaceBelow < menuHeight && rect.top > menuHeight ? rect.top - menuHeight - 6 : rect.bottom + 6;
+  const wrap = document.createElement('div');
+  const backdrop = document.createElement('div');
+  backdrop.className = 'cmd-select-backdrop';
+  const menu = document.createElement('ul');
+  menu.className = 'cmd-select-menu';
+  menu.setAttribute('role', 'listbox');
+  menu.style.top = `${top}px`;
+  menu.style.left = `${Math.max(8, Math.min(rect.left, window.innerWidth - Math.max(rect.width, 180) - 8))}px`;
+  menu.style.width = `${Math.max(rect.width, 160)}px`;
+  options.forEach((option) => {
+    const item = document.createElement('li');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = `cmd-select-option${option.value === select.value ? ' is-active' : ''}`;
+    button.setAttribute('role', 'option');
+    button.dataset.value = option.value;
+    button.textContent = String(option.textContent || '').trim() || (option.value ? option.value : '—');
+    item.appendChild(button);
+    menu.appendChild(item);
+  });
+  backdrop.addEventListener('click', closeChoiceMenu);
+  menu.addEventListener('click', (event) => {
+    const button = event.target.closest('[data-value]');
+    if (!button) {
+      return;
+    }
+    select.value = button.dataset.value;
+    trigger.textContent = selectedLabel(select) || t('notice.choose');
+    select.dispatchEvent(new Event('change', { bubbles: true }));
+    closeChoiceMenu();
+  });
+  wrap.append(backdrop, menu);
+  document.body.appendChild(wrap);
+  openChoiceMenu = wrap;
+  choiceKeyHandler = (event) => {
+    if (event.key === 'Escape') {
+      closeChoiceMenu();
+    }
+  };
+  window.addEventListener('keydown', choiceKeyHandler);
+}
+
 function wrapSelect(select) {
+  if (select.classList.contains('sr-only') || select.closest('.cmd-select')) {
+    return;
+  }
   if (select.dataset.choiceUpgraded === 'true') {
     const trigger = select.previousElementSibling;
     if (trigger?.classList.contains('choice-trigger')) {
@@ -250,30 +314,27 @@ function wrapSelect(select) {
   select.classList.add('is-native-hidden');
   const trigger = document.createElement('button');
   trigger.type = 'button';
-  trigger.className = 'choice-trigger';
+  trigger.className = 'choice-trigger cmd-select-trigger';
+  trigger.disabled = select.disabled;
   trigger.textContent = selectedLabel(select) || t('notice.choose');
   select.insertAdjacentElement('beforebegin', trigger);
-  trigger.addEventListener('click', async () => {
-    const options = [...select.options].map((option) => ({
-      value: option.value,
-      label: String(option.textContent || '').trim() || (option.value ? option.value : '—')
-    }));
-    const picked = await chooseNotice({
-      title: t('notice.choose'),
-      options,
-      value: select.value
-    });
-    if (picked === undefined) {
+  trigger.addEventListener('click', () => {
+    if (select.disabled) {
       return;
     }
-    select.value = picked;
-    trigger.textContent = selectedLabel(select) || t('notice.choose');
-    select.dispatchEvent(new Event('change', { bubbles: true }));
+    openSelectMenu(select, trigger);
   });
 }
 
 export function upgradeSelects(root = document) {
-  root.querySelectorAll('select.select-field').forEach(wrapSelect);
+  root.querySelectorAll('select').forEach(wrapSelect);
+  upgradeCheckboxes(root);
+}
+
+export function upgradeCheckboxes(root = document) {
+  root.querySelectorAll('input[type="checkbox"]').forEach((input) => {
+    input.classList.add('cmd-native-check');
+  });
 }
 
 export function installCrestIcon() {

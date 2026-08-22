@@ -35,7 +35,7 @@ export async function fetchOwnSettings(userId) {
   if (error) {
     throw error;
   }
-  return data || { user_id: userId, theme_accent: null, bio_public: true };
+  return data || { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html' };
 }
 
 export async function saveOwnSettings(userId, payload) {

@@ -1,5 +1,5 @@
 import { t } from './i18n.js';
-import { escapeHtml, showStatus } from './ui.js';
+import { escapeHtml, showStatus, upgradeSelects } from './ui.js';
 
 const ASPECTS = [
   { id: 'free', ratio: 0 },
@@ -385,6 +385,7 @@ export function ensureImageEditor() {
     </div>
   `;
   document.body.appendChild(host);
+  upgradeSelects(host);
   canvas = host.querySelector('#image-editor-canvas');
   previewCanvas = host.querySelector('#image-editor-preview');
   const fileInput = host.querySelector('#image-editor-file');

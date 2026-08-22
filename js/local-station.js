@@ -672,7 +672,7 @@ export async function localFetchSettings() {
 
 export async function localFetchOwnSettings(userId) {
   const row = settingsRows().find((item) => item.user_id === userId);
-  return row ? clone(row) : { user_id: userId, theme_accent: null, bio_public: true };
+  return row ? clone(row) : { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html' };
 }
 
 export async function localUpsertSettings(userId, payload) {
@@ -682,6 +682,7 @@ export async function localUpsertSettings(userId, payload) {
     user_id: userId,
     theme_accent: null,
     bio_public: true,
+    ui_skin: 'html',
     ...(index >= 0 ? rows[index] : {}),
     ...payload,
     updated_at: new Date().toISOString()
@@ -1291,6 +1292,15 @@ export async function localUpdateTicket(ticketId, payload) {
   }
   Object.assign(row, payload, { updated_at: new Date().toISOString() });
   writeJson(STORAGE_TICKETS, rows);
+}
+
+export async function localDeleteTicket(ticketId) {
+  const rows = ticketRows();
+  const next = rows.filter((item) => item.id !== ticketId);
+  if (next.length === rows.length) {
+    throw new Error('Ticket was not found.');
+  }
+  writeJson(STORAGE_TICKETS, next);
 }
 
 function operationRows() {

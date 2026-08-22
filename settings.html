@@ -8,7 +8,7 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
-    <link rel="stylesheet" href="./css/design-system.css?v=drop-nav">
+    <link rel="stylesheet" href="./css/design-system.css?v=ui-mode">
     <link rel="stylesheet" href="./css/animations.css?v=drop-nav">
     <script>
       (function () {
@@ -62,6 +62,21 @@
             </div>
           </article>
           <article class="settings-row" data-aos="fade-up">
+            <h2 data-i18n="settings.ui">Interface</h2>
+            <p class="settings-lead" data-i18n="settings.uiHint">Choose the normal HTML command portal or the richer JSX skin. The choice is saved to this personnel file.</p>
+            <div class="ui-mode-picks" role="radiogroup" aria-label="Interface">
+              <button class="ui-mode-pick is-active" id="ui-mode-html" type="button" data-ui-mode="html">
+                <strong data-i18n="settings.uiHtml">Normal (HTML)</strong>
+              </button>
+              <button class="ui-mode-pick" id="ui-mode-jsx" type="button" data-ui-mode="jsx">
+                <strong data-i18n="settings.uiJsx">Beautiful (JSX)</strong>
+              </button>
+            </div>
+            <p class="settings-actions">
+              <button id="save-ui-mode" class="btn btn-primary" type="button" data-i18n="settings.uiSave">Save interface</button>
+            </p>
+          </article>
+          <article class="settings-row" data-aos="fade-up">
             <h2 data-i18n="settings.privacy">Privacy Settings</h2>
             <label class="switch">
               <input id="bio-public" type="checkbox" checked>
@@ -73,6 +88,6 @@
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/settings.js?v=profiles"></script>
+    <script type="module" src="./js/settings.js?v=ui-mode"></script>
   </body>
 </html>

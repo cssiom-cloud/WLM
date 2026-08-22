@@ -1,6 +1,6 @@
 import { bootCommandShell, initAos } from './shell.js';
 import { readCurrentPersonnel } from './session.js';
-import { confirmNotice, escapeHtml, showToast } from './ui.js';
+import { escapeHtml, showToast } from './ui.js';
 import { t } from './i18n.js';
 // SUPABASE INJECT POINT: CRUD goes through js/content-service.js (command_documents table).
 import { deleteDocument, fetchDocuments, saveDocument } from './content-service.js';
@@ -66,13 +66,28 @@ function renderNav() {
   const nav = document.querySelector('#docs-nav');
   nav.innerHTML = documents
     .map(
-      (doc) => `
-        <button type="button" class="docs-nav-item${doc.id === activeId ? ' is-active' : ''}" data-doc-id="${escapeHtml(doc.id)}">
+      (doc, index) => `
+        <button type="button" class="docs-nav-item${doc.id === activeId ? ' is-active' : ''}" data-doc-id="${escapeHtml(doc.id)}" data-aos="fade-up" data-aos-delay="${index * 40}">
           ${escapeHtml(doc.title)}
         </button>
       `
     )
     .join('');
+}
+
+function renderDeleteConfirm(doc) {
+  const content = document.querySelector('#docs-content');
+  content.innerHTML = `
+    <div class="docs-delete-confirm" data-aos="zoom-in">
+      <h2>${escapeHtml(t('docs.confirmTitle'))}</h2>
+      <p>${escapeHtml(t('docs.confirmBody').replace('{title}', doc.title || ''))}</p>
+      <div class="btn-row">
+        <button class="btn" type="button" id="doc-delete-cancel">${escapeHtml(t('common.cancel'))}</button>
+        <button class="btn btn-danger" type="button" id="doc-delete-confirm">${escapeHtml(t('common.delete'))}</button>
+      </div>
+    </div>
+  `;
+  initAos();
 }
 
 function renderView() {
@@ -195,15 +210,21 @@ document.querySelector('#docs-content').addEventListener('click', async (event) 
     renderEditor('edit');
   }
   if (event.target.id === 'doc-delete') {
-    if (!(await confirmNotice(t('common.confirmDelete')))) {
-      return;
+    const doc = activeDocument();
+    if (doc) {
+      renderDeleteConfirm(doc);
     }
+  }
+  if (event.target.id === 'doc-delete-cancel') {
+    renderView();
+  }
+  if (event.target.id === 'doc-delete-confirm') {
     try {
       await deleteDocument(activeId);
       documents = await fetchDocuments();
       activeId = documents[0]?.id || null;
       renderView();
-      showToast(t('common.delete'), 'success');
+      showToast(t('docs.deleted'), 'success');
     } catch (error) {
       showToast(error.message, 'error', 5000);
     }

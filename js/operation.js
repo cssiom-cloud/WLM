@@ -8,6 +8,7 @@ import { authorizationMarkup, briefingHtml, docId, filedDate, overviewGridMarkup
 import { mountMapViewer } from './tactical-map.js';
 import { handleExportJPG, handleExportPDF } from './operation-export.js';
 import { logoMarkup } from './unit-common.js';
+import { completeOpsExportHandoff, readOpsExportHandoff } from './ui-mode.js';
 
 bootCommandShell('operations');
 initAos();
@@ -156,6 +157,35 @@ async function boot() {
     drawings: operation.drawings || []
   });
   renderAar();
+  await runExportHandoffIfNeeded();
+}
+
+async function exportPayload() {
+  return {
+    title: operation.title,
+    mapUrl: operation.map_url || '',
+    drawings: operation.drawings || []
+  };
+}
+
+async function runExportHandoffIfNeeded() {
+  const job = readOpsExportHandoff();
+  if (!job || !operation || String(job.id) !== String(operationId)) {
+    return;
+  }
+  document.body.classList.add('is-ops-handoff');
+  let ok = false;
+  try {
+    mapViewer?.resetView();
+    await new Promise((resolve) => setTimeout(resolve, 350));
+    const payload = await exportPayload();
+    ok = job.format === 'jpg' ? await handleExportJPG(payload) : await handleExportPDF(payload);
+  } catch {
+    ok = false;
+  }
+  if (!completeOpsExportHandoff({ ok })) {
+    document.body.classList.remove('is-ops-handoff');
+  }
 }
 
 document.querySelector('.ops-lang-switch')?.addEventListener('click', (event) => {
@@ -172,11 +202,7 @@ document.querySelector('.ops-export')?.addEventListener('click', async (event) =
     return;
   }
   mapViewer?.resetView();
-  const payload = {
-    title: operation.title,
-    mapUrl: operation.map_url || '',
-    drawings: operation.drawings || []
-  };
+  const payload = await exportPayload();
   if (button.getAttribute('data-export') === 'jpg') {
     await handleExportJPG(payload);
   } else {

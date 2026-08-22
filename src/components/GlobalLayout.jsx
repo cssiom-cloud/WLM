@@ -1,59 +1,64 @@
-import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { NavLink, useLocation, useNavigate, useOutlet } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
-import { createClient } from '@supabase/supabase-js';
+import {
+  BookOpen,
+  Building2,
+  FileText,
+  FolderOpen,
+  Home,
+  KeyRound,
+  LogOut,
+  Map,
+  Megaphone,
+  Network,
+  PlusCircle,
+  ScrollText,
+  Settings,
+  Shield,
+  Ticket,
+  Users
+} from 'lucide-react';
+import CommandAtmosphere from './CommandAtmosphere.jsx';
+import TacticalDock from './TacticalDock.jsx';
+import { SITE_LOGO } from '../lib/brand.js';
+import { isAdmin as roleIsAdmin, isDev } from '../lib/access.js';
+import { t as translate } from '../lib/i18n.js';
+import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings } from '../lib/services.js';
+import { supabase } from '../lib/supabase.js';
+import { applyAccent, applyStoredAccent } from '../../js/theme.js';
+import { writeUiMode } from '../../js/ui-mode.js';
 
-const SUPABASE_URL = 'https://ltfiluaddwebijhbipdb.supabase.co';
-const SUPABASE_ANON_KEY =
-  'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imx0ZmlsdWFkZHdlYmlqaGJpcGRiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcwNjQwNDEsImV4cCI6MjEwMjY0MDA0MX0.9ba9eaFDA6IlyJNRZYrj5txZPffZC-OoJ5VK-RN4SMI';
-
-export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY, {
-  auth: {
-    persistSession: true,
-    autoRefreshToken: true,
-    detectSessionInUrl: true,
-    storage: typeof window === 'undefined' ? undefined : window.localStorage
-  }
-});
+export { supabase };
 
 const ACTIVE_PERSONNEL_KEY = 'wlr-active-personnel-id';
 const LANG_KEY = 'wlr-command-lang';
 const THEME_KEY = 'wlr-command-theme';
+const RAIN_KEY = 'wlr-command-rain';
+const GLASS_KEY = 'wlr-command-glass';
+const GLASS_MOTION_KEY = 'wlr-command-glass-motion';
 
-const COPY = {
-  en: {
+function layoutCopy(lang) {
+  const tx = (key) => translate(lang, key);
+  return {
     brand: 'WHITE LION REGIMENT',
-    menu: 'Open menu',
-    close: 'Close menu',
-    signOut: 'Sign Out',
-    personnel: 'Personnel',
-    operations: 'Operations',
-    archive: 'Archive',
-    command: 'Command',
-    dashboard: 'Directory',
-    board: 'Tactical Board',
-    documents: 'Official Documents',
-    settings: 'Settings',
-    switch: 'Switch personnel',
-    home: 'Command Home'
-  },
-  th: {
-    brand: 'WHITE LION REGIMENT',
-    menu: 'เปิดเมนู',
-    close: 'ปิดเมนู',
-    signOut: 'ออกจากระบบ',
-    personnel: 'กำลังพล',
-    operations: 'ปฏิบัติการ',
-    archive: 'คลังเอกสาร',
-    command: 'ศูนย์บัญชาการ',
-    dashboard: 'ทำเนียบ',
-    board: 'บอร์ดปฏิบัติการ',
-    documents: 'เอกสารราชการ',
-    settings: 'การตั้งค่า',
-    switch: 'สลับแฟ้มกำลังพล',
-    home: 'หน้าหลัก'
-  }
-};
+    menu: tx('nav.menu'),
+    close: lang === 'th' ? 'ปิดเมนู' : 'Close menu',
+    signOut: tx('nav.signOut'),
+    personnel: tx('nav.group.personnel'),
+    operations: tx('nav.group.operations'),
+    archive: tx('nav.group.archive'),
+    support: tx('nav.group.support'),
+    command: tx('nav.group.command'),
+    dashboard: tx('nav.directory'),
+    board: tx('nav.operations'),
+    announcements: tx('nav.announcements'),
+    documents: tx('nav.memo'),
+    settings: tx('nav.settings'),
+    switch: tx('nav.profiles'),
+    home: tx('nav.home')
+  };
+}
 
 const CommandContext = createContext(null);
 
@@ -83,23 +88,45 @@ export function CommandProvider({ children }) {
   const [activePersonnel, setActivePersonnelState] = useState(null);
   const [lang, setLangState] = useState(() => (window.localStorage.getItem(LANG_KEY) === 'th' ? 'th' : 'en'));
   const [theme, setThemeState] = useState(readStoredTheme);
+  const [rain, setRainState] = useState(() => window.localStorage.getItem(RAIN_KEY) !== 'off');
+  const [glassVisible, setGlassVisibleState] = useState(() => window.localStorage.getItem(GLASS_KEY) !== 'off');
+  const [glassMotion, setGlassMotionState] = useState(() => window.localStorage.getItem(GLASS_MOTION_KEY) !== 'off');
   const [zenMode, setZenMode] = useState(false);
+  const [authHold, setAuthHold] = useState(false);
+  const rosterGen = useRef(0);
 
   const loadRoster = useCallback(async (authSession) => {
+    const gen = ++rosterGen.current;
     if (!authSession?.user) {
-      setProfiles([]);
-      setActivePersonnelState(null);
-      return;
+      if (gen === rosterGen.current) {
+        setProfiles([]);
+        setActivePersonnelState(null);
+      }
+      return null;
     }
-    const { data, error } = await supabase
+    let owned = [];
+    const ownedResult = await supabase
       .from('oc_personnel')
       .select('*')
       .eq('owner_user_id', authSession.user.id)
       .order('first_name', { ascending: true });
-    if (error) {
-      throw error;
+    if (!ownedResult.error) {
+      owned = ownedResult.data || [];
     }
-    const owned = data || [];
+    if (!owned.length) {
+      const { data: legacy, error: legacyError } = await supabase
+        .from('oc_personnel')
+        .select('*')
+        .eq('id', authSession.user.id)
+        .maybeSingle();
+      if (legacyError && ownedResult.error) {
+        throw ownedResult.error;
+      }
+      owned = legacy ? [legacy] : [];
+    }
+    if (gen !== rosterGen.current) {
+      return null;
+    }
     setProfiles(owned);
     const preferred = window.localStorage.getItem(ACTIVE_PERSONNEL_KEY);
     const { data: state } = await supabase
@@ -108,11 +135,27 @@ export function CommandProvider({ children }) {
       .eq('auth_user_id', authSession.user.id)
       .maybeSingle();
     const activeId = state?.active_personnel_id || preferred;
-    const selected = owned.find((row) => row.id === activeId) || (owned.length === 1 ? owned[0] : null);
+    const selected = owned.find((row) => row.id === activeId) || owned[0] || null;
     if (selected) {
       window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, selected.id);
+      try {
+        const settings = await fetchOwnSettings(supabase, selected.id);
+        if (settings?.theme_accent) {
+          applyAccent(settings.theme_accent);
+        }
+        if (settings?.ui_skin === 'jsx') {
+          writeUiMode('jsx');
+        } else if (settings?.ui_skin === 'html') {
+          writeUiMode('html');
+        }
+      } catch {
+        /* keep the local preference if settings are unavailable */
+      }
     }
-    setActivePersonnelState(selected);
+    if (gen === rosterGen.current) {
+      setActivePersonnelState(selected);
+    }
+    return selected;
   }, []);
 
   useEffect(() => {
@@ -132,7 +175,10 @@ export function CommandProvider({ children }) {
       }
     }
     boot();
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+    const { data: listener } = supabase.auth.onAuthStateChange((event, nextSession) => {
+      if (event === 'INITIAL_SESSION') {
+        return;
+      }
       setSession(nextSession);
       loadRoster(nextSession).catch(() => {
         setProfiles([]);
@@ -146,12 +192,19 @@ export function CommandProvider({ children }) {
   }, [loadRoster]);
 
   useEffect(() => {
+    applyStoredAccent();
+  }, []);
+
+  useEffect(() => {
     document.documentElement.lang = lang;
     document.documentElement.setAttribute('data-theme', theme);
     document.documentElement.classList.toggle('dark', theme === 'dark');
     window.localStorage.setItem(LANG_KEY, lang);
     window.localStorage.setItem(THEME_KEY, theme);
-  }, [lang, theme]);
+    window.localStorage.setItem(RAIN_KEY, rain ? 'on' : 'off');
+    window.localStorage.setItem(GLASS_KEY, glassVisible ? 'on' : 'off');
+    window.localStorage.setItem(GLASS_MOTION_KEY, glassMotion ? 'on' : 'off');
+  }, [lang, theme, rain, glassVisible, glassMotion]);
 
   const setActivePersonnel = useCallback(
     async (personnelId) => {
@@ -165,6 +218,16 @@ export function CommandProvider({ children }) {
     [profiles]
   );
 
+  const createPersonnelProfile = useCallback(
+    async ({ firstName = '', lastName = '' } = {}) => {
+      const row = await createPersonnelProfileRow(supabase, { firstName, lastName });
+      window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, row.id);
+      await loadRoster(session);
+      return row;
+    },
+    [loadRoster, session]
+  );
+
   const signOut = useCallback(async () => {
     window.localStorage.removeItem(ACTIVE_PERSONNEL_KEY);
     await supabase.auth.signOut();
@@ -172,6 +235,8 @@ export function CommandProvider({ children }) {
     setProfiles([]);
     setActivePersonnelState(null);
   }, []);
+
+  const t = useCallback((key) => translate(lang, key), [lang]);
 
   const value = useMemo(
     () => ({
@@ -181,55 +246,135 @@ export function CommandProvider({ children }) {
       activePersonnel,
       lang,
       theme,
+      rain,
+      glassVisible,
+      glassMotion,
       zenMode,
-      copy: COPY[lang],
+      authHold,
+      copy: layoutCopy(lang),
+      t,
+      isAdmin: roleIsAdmin(activePersonnel),
+      isDev: isDev(activePersonnel),
       formatPersonnelName,
       setLang: setLangState,
       setTheme: setThemeState,
+      setRain: setRainState,
+      setGlassVisible: setGlassVisibleState,
+      setGlassMotion: setGlassMotionState,
       setZenMode,
+      setAuthHold,
       setActivePersonnel,
-      refresh: () => loadRoster(session),
+      createPersonnelProfile,
+      refresh: async (sessionOverride) => {
+        let next = sessionOverride;
+        if (!next?.user) {
+          const { data } = await supabase.auth.getSession();
+          next = data.session;
+        }
+        setSession(next);
+        return loadRoster(next);
+      },
       signOut,
       supabase
     }),
-    [activePersonnel, bootstrapping, lang, loadRoster, profiles, session, setActivePersonnel, signOut, theme, zenMode]
+    [
+      activePersonnel,
+      bootstrapping,
+      createPersonnelProfile,
+      lang,
+      loadRoster,
+      profiles,
+      session,
+      setActivePersonnel,
+      signOut,
+      t,
+      theme,
+      rain,
+      glassVisible,
+      glassMotion,
+      zenMode,
+      authHold
+    ]
   );
 
   return <CommandContext.Provider value={value}>{children}</CommandContext.Provider>;
 }
 
-const NAV = [
-  {
-    id: 'personnel',
-    labelKey: 'personnel',
-    links: [
-      { to: '/', labelKey: 'dashboard', end: true },
-      { to: '/select', labelKey: 'switch' }
-    ]
-  },
-  {
-    id: 'operations',
-    labelKey: 'operations',
-    links: [{ to: '/operations', labelKey: 'board' }]
-  },
-  {
-    id: 'archive',
-    labelKey: 'archive',
-    links: [{ to: '/documents', labelKey: 'documents' }]
-  },
-  {
-    id: 'command',
-    labelKey: 'command',
-    links: [{ to: '/settings', labelKey: 'settings' }]
+const NAV_ICONS = {
+  '/': Home,
+  '/directory': Users,
+  '/org': Network,
+  '/units': Building2,
+  '/operations': Map,
+  '/announcements': Megaphone,
+  '/announcements/create': PlusCircle,
+  '/lore': BookOpen,
+  '/library': FolderOpen,
+  '/memo': FileText,
+  '/tickets': Ticket,
+  '/admin': Shield,
+  '/accounts': KeyRound,
+  '/settings': Settings,
+  '/logs': ScrollText
+};
+
+const pageMotion = {
+  initial: { opacity: 0, y: 16 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -10 },
+  transition: { duration: 0.32, ease: [0.22, 1, 0.36, 1] }
+};
+
+function navGroupsFor(person, session) {
+  const authed = Boolean(session);
+  const admin = roleIsAdmin(person);
+  const personnel = [
+    { to: '/', labelKey: 'nav.home', end: true },
+    { to: '/directory', labelKey: 'nav.directory' },
+    { to: '/org', labelKey: 'nav.org' }
+  ];
+  if (authed) {
+    personnel.push({ to: '/units', labelKey: 'nav.units' });
   }
-];
+  const operations = [
+    { to: '/operations', labelKey: 'nav.operations' },
+    { to: '/announcements', labelKey: 'nav.announcements' }
+  ];
+  if (admin) {
+    operations.push({ to: '/announcements/create', labelKey: 'nav.createAnnouncement' });
+  }
+  const archive = [
+    { to: '/lore', labelKey: 'nav.lore' },
+    { to: '/library', labelKey: 'nav.documents' }
+  ];
+  if (authed) {
+    archive.push({ to: '/memo', labelKey: 'nav.memo' });
+  }
+  const support = [{ to: '/tickets', labelKey: 'nav.tickets' }];
+  const command = [];
+  if (admin) {
+    command.push({ to: '/admin', labelKey: 'nav.adminPage' });
+    command.push({ to: '/accounts', labelKey: 'nav.accounts' });
+  }
+  if (authed) {
+    command.push({ to: '/settings', labelKey: 'nav.settings' });
+    command.push({ to: '/logs', labelKey: 'nav.logs' });
+  }
+  return [
+    { id: 'personnel', labelKey: 'nav.group.personnel', links: personnel },
+    { id: 'operations', labelKey: 'nav.group.operations', links: operations },
+    { id: 'archive', labelKey: 'nav.group.archive', links: archive },
+    { id: 'support', labelKey: 'nav.group.support', links: support },
+    { id: 'command', labelKey: 'nav.group.command', links: command }
+  ];
+}
 
 function BrandMark({ compact = false }) {
   const { copy } = useCommand();
   return (
     <NavLink to="/" className="flex min-w-0 items-center gap-3 no-underline">
       <img
-        src={`${import.meta.env.BASE_URL}assets/1.jpg`}
+        src={SITE_LOGO}
         alt={copy.brand}
         className="h-12 w-12 rounded-xl border border-stone-200/80 bg-white object-contain p-0.5 shadow-sm dark:border-slate-700 dark:bg-slate-900"
       />
@@ -244,37 +389,117 @@ function BrandMark({ compact = false }) {
   );
 }
 
-function NavGroups({ onNavigate }) {
-  const { copy } = useCommand();
+function allNavLinks(person, session) {
+  return navGroupsFor(person, session).flatMap((group) => group.links);
+}
+
+function NavGroups({ onNavigate, compact = false }) {
+  const { t, session, activePersonnel } = useCommand();
+  const groups = navGroupsFor(activePersonnel, session);
   return (
     <div className="flex flex-1 flex-col gap-5 overflow-y-auto">
-      {NAV.map((group) => (
-        <section key={group.id}>
-          <h2 className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-            {copy[group.labelKey]}
-          </h2>
-          <div className="grid gap-1">
-            {group.links.map((link) => (
-              <NavLink
-                key={link.to}
-                to={link.to}
-                end={Boolean(link.end)}
-                onClick={onNavigate}
-                className={({ isActive }) =>
-                  `rounded-xl px-3 py-2.5 text-sm font-semibold no-underline transition duration-300 ${
-                    isActive
-                      ? 'bg-indigo-600/10 text-indigo-800 shadow-sm dark:bg-indigo-400/15 dark:text-indigo-200'
-                      : 'text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5'
-                  }`
-                }
-              >
-                {copy[link.labelKey]}
-              </NavLink>
-            ))}
-          </div>
-        </section>
-      ))}
+      {groups.map((group) =>
+        group.links.length ? (
+          <section key={group.id}>
+            {compact ? null : (
+              <h2 className="mb-2 px-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
+                {t(group.labelKey)}
+              </h2>
+            )}
+            <div className="grid gap-1">
+              {group.links.map((link) => {
+                const Icon = NAV_ICONS[link.to] || FileText;
+                return (
+                  <NavLink
+                    key={link.to}
+                    to={link.to}
+                    end={Boolean(link.end)}
+                    onClick={onNavigate}
+                    title={t(link.labelKey)}
+                    className={({ isActive }) =>
+                      `flex items-center gap-3 rounded-xl px-3 py-2.5 text-sm font-semibold no-underline transition duration-300 ${
+                        isActive
+                          ? 'bg-[var(--accent-soft)] text-[var(--accent)] shadow-sm'
+                          : 'text-slate-700 hover:bg-white/70 dark:text-slate-200 dark:hover:bg-white/5'
+                      }`
+                    }
+                  >
+                    <Icon className="h-4 w-4 shrink-0" strokeWidth={1.85} aria-hidden="true" />
+                    <span className="truncate">{t(link.labelKey)}</span>
+                  </NavLink>
+                );
+              })}
+            </div>
+          </section>
+        ) : null
+      )}
     </div>
+  );
+}
+
+function IconRail({ onSignOut, signOutLabel }) {
+  const { t, session, activePersonnel } = useCommand();
+  const links = allNavLinks(activePersonnel, session);
+  return (
+    <aside className="fixed inset-y-0 left-0 z-[90] hidden w-[72px] flex-col border-r border-[var(--border)] bg-[var(--glass-bg)] py-4 text-[var(--text)] backdrop-blur-xl lg:flex">
+      <NavLink to="/" className="mb-3 grid place-items-center px-2" title={t('nav.home')} aria-label={t('nav.home')}>
+        <img src={SITE_LOGO} alt="" className="h-11 w-11 rounded-xl border border-[var(--border)] bg-white object-contain p-0.5 dark:bg-slate-900" />
+      </NavLink>
+      <nav className="flex flex-1 flex-col items-center gap-1 overflow-y-auto px-2">
+        {links.map((link) => {
+          const Icon = NAV_ICONS[link.to] || FileText;
+          return (
+            <NavLink
+              key={link.to}
+              to={link.to}
+              end={Boolean(link.end)}
+              title={t(link.labelKey)}
+              aria-label={t(link.labelKey)}
+              className={({ isActive }) =>
+                `grid h-11 w-11 place-items-center rounded-xl no-underline transition ${
+                  isActive
+                    ? 'bg-[var(--accent)] text-[var(--accent-ink)]'
+                    : 'text-slate-600 hover:bg-white/80 dark:text-slate-300 dark:hover:bg-white/5'
+                }`
+              }
+            >
+              <Icon className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.85} aria-hidden="true" />
+            </NavLink>
+          );
+        })}
+      </nav>
+      <button
+        type="button"
+        title={signOutLabel}
+        aria-label={signOutLabel}
+        onClick={onSignOut}
+        className="mx-auto mt-2 grid h-11 w-11 place-items-center rounded-xl text-slate-600 hover:bg-white/80 dark:text-slate-300 dark:hover:bg-white/5"
+      >
+        <LogOut className="h-[1.15rem] w-[1.15rem]" strokeWidth={1.85} aria-hidden="true" />
+      </button>
+    </aside>
+  );
+}
+
+function MenuGlyph({ open = false }) {
+  return (
+    <span className="relative block h-3.5 w-4 text-current">
+      <motion.span
+        className="menu-glyph-bar absolute left-0 top-0 block h-0.5 w-4 origin-center rounded-full"
+        animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      />
+      <motion.span
+        className="menu-glyph-bar absolute left-0 top-[6px] block h-0.5 w-4 rounded-full"
+        animate={open ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
+        transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
+      />
+      <motion.span
+        className="menu-glyph-bar absolute left-0 top-[12px] block h-0.5 w-4 origin-center rounded-full"
+        animate={open ? { y: -6, rotate: -45 } : { y: 0, rotate: 0 }}
+        transition={{ type: 'spring', stiffness: 420, damping: 28 }}
+      />
+    </span>
   );
 }
 
@@ -282,29 +507,13 @@ function HamburgerButton({ open, onToggle, labels }) {
   return (
     <button
       type="button"
-      className="relative grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-stone-200/80 bg-white/70 shadow-sm backdrop-blur-xl lg:hidden dark:border-slate-700/80 dark:bg-slate-900/75"
+      className="relative z-50 grid h-11 w-11 place-items-center overflow-hidden rounded-xl border border-[var(--border)] bg-[var(--glass-bg)] text-[var(--text)] shadow-sm backdrop-blur-xl"
       aria-expanded={open}
       aria-controls="command-drawer"
       aria-label={open ? labels.close : labels.menu}
       onClick={onToggle}
     >
-      <span className="relative block h-3.5 w-4">
-        <motion.span
-          className="absolute left-0 top-0 block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
-          animate={open ? { y: 6, rotate: 45 } : { y: 0, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-        />
-        <motion.span
-          className="absolute left-0 top-[6px] block h-0.5 w-4 rounded-full bg-slate-800 dark:bg-slate-100"
-          animate={open ? { opacity: 0, scaleX: 0 } : { opacity: 1, scaleX: 1 }}
-          transition={{ duration: 0.18, ease: [0.4, 0, 0.2, 1] }}
-        />
-        <motion.span
-          className="absolute left-0 top-[12px] block h-0.5 w-4 origin-center rounded-full bg-slate-800 dark:bg-slate-100"
-          animate={open ? { y: -6, rotate: -45 } : { y: 0, rotate: 0 }}
-          transition={{ type: 'spring', stiffness: 420, damping: 28 }}
-        />
-      </span>
+      <MenuGlyph open={open} />
     </button>
   );
 }
@@ -319,8 +528,8 @@ function LangThemeControls() {
             key={code}
             type="button"
             onClick={() => setLang(code)}
-            className={`min-h-11 px-3 text-xs font-semibold uppercase tracking-[0.08em] transition ${
-              lang === code ? 'bg-indigo-700 text-white dark:bg-indigo-300 dark:text-slate-900' : 'text-slate-500'
+            className={`min-h-11 px-3 text-xs font-semibold uppercase tracking-[0.08em] transition-colors duration-500 ${
+              lang === code ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'text-slate-600 dark:text-slate-300'
             }`}
           >
             {code}
@@ -330,7 +539,7 @@ function LangThemeControls() {
       <button
         type="button"
         onClick={() => setTheme(theme === 'dark' ? 'light' : 'dark')}
-        className="min-h-11 rounded-xl border border-stone-200/80 bg-white/80 px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-600 backdrop-blur-xl dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-300"
+        className="min-h-11 rounded-xl border border-stone-200/80 bg-white/80 px-3 text-xs font-semibold uppercase tracking-[0.08em] text-slate-700 backdrop-blur-xl transition-colors duration-500 dark:border-slate-700 dark:bg-slate-900/80 dark:text-slate-200"
       >
         {theme === 'dark' ? 'Light' : 'Dark'}
       </button>
@@ -338,14 +547,55 @@ function LangThemeControls() {
   );
 }
 
+function ThemeFlash({ theme }) {
+  const [flash, setFlash] = useState(0);
+  const previous = useRef(theme);
+
+  useEffect(() => {
+    if (previous.current !== theme) {
+      previous.current = theme;
+      setFlash((value) => value + 1);
+    }
+  }, [theme]);
+
+  return (
+    <AnimatePresence>
+      {flash ? (
+        <motion.div
+          key={flash}
+          className="pointer-events-none fixed inset-0 z-[90]"
+          initial={{ opacity: 0.42 }}
+          animate={{ opacity: 0 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.55, ease: [0.22, 1, 0.36, 1] }}
+          style={{ background: theme === 'dark' ? '#0b0d12' : '#f4f1ea' }}
+        />
+      ) : null}
+    </AnimatePresence>
+  );
+}
+
+function AnimatedOutlet() {
+  const location = useLocation();
+  const outlet = useOutlet();
+  return (
+    <AnimatePresence>
+      <motion.div key={location.pathname} className="min-h-full" {...pageMotion}>
+        {outlet}
+      </motion.div>
+    </AnimatePresence>
+  );
+}
+
 export function GlobalLayout() {
-  const { copy, activePersonnel, formatPersonnelName, signOut, zenMode } = useCommand();
+  const { copy, t, activePersonnel, formatPersonnelName, signOut, zenMode, theme, rain, glassVisible, glassMotion } = useCommand();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
 
   useEffect(() => {
     setOpen(false);
+    document.documentElement.classList.remove('overlay-lock');
   }, [location.pathname]);
 
   async function handleSignOut() {
@@ -354,36 +604,21 @@ export function GlobalLayout() {
   }
 
   return (
-    <div className="min-h-screen lg:pl-[268px]">
-      <motion.aside
-        className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[268px] lg:flex-col lg:border-r lg:border-stone-200/70 lg:bg-white/55 lg:px-4 lg:py-5 lg:backdrop-blur-xl dark:lg:border-slate-800/80 dark:lg:bg-slate-950/55"
-        animate={{ opacity: zenMode ? 0.28 : 1 }}
-        transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
-      >
-        <div className="mb-6 border-b border-stone-200/80 pb-5 dark:border-slate-800">
-          <BrandMark compact />
-        </div>
-        <NavGroups />
-        <button
-          type="button"
-          onClick={handleSignOut}
-          className="mt-4 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/70 dark:text-slate-300 dark:hover:bg-white/5"
-        >
-          {copy.signOut}
-        </button>
-      </motion.aside>
+    <div className="relative min-h-screen lg:pl-[72px]">
+      <CommandAtmosphere theme={theme} rain={rain} glassVisible={glassVisible} glassMotion={glassMotion} />
+      <ThemeFlash theme={theme} />
+
+      <IconRail onSignOut={handleSignOut} signOutLabel={copy.signOut} />
 
       <motion.header
-        className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-stone-200/70 bg-white/55 px-4 backdrop-blur-xl sm:px-6 dark:border-slate-800/80 dark:bg-slate-950/55"
+        className="sticky top-0 z-[90] flex h-[72px] items-center justify-between gap-4 border-b border-stone-200/70 bg-white/55 px-4 backdrop-blur-xl sm:px-6 dark:border-slate-800/80 dark:bg-slate-950/55"
         animate={{ opacity: zenMode ? 0.22 : 1 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
         <div className="flex min-w-0 items-center gap-3">
           <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} labels={copy} />
-          <div className="lg:hidden">
-            <BrandMark />
-          </div>
-          <p className="hidden min-w-0 truncate text-sm font-medium text-slate-500 lg:block">
+          <BrandMark compact />
+          <p className="hidden min-w-0 truncate text-sm font-medium text-slate-600 lg:block dark:text-slate-300">
             {formatPersonnelName(activePersonnel) || copy.home}
           </p>
         </div>
@@ -397,7 +632,7 @@ export function GlobalLayout() {
               key="drawer-backdrop"
               type="button"
               aria-label={copy.close}
-              className="fixed inset-0 z-40 bg-slate-950/30 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-[94] bg-slate-950/35 backdrop-blur-sm"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -407,18 +642,20 @@ export function GlobalLayout() {
             <motion.nav
               id="command-drawer"
               key="drawer-panel"
-              className="fixed left-0 top-[72px] z-50 flex max-h-[min(78dvh,calc(100dvh-72px))] w-[min(320px,100%)] flex-col gap-4 overflow-y-auto rounded-br-2xl border-b border-r border-white/50 bg-white/70 p-4 shadow-[0_28px_80px_rgba(28,25,23,0.16)] backdrop-blur-xl lg:hidden dark:border-white/10 dark:bg-slate-900/80"
-              initial={{ y: -24, opacity: 0 }}
-              animate={{ y: 0, opacity: 1 }}
-              exit={{ y: -20, opacity: 0 }}
-              transition={{ duration: 0.38, ease: [0.22, 1, 0.36, 1] }}
+              className="fixed left-0 top-0 z-[95] flex h-dvh w-[min(320px,92vw)] flex-col gap-4 overflow-y-auto border-r border-[var(--border)] bg-[var(--bg-elevated)] p-4 pt-[88px] text-[var(--text)] shadow-[0_28px_80px_rgba(28,25,23,0.16)] backdrop-blur-xl"
+              initial={{ x: -28, opacity: 0 }}
+              animate={{ x: 0, opacity: 1 }}
+              exit={{ x: -24, opacity: 0 }}
+              transition={{ duration: 0.34, ease: [0.22, 1, 0.36, 1] }}
             >
+              <BrandMark compact />
               <NavGroups onNavigate={() => setOpen(false)} />
               <button
                 type="button"
                 onClick={handleSignOut}
-                className="rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-slate-600 hover:bg-white/60 dark:text-slate-300 dark:hover:bg-white/5"
+                className="mt-auto flex items-center gap-3 rounded-xl px-3 py-2.5 text-left text-sm font-semibold text-[var(--text)] hover:bg-white/60 dark:hover:bg-white/5"
               >
+                <LogOut className="h-4 w-4" strokeWidth={1.85} aria-hidden="true" />
                 {copy.signOut}
               </button>
             </motion.nav>
@@ -426,34 +663,44 @@ export function GlobalLayout() {
         ) : null}
       </AnimatePresence>
 
-      <main className="px-4 py-6 pb-24 sm:px-6 lg:px-8">
-        <Outlet />
+      <main className="relative z-[1] px-4 pb-36 pt-6 sm:px-6 lg:px-8 lg:pb-40">
+        <AnimatedOutlet />
       </main>
 
+      <TacticalDock copy={copy} zenMode={zenMode} />
+
       <motion.nav
-        className="fixed inset-x-0 bottom-0 z-30 grid grid-cols-4 border-t border-stone-200/80 bg-white/80 py-1 backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/80"
+        className="fixed inset-x-0 bottom-0 z-[85] grid grid-cols-4 border-t border-stone-200/80 bg-white/80 py-2 backdrop-blur-xl lg:hidden dark:border-slate-800 dark:bg-slate-950/80"
         animate={{ opacity: zenMode ? 0.18 : 1 }}
         transition={{ duration: 0.4, ease: [0.22, 1, 0.36, 1] }}
       >
         {[
-          { to: '/', label: copy.dashboard, end: true },
-          { to: '/operations', label: copy.board },
-          { to: '/documents', label: copy.documents },
-          { to: '/settings', label: copy.settings }
-        ].map((item) => (
-          <NavLink
-            key={item.to}
-            to={item.to}
-            end={Boolean(item.end)}
-            className={({ isActive }) =>
-              `grid min-h-11 place-items-center px-1 text-center text-[0.7rem] font-semibold no-underline ${
-                isActive ? 'text-indigo-700 dark:text-indigo-300' : 'text-slate-500'
-              }`
-            }
-          >
-            {item.label}
-          </NavLink>
-        ))}
+          { to: '/', label: copy.home, end: true, icon: Home },
+          { to: '/directory', label: copy.dashboard, icon: Users },
+          { to: '/announcements', label: t('nav.announcements'), icon: Megaphone },
+          { to: '/settings', label: copy.settings, icon: Settings }
+        ].map((item) => {
+          const Icon = item.icon;
+          return (
+            <NavLink
+              key={item.to}
+              to={item.to}
+              end={Boolean(item.end) || item.to === '/announcements'}
+              onClick={(event) => {
+                event.preventDefault();
+                navigate(item.to);
+              }}
+              className={({ isActive }) =>
+                `grid min-h-12 place-items-center gap-1 rounded-xl px-1 text-center text-[0.68rem] font-semibold no-underline ${
+                  isActive ? 'bg-[var(--accent-soft)] text-[var(--accent)]' : 'text-[var(--text-muted)]'
+                }`
+              }
+            >
+              <Icon className="h-4 w-4" strokeWidth={1.85} aria-hidden="true" />
+              {item.label}
+            </NavLink>
+          );
+        })}
       </motion.nav>
     </div>
   );

@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>W.L.R Command Personnel</title>
+    <script>
+      (function () {
+        var path = location.pathname + location.search + location.hash;
+        if (location.pathname === '/app' || location.pathname.indexOf('/app/') === 0) {
+          try {
+            sessionStorage.setItem('wlr-spa-path', path);
+          } catch (error) {}
+          location.replace('/react.html');
+          return;
+        }
+        var marker = '/app/';
+        var at = location.pathname.indexOf(marker);
+        if (location.pathname.slice(-4) === '/app' || at !== -1) {
+          try {
+            sessionStorage.setItem('wlr-spa-path', path);
+          } catch (error) {}
+          var prefix = at === -1 ? location.pathname.replace(/\/app\/?$/, '') : location.pathname.slice(0, at);
+          location.replace(prefix + '/react.html');
+        }
+      })();
+    </script>
+  </head>
+  <body></body>
+</html>

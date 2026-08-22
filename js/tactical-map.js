@@ -5,6 +5,7 @@ import { escapeHtml } from './ui.js';
 // react-konva / fabric.js. Viewer pan/zoom is native (react-zoom-pan-pinch equivalent).
 
 const TOOLS = [
+  { id: 'pen', icon: '✎' },
   { id: 'arrow', icon: '↗' },
   { id: 'dot', icon: '●' },
   { id: 'ring', icon: '○' },
@@ -77,35 +78,106 @@ function paintMark(ctx, item, width, height) {
     ctx.strokeRect(x, y, w, h);
   } else if (item.type === 'text' && item.text) {
     ctx.fillText(item.text, item.x * width, item.y * height);
+  } else if (item.type === 'pen' && Array.isArray(item.points) && item.points.length) {
+    ctx.beginPath();
+    item.points.forEach((point, index) => {
+      const x = point.x * width;
+      const y = point.y * height;
+      if (index === 0) {
+        ctx.moveTo(x, y);
+      } else {
+        ctx.lineTo(x, y);
+      }
+    });
+    ctx.stroke();
   }
   ctx.restore();
 }
 
-function loadImage(url) {
+function fitExportSize(naturalWidth, naturalHeight, maxWidth = 1200, maxHeight = 720) {
+  const scale = Math.min(1, maxWidth / Math.max(1, naturalWidth), maxHeight / Math.max(1, naturalHeight));
+  return {
+    width: Math.max(1, Math.round(naturalWidth * scale)),
+    height: Math.max(1, Math.round(naturalHeight * scale))
+  };
+}
+
+function stillFromImage(image, drawings = [], maxWidth = 1200, maxHeight = 720) {
+  const { width, height } = fitExportSize(image.naturalWidth || image.width, image.naturalHeight || image.height, maxWidth, maxHeight);
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  ctx.drawImage(image, 0, 0, width, height);
+  drawMarkings(ctx, drawings, width, height);
+  return canvas.toDataURL('image/jpeg', 0.92);
+}
+
+function loadImage(url, cors = false) {
   return new Promise((resolve, reject) => {
     const image = new Image();
-    image.crossOrigin = 'anonymous';
+    if (cors) {
+      image.crossOrigin = 'anonymous';
+    }
     image.onload = () => resolve(image);
     image.onerror = () => reject(new Error('Map image could not be loaded for export.'));
     image.src = url;
   });
 }
 
-export async function renderMapStill(mapUrl, drawings = [], maxWidth = 2000) {
-  if (!mapUrl) {
+export function rasterizeLiveMap(host, drawings = []) {
+  const image = host?.querySelector('img.tac-map, [data-tac-image]');
+  const overlay = host?.querySelector('canvas.tac-canvas');
+  if (!image?.naturalWidth) {
     return '';
   }
-  const image = await loadImage(mapUrl);
-  const scale = Math.min(2, maxWidth / Math.max(1, image.naturalWidth));
-  const width = Math.max(1, Math.round(image.naturalWidth * scale));
-  const height = Math.max(1, Math.round(image.naturalHeight * scale));
+  const { width, height } = fitExportSize(image.naturalWidth, image.naturalHeight);
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
   const ctx = canvas.getContext('2d');
-  ctx.drawImage(image, 0, 0, width, height);
-  drawMarkings(ctx, drawings, width, height);
-  return canvas.toDataURL('image/jpeg', 0.92);
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+  try {
+    ctx.drawImage(image, 0, 0, width, height);
+    if (overlay?.width && overlay.height) {
+      ctx.drawImage(overlay, 0, 0, width, height);
+    } else {
+      drawMarkings(ctx, drawings, width, height);
+    }
+    return canvas.toDataURL('image/jpeg', 0.92);
+  } catch {
+    return '';
+  }
+}
+
+export async function renderMapStill(mapUrl, drawings = [], maxWidth = 1200, maxHeight = 720) {
+  if (!mapUrl) {
+    return '';
+  }
+  try {
+    const response = await fetch(mapUrl);
+    if (response.ok) {
+      const blob = await response.blob();
+      const objectUrl = URL.createObjectURL(blob);
+      try {
+        const image = await loadImage(objectUrl, false);
+        return stillFromImage(image, drawings, maxWidth, maxHeight);
+      } finally {
+        URL.revokeObjectURL(objectUrl);
+      }
+    }
+  } catch {
+    /* Fall through to a CORS image load. */
+  }
+  try {
+    const image = await loadImage(mapUrl, true);
+    return stillFromImage(image, drawings, maxWidth, maxHeight);
+  } catch {
+    return '';
+  }
 }
 
 function pointFromEvent(canvas, event, cssWidth, cssHeight) {
@@ -162,11 +234,17 @@ export function mountMapEditor(root, options = {}) {
     color: options.color || '#1e4e8c',
     stroke: Number(options.stroke) || 3,
     preview: null,
-    drag: null
+    drag: null,
+    toolsOpen: true,
+    fullscreen: false
   };
 
   root.innerHTML = `
     <div class="tac-editor">
+      <div class="tac-chrome">
+        <button class="tac-tool" type="button" data-tac-tools-toggle></button>
+        <button class="tac-tool" type="button" data-tac-fullscreen></button>
+      </div>
       <div data-tac-bar></div>
       <div class="tac-stage">
         <div class="tac-frame" data-tac-frame hidden>
@@ -184,6 +262,8 @@ export function mountMapEditor(root, options = {}) {
   `;
 
   const bar = root.querySelector('[data-tac-bar]');
+  const toolsToggle = root.querySelector('[data-tac-tools-toggle]');
+  const fullscreenButton = root.querySelector('[data-tac-fullscreen]');
   const frame = root.querySelector('[data-tac-frame]');
   const image = root.querySelector('[data-tac-image]');
   const canvas = root.querySelector('[data-tac-canvas]');
@@ -192,9 +272,66 @@ export function mountMapEditor(root, options = {}) {
   const textInput = root.querySelector('[data-tac-text]');
   let cssSize = { width: 1, height: 1 };
   let objectUrl = '';
+  let fsShell = null;
+  document.documentElement.classList.remove('overlay-lock');
+
+  function portalEditor(on) {
+    if (on) {
+      const editor = root.querySelector('.tac-editor');
+      if (!editor || fsShell) {
+        return;
+      }
+      fsShell = document.createElement('div');
+      fsShell.className = 'tac-fullscreen-shell';
+      document.body.appendChild(fsShell);
+      fsShell.appendChild(editor);
+      document.body.style.overflow = 'hidden';
+      return;
+    }
+    if (!fsShell) {
+      return;
+    }
+    const editor = fsShell.querySelector('.tac-editor');
+    if (editor) {
+      root.appendChild(editor);
+    }
+    fsShell.remove();
+    fsShell = null;
+    document.body.style.overflow = '';
+  }
+
+  function applyFullscreen(on) {
+    root.classList.toggle('tac-is-fullscreen', on);
+    if (on) {
+      const req = root.requestFullscreen || root.webkitRequestFullscreen;
+      if (typeof req === 'function') {
+        Promise.resolve(req.call(root))
+          .then(() => window.setTimeout(paint, 80))
+          .catch(() => {
+            portalEditor(true);
+            window.setTimeout(paint, 80);
+          });
+        return;
+      }
+      portalEditor(true);
+      return;
+    }
+    portalEditor(false);
+    const exit = document.exitFullscreen || document.webkitExitFullscreen;
+    if ((document.fullscreenElement || document.webkitFullscreenElement) && typeof exit === 'function') {
+      Promise.resolve(exit.call(document)).catch(() => {});
+    }
+  }
+
+  function renderChrome() {
+    toolsToggle.textContent = state.toolsOpen ? t('ops.tools.hide') : t('ops.tools.show');
+    fullscreenButton.textContent = state.fullscreen ? t('ops.map.exitFullscreen') : t('ops.map.fullscreen');
+    bar.hidden = !state.toolsOpen;
+  }
 
   function renderBar() {
     bar.innerHTML = toolbarMarkup(state.tool, state.color, state.stroke);
+    renderChrome();
   }
 
   function paint() {
@@ -233,6 +370,37 @@ export function mountMapEditor(root, options = {}) {
   const observer = new ResizeObserver(() => paint());
   observer.observe(frame);
   image.addEventListener('load', paint);
+
+  toolsToggle.addEventListener('click', () => {
+    state.toolsOpen = !state.toolsOpen;
+    renderChrome();
+  });
+  fullscreenButton.addEventListener('click', () => {
+    state.fullscreen = !state.fullscreen;
+    renderChrome();
+    applyFullscreen(state.fullscreen);
+    window.setTimeout(paint, 80);
+  });
+  function handleKey(event) {
+    if (event.key === 'Escape' && state.fullscreen) {
+      state.fullscreen = false;
+      renderChrome();
+      applyFullscreen(false);
+      window.setTimeout(paint, 80);
+    }
+  }
+  function onFullscreenChange() {
+    const native = Boolean(document.fullscreenElement || document.webkitFullscreenElement);
+    if (!native && state.fullscreen && !fsShell) {
+      state.fullscreen = false;
+      renderChrome();
+      document.body.style.overflow = '';
+      window.setTimeout(paint, 80);
+    }
+  }
+  window.addEventListener('keydown', handleKey);
+  document.addEventListener('fullscreenchange', onFullscreenChange);
+  document.addEventListener('webkitfullscreenchange', onFullscreenChange);
 
   bar.addEventListener('click', (event) => {
     const toolButton = event.target.closest('[data-tac-tool]');
@@ -303,6 +471,12 @@ export function mountMapEditor(root, options = {}) {
       textInput.focus();
       return;
     }
+    if (state.tool === 'pen') {
+      state.drag = { type: 'pen', points: [point] };
+      state.preview = { type: 'pen', points: [point], color: state.color, stroke: state.stroke };
+      paint();
+      return;
+    }
     state.drag = { start: point, type: state.tool };
   });
 
@@ -311,7 +485,15 @@ export function mountMapEditor(root, options = {}) {
       return;
     }
     const point = pointFromEvent(canvas, event, cssSize.width, cssSize.height);
-    if (state.drag.type === 'arrow') {
+    if (state.drag.type === 'pen') {
+      state.drag.points.push(point);
+      state.preview = {
+        type: 'pen',
+        points: state.drag.points,
+        color: state.color,
+        stroke: state.stroke
+      };
+    } else if (state.drag.type === 'arrow') {
       state.preview = {
         type: 'arrow',
         x1: state.drag.start.x,
@@ -340,9 +522,26 @@ export function mountMapEditor(root, options = {}) {
       return;
     }
     const point = pointFromEvent(canvas, event, cssSize.width, cssSize.height);
-    const start = state.drag.start;
-    const type = state.drag.type;
+    const drag = state.drag;
     state.drag = null;
+    if (drag.type === 'pen') {
+      const points = [...(drag.points || []), point];
+      if (points.length > 1) {
+        commit({
+          id: uid(),
+          type: 'pen',
+          points,
+          color: state.color,
+          stroke: state.stroke
+        });
+      } else {
+        state.preview = null;
+        paint();
+      }
+      return;
+    }
+    const start = drag.start;
+    const type = drag.type;
     if (type === 'arrow') {
       commit({
         id: uid(),
@@ -413,12 +612,23 @@ export function mountMapEditor(root, options = {}) {
       syncMap();
     },
     syncLabels() {
-      root.querySelector('[data-tac-upload-label]').textContent = t('ops.map.upload');
+      const scope = fsShell || root;
+      const label = scope.querySelector('[data-tac-upload-label]');
+      if (label) {
+        label.textContent = t('ops.map.upload');
+      }
       empty.textContent = t('ops.map.empty');
       renderBar();
     },
     destroy() {
       observer.disconnect();
+      window.removeEventListener('keydown', handleKey);
+      document.removeEventListener('fullscreenchange', onFullscreenChange);
+      document.removeEventListener('webkitfullscreenchange', onFullscreenChange);
+      state.fullscreen = false;
+      applyFullscreen(false);
+      document.documentElement.classList.remove('overlay-lock');
+      document.body.style.overflow = '';
       if (objectUrl) {
         URL.revokeObjectURL(objectUrl);
       }

@@ -29,12 +29,16 @@ export function applyAccent(hex) {
   const value = String(hex || '').trim();
   if (!/^#[0-9A-Fa-f]{6}$/.test(value)) {
     document.documentElement.style.removeProperty('--accent');
-    document.documentElement.style.removeProperty('--accent-hover');
+    document.documentElement.style.removeProperty('--accent-ink');
     window.localStorage.removeItem(ACCENT_STORAGE_KEY);
     return;
   }
+  const r = parseInt(value.slice(1, 3), 16);
+  const g = parseInt(value.slice(3, 5), 16);
+  const b = parseInt(value.slice(5, 7), 16);
+  const luma = (r * 299 + g * 587 + b * 114) / 1000;
   document.documentElement.style.setProperty('--accent', value);
-  document.documentElement.style.setProperty('--accent-hover', value);
+  document.documentElement.style.setProperty('--accent-ink', luma > 168 ? '#1c1917' : '#ffffff');
   window.localStorage.setItem(ACCENT_STORAGE_KEY, value);
 }
 

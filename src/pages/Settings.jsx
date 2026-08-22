@@ -1,47 +1,14 @@
-import { useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { useCommand } from '../components/GlobalLayout.jsx';
+import { useToast } from '../components/LiquidToast.jsx';
+import { initialsFromName, oauthRedirectTo } from '../lib/access.js';
+import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from '../lib/services.js';
+import { applyUiMode, persistUiSkin, readUiMode, reactUiAvailable } from '../../js/ui-mode.js';
+import { applyAccent } from '../../js/theme.js';
+import { btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
-const COPY = {
-  en: {
-    kicker: 'Command',
-    title: 'Settings',
-    lead: 'Manage the official appearance of this station and the accounts linked to the personnel file.',
-    appearance: 'Station appearance',
-    theme: 'Dark theme',
-    themeHint: 'Use the deep slate command palette for evening watches.',
-    language: 'Thai language',
-    languageHint: 'Display official copy in Thai across the portal.',
-    accounts: 'Linked accounts',
-    accountsLead: 'Discord is the preferred identity channel for command personnel.',
-    linked: 'Discord is linked to this file',
-    notLinked: 'Discord is not linked to this file',
-    link: 'Link Discord account',
-    linking: 'Opening Discord authorization',
-    unlinkHint: 'Keep at least one other sign-in method before requesting an unlink from administration.',
-    personnel: 'Active personnel',
-    none: 'No personnel file is selected.'
-  },
-  th: {
-    kicker: 'ศูนย์บัญชาการ',
-    title: 'การตั้งค่า',
-    lead: 'จัดการลักษณะของสถานีราชการและบัญชีที่เชื่อมกับแฟ้มกำลังพล',
-    appearance: 'ลักษณะสถานี',
-    theme: 'ธีมเข้ม',
-    themeHint: 'ใช้โทนหินชนวนสำหรับเวรยามค่ำ',
-    language: 'ภาษาไทย',
-    languageHint: 'แสดงข้อความราชการเป็นภาษาไทยทั้งพอร์ทัล',
-    accounts: 'บัญชีที่เชื่อมแล้ว',
-    accountsLead: 'Discord เป็นช่องทางยืนยันตัวตนหลักสำหรับกำลังพลศูนย์บัญชาการ',
-    linked: 'เชื่อม Discord กับแฟ้มนี้แล้ว',
-    notLinked: 'ยังไม่ได้เชื่อม Discord กับแฟ้มนี้',
-    link: 'เชื่อมบัญชี Discord',
-    linking: 'กำลังเปิดการยืนยัน Discord',
-    unlinkHint: 'ต้องมีวิธีเข้าสู่ระบบอย่างน้อยอีกหนึ่งวิธีก่อนแจ้งขอยกเลิกการเชื่อมต่อ',
-    personnel: 'แฟ้มกำลังพลที่ใช้อยู่',
-    none: 'ยังไม่ได้เลือกแฟ้มกำลังพล'
-  }
-};
+const ACCENT_KEY = 'wlr-command-accent';
 
 function DiscordMark({ className = 'h-8 w-8' }) {
   return (
@@ -54,242 +21,459 @@ function DiscordMark({ className = 'h-8 w-8' }) {
   );
 }
 
-function isDiscordLinked(session) {
-  const user = session?.user;
-  if (!user) {
-    return false;
-  }
-  const identities = user.identities || [];
-  if (identities.some((item) => item.provider === 'discord')) {
-    return true;
-  }
-  const providers = user.app_metadata?.providers;
-  if (Array.isArray(providers) && providers.includes('discord')) {
-    return true;
-  }
-  return user.app_metadata?.provider === 'discord';
+function findDiscordIdentity(user) {
+  return (user?.identities || []).find((item) => item.provider === 'discord') || null;
 }
 
-function discordDisplay(session) {
-  const user = session?.user;
-  const identity = (user?.identities || []).find((item) => item.provider === 'discord');
+function discordDisplay(identity, user) {
   const data = identity?.identity_data || {};
   const meta = user?.user_metadata || {};
   const claims = data.custom_claims || meta.custom_claims || {};
   return {
     username:
-      claims.global_name ||
-      data.full_name ||
-      data.name ||
-      data.preferred_username ||
-      meta.full_name ||
-      meta.name ||
-      meta.preferred_username ||
-      'Discord',
+      claims.global_name || data.full_name || data.name || data.preferred_username || meta.full_name || meta.name || meta.preferred_username || 'Discord',
     avatar: data.avatar_url || meta.avatar_url || ''
   };
 }
 
+function hslToHex(h, s, l) {
+  const sat = s / 100;
+  const lig = l / 100;
+  const k = (n) => (n + h / 30) % 12;
+  const a = sat * Math.min(lig, 1 - lig);
+  const f = (n) => lig - a * Math.max(Math.min(k(n) - 3, 9 - k(n), 1), -1);
+  const toHex = (x) => Math.round(255 * x).toString(16).padStart(2, '0');
+  return `#${toHex(f(0))}${toHex(f(8))}${toHex(f(4))}`;
+}
+
 function SpringToggle({ on, onToggle, label, hint }) {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/75 px-4 py-4 text-left dark:border-white/10 dark:bg-slate-950/55"
-    >
+    <button type="button" onClick={onToggle} className="flex w-full items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/75 px-4 py-4 text-left dark:border-white/10 dark:bg-slate-950/55">
       <span>
         <span className="block text-sm font-semibold text-slate-800 dark:text-slate-100">{label}</span>
         <span className="mt-1 block text-sm text-slate-500">{hint}</span>
       </span>
-      <span
-        className={`flex h-8 w-14 items-center rounded-full px-1 ${
-          on ? 'justify-end bg-indigo-700 dark:bg-indigo-300' : 'justify-start bg-slate-300 dark:bg-slate-700'
-        }`}
-      >
-        <motion.div
-          layout
-          transition={{ type: 'spring', stiffness: 520, damping: 32 }}
-          className="h-6 w-6 rounded-full bg-white shadow"
-        />
+      <span className={`flex h-8 w-14 items-center rounded-full px-1 ${on ? 'justify-end bg-[var(--accent)]' : 'justify-start bg-slate-300 dark:bg-slate-700'}`}>
+        <motion.div layout transition={{ type: 'spring', stiffness: 520, damping: 32 }} className="h-6 w-6 rounded-full bg-white shadow" />
       </span>
     </button>
   );
 }
 
-function LinkedIdentityPulse({ linked, personName, personAvatar, discordName, discordAvatar }) {
-  return (
-    <div className="relative overflow-hidden rounded-3xl border border-slate-200/80 bg-white/75 px-5 py-6 dark:border-white/10 dark:bg-slate-950/55">
-      <div className="relative z-10 flex items-center justify-between gap-4">
-        <div className="flex min-w-0 items-center gap-3">
-          {personAvatar ? (
-            <img src={personAvatar} alt="" className="h-12 w-12 rounded-full object-cover" />
-          ) : (
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-slate-200 text-xs font-semibold text-slate-600 dark:bg-slate-800 dark:text-slate-200">
-              WLR
-            </span>
-          )}
-          <div className="min-w-0">
-            <p className="truncate text-sm font-semibold text-slate-800 dark:text-slate-100">{personName}</p>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Personnel</p>
-          </div>
-        </div>
-
-        <div className="flex min-w-0 items-center gap-3 text-[#5865F2]">
-          <div className="min-w-0 text-right">
-            <p className="truncate text-sm font-semibold">{discordName}</p>
-            <p className="text-xs uppercase tracking-[0.12em] text-slate-500">Discord</p>
-          </div>
-          {discordAvatar ? (
-            <img src={discordAvatar} alt="" className="h-12 w-12 rounded-full object-cover" />
-          ) : (
-            <span className="grid h-12 w-12 place-items-center rounded-full bg-[#5865F2]/12">
-              <DiscordMark className="h-6 w-6" />
-            </span>
-          )}
-        </div>
-      </div>
-
-      {linked ? (
-        <svg
-          className="pointer-events-none absolute inset-x-20 top-1/2 h-16 -translate-y-1/2"
-          viewBox="0 0 240 48"
-          aria-hidden="true"
-        >
-          <defs>
-            <filter id="wlr-discord-glow" x="-20%" y="-20%" width="140%" height="140%">
-              <feGaussianBlur stdDeviation="2.6" result="blur" />
-              <feMerge>
-                <feMergeNode in="blur" />
-                <feMergeNode in="SourceGraphic" />
-              </feMerge>
-            </filter>
-          </defs>
-          <motion.path
-            d="M 8 24 C 72 8, 168 40, 232 24"
-            fill="none"
-            stroke="rgba(88,101,242,0.85)"
-            strokeWidth="1.8"
-            filter="url(#wlr-discord-glow)"
-            initial={{ pathLength: 0 }}
-            animate={{ pathLength: 1, opacity: [0.4, 1, 0.4] }}
-            transition={{
-              pathLength: { duration: 1.1, ease: [0.22, 1, 0.36, 1] },
-              opacity: { duration: 2.4, repeat: Infinity, ease: 'easeInOut' }
-            }}
-          />
-          <motion.circle
-            r="3.4"
-            fill="#818cf8"
-            filter="url(#wlr-discord-glow)"
-            animate={{ cx: [8, 120, 232], cy: [24, 12, 24], opacity: [0.5, 1, 0.5] }}
-            transition={{ duration: 2.6, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        </svg>
-      ) : null}
-    </div>
-  );
-}
-
 export default function Settings() {
-  const { session, supabase, lang, setLang, theme, setTheme, activePersonnel, formatPersonnelName } = useCommand();
-  const copy = COPY[lang] || COPY.en;
+  const { session, supabase, lang, setLang, theme, setTheme, rain, setRain, glassVisible, setGlassVisible, glassMotion, setGlassMotion, t, profiles, activePersonnel, formatPersonnelName, setActivePersonnel, createPersonnelProfile, refresh } =
+    useCommand();
+  const toast = useToast();
+  const canvasRef = useRef(null);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState('');
-  const linked = isDiscordLinked(session);
-  const discord = useMemo(() => discordDisplay(session), [session]);
-  const personName = formatPersonnelName(activePersonnel) || session?.user?.email || copy.none;
-  const personAvatar = activePersonnel?.avatar_url || session?.user?.user_metadata?.avatar_url || '';
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [accent, setAccent] = useState(window.localStorage.getItem(ACCENT_KEY) || '#1E4E8C');
+  const [bioPublic, setBioPublic] = useState(true);
+  const [uiMode, setUiMode] = useState(() => readUiMode() || 'html');
+  const [authUser, setAuthUser] = useState(session?.user || null);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [creating, setCreating] = useState(false);
+  const identity = findDiscordIdentity(authUser);
+  const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
+  const canUnlink = (authUser?.identities || []).length > 1;
 
-  async function handleLinkDiscord() {
-    if (busy) {
+  const loadSettings = useCallback(async () => {
+    if (!activePersonnel) {
       return;
     }
-    setError('');
+    const settings = await fetchOwnSettings(supabase, activePersonnel.id);
+    setBioPublic(settings.bio_public !== false);
+    setUiMode(settings.ui_skin === 'jsx' || settings.ui_skin === 'html' ? settings.ui_skin : readUiMode() || 'html');
+    if (settings.theme_accent) {
+      setAccent(settings.theme_accent);
+      applyAccent(settings.theme_accent);
+    }
+    const { data } = await supabase.auth.getUser();
+    setAuthUser(data.user || session?.user || null);
+  }, [activePersonnel, session, supabase]);
+
+  useEffect(() => {
+    loadSettings().catch((error) => toast.alert(error.message));
+  }, [loadSettings, toast]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || !pickerOpen) {
+      return;
+    }
+    const ctx = canvas.getContext('2d');
+    const size = canvas.width;
+    const cx = size / 2;
+    const cy = size / 2;
+    const outer = size / 2 - 6;
+    const inner = outer - 28;
+    ctx.clearRect(0, 0, size, size);
+    for (let angle = 0; angle < 360; angle += 1) {
+      ctx.beginPath();
+      ctx.strokeStyle = `hsl(${angle} 100% 50%)`;
+      ctx.lineWidth = outer - inner;
+      ctx.arc(cx, cy, (outer + inner) / 2, ((angle - 90) * Math.PI) / 180, ((angle - 89) * Math.PI) / 180);
+      ctx.stroke();
+    }
+  }, [pickerOpen]);
+
+  function pickFromWheel(event) {
+    const canvas = canvasRef.current;
+    if (!canvas) {
+      return;
+    }
+    const rect = canvas.getBoundingClientRect();
+    const scale = canvas.width / rect.width;
+    const x = (event.clientX - rect.left) * scale - canvas.width / 2;
+    const y = (event.clientY - rect.top) * scale - canvas.height / 2;
+    const distance = Math.hypot(x, y);
+    const outer = canvas.width / 2 - 6;
+    const inner = outer - 28;
+    if (distance < inner - 4 || distance > outer + 4) {
+      return;
+    }
+    let hue = (Math.atan2(y, x) * 180) / Math.PI + 90;
+    if (hue < 0) {
+      hue += 360;
+    }
+    const hex = hslToHex(hue, 100, 50);
+    setAccent(hex);
+    applyAccent(hex);
+  }
+
+  async function handleLinkDiscord() {
     setBusy(true);
     try {
-      const { error: linkError } = await supabase.auth.linkIdentity({
+      const { error } = await supabase.auth.linkIdentity({
         provider: 'discord',
-        options: {
-          redirectTo: window.location.href,
-          scopes: 'identify email'
-        }
+        options: { redirectTo: oauthRedirectTo('/settings'), scopes: 'identify email' }
       });
-      if (linkError) {
-        throw linkError;
+      if (error) {
+        throw error;
       }
-    } catch (linkError) {
+    } catch (error) {
       setBusy(false);
-      setError(linkError?.message || copy.notLinked);
+      toast.alert(error.message);
+    }
+  }
+
+  async function handleUnlinkDiscord() {
+    if (!window.confirm(t('settings.discordUnlinkConfirm'))) {
+      return;
+    }
+    try {
+      const { data, error } = await supabase.auth.getUserIdentities();
+      if (error) {
+        throw error;
+      }
+      const identities = data?.identities || [];
+      if (identities.length < 2) {
+        throw new Error(t('settings.discordNeedOther'));
+      }
+      const discordIdentity = identities.find((item) => item.provider === 'discord');
+      if (!discordIdentity) {
+        throw new Error(t('settings.discordMissing'));
+      }
+      const { error: unlinkError } = await supabase.auth.unlinkIdentity(discordIdentity);
+      if (unlinkError) {
+        throw unlinkError;
+      }
+      await loadSettings();
+      toast.success(t('settings.discordUnlinked'));
+    } catch (error) {
+      toast.alert(error.message);
+    }
+  }
+
+  async function saveTheme() {
+    if (!activePersonnel) {
+      return;
+    }
+    try {
+      applyAccent(accent);
+      await saveOwnSettings(supabase, activePersonnel.id, { theme_accent: accent });
+      await writeActivityLog(supabase, {
+        userId: activePersonnel.id,
+        roleSnapshot: activePersonnel.role,
+        actionType: 'theme_update',
+        details: `Updated theme accent to ${accent}`
+      });
+      toast.success(t('common.save'));
+    } catch (error) {
+      toast.alert(error.message);
+    }
+  }
+
+  async function saveUiMode() {
+    if (!activePersonnel) {
+      return;
+    }
+    try {
+      await persistUiSkin((payload) => saveOwnSettings(supabase, activePersonnel.id, payload), uiMode);
+      const result = applyUiMode(uiMode);
+      if (result.unavailable) {
+        toast.info(t('settings.uiUnavailable'));
+        return;
+      }
+      if (!result.navigated) {
+        toast.success(t('settings.uiSaved'));
+      }
+    } catch (error) {
+      toast.alert(error.message);
+    }
+  }
+
+  async function savePrivacy(next) {
+    setBioPublic(next);
+    if (!activePersonnel) {
+      return;
+    }
+    try {
+      await saveOwnSettings(supabase, activePersonnel.id, { bio_public: next });
+      await writeActivityLog(supabase, {
+        userId: activePersonnel.id,
+        roleSnapshot: activePersonnel.role,
+        actionType: 'privacy_update',
+        details: next ? 'Biography set to public' : 'Biography set to private'
+      });
+      toast.success(t('common.save'));
+    } catch (error) {
+      toast.alert(error.message);
     }
   }
 
   return (
     <section className="mx-auto max-w-3xl">
       <header className="mb-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.kicker}</p>
-        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">{copy.title}</h1>
-        <p className="mt-2 text-sm leading-6 text-slate-500">{copy.lead}</p>
+        <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-500">{t('settings.kicker')}</p>
+        <h1 className="mt-1 text-3xl font-semibold tracking-tight text-slate-900 dark:text-slate-50">{t('settings.title')}</h1>
       </header>
 
       <div className="grid gap-6">
-        <section>
-          <h2 className="mb-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.appearance}</h2>
-          <div className="grid gap-3">
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.connected')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('settings.connectedHint')}</p>
+          <div className="mt-4 flex items-center gap-3 rounded-2xl border border-slate-200/80 p-4 dark:border-white/10">
+            {identity && discord.avatar ? (
+              <img src={discord.avatar} alt="" className="h-12 w-12 rounded-full object-cover" />
+            ) : (
+              <span className="grid h-12 w-12 place-items-center rounded-full bg-[#5865F2]/12 text-[#5865F2]">
+                <DiscordMark className="h-6 w-6" />
+              </span>
+            )}
+            <div className="min-w-0 flex-1">
+              <p className="font-semibold text-slate-800 dark:text-slate-100">
+                {identity ? discord.username : t('settings.discord')}
+                {identity ? (
+                  <span className="ml-2 text-xs uppercase tracking-[0.12em] text-emerald-600">{t('settings.discordConnected')}</span>
+                ) : null}
+              </p>
+              <p className="text-sm text-slate-500">{identity ? t('settings.discord') : t('settings.discordNotLinked')}</p>
+            </div>
+            {identity ? (
+              <button type="button" className={btnGhost} disabled={!canUnlink} onClick={handleUnlinkDiscord}>
+                {t('settings.discordUnlink')}
+              </button>
+            ) : (
+              <button type="button" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-4 text-sm font-semibold text-white" disabled={busy} onClick={handleLinkDiscord}>
+                <DiscordMark className="h-4 w-4" />
+                {t('settings.discordLink')}
+              </button>
+            )}
+          </div>
+        </article>
+
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.profiles')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('settings.profilesHint')}</p>
+          <div className="mt-4 grid gap-3">
+            {profiles.length ? (
+              profiles.map((row) => {
+                const name = formatPersonnelName(row) || t('profiles.empty');
+                const active = row.id === activePersonnel?.id;
+                return (
+                  <div key={row.id} className="flex items-center gap-3 rounded-2xl border border-slate-200/80 p-3 dark:border-white/10">
+                    {row.avatar_url ? (
+                      <img src={row.avatar_url} alt="" className="h-10 w-10 rounded-full object-cover" />
+                    ) : (
+                      <span className="grid h-10 w-10 place-items-center rounded-full bg-slate-200 text-xs font-semibold dark:bg-slate-800">
+                        {initialsFromName(name) || 'WLR'}
+                      </span>
+                    )}
+                    <div className="min-w-0 flex-1">
+                      <p className="font-semibold">
+                        {name}
+                        {active ? <span className="ml-2 text-xs uppercase tracking-[0.12em] text-emerald-600">{t('settings.activeProfile')}</span> : null}
+                      </p>
+                      <p className="text-sm text-slate-500">{row.military_rank || row.organization_role}</p>
+                    </div>
+                    {!active ? (
+                      <button
+                        type="button"
+                        className={btnGhost}
+                        onClick={async () => {
+                          await setActivePersonnel(row.id);
+                          await refresh?.();
+                        }}
+                      >
+                        {t('settings.switchProfile')}
+                      </button>
+                    ) : null}
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-sm text-slate-500">{t('profiles.empty')}</p>
+            )}
+          </div>
+          <form
+            className="mt-4 grid gap-3"
+            onSubmit={async (event) => {
+              event.preventDefault();
+              if (creating) {
+                return;
+              }
+              setCreating(true);
+              try {
+                const created = await createPersonnelProfile({ firstName: firstName.trim(), lastName: lastName.trim() });
+                await setActivePersonnel(created.id);
+                await refresh?.();
+                setFirstName('');
+                setLastName('');
+                toast.success(t('profiles.register'));
+              } catch (error) {
+                toast.alert(error.message);
+              } finally {
+                setCreating(false);
+              }
+            }}
+          >
+            <h3 className="text-sm font-semibold">{t('profiles.register')}</h3>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <input className={fieldClass} required maxLength={80} placeholder={t('profiles.firstName')} value={firstName} onChange={(event) => setFirstName(event.target.value)} />
+              <input className={fieldClass} maxLength={80} placeholder={t('profiles.lastName')} value={lastName} onChange={(event) => setLastName(event.target.value)} />
+            </div>
+            <button type="submit" className={btnPrimary} disabled={creating}>
+              {t('profiles.register')}
+            </button>
+          </form>
+        </article>
+
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.theme')}</h2>
+          <div className="mt-4 grid gap-3">
             <SpringToggle
               on={theme === 'dark'}
               onToggle={() => setTheme?.(theme === 'dark' ? 'light' : 'dark')}
-              label={copy.theme}
-              hint={copy.themeHint}
+              label={lang === 'th' ? 'ธีมเข้ม' : 'Dark theme'}
+              hint={lang === 'th' ? 'ใช้โทนหินชนวนสำหรับเวรยามค่ำ' : 'Use the deep slate command palette for evening watches.'}
             />
             <SpringToggle
               on={lang === 'th'}
               onToggle={() => setLang?.(lang === 'th' ? 'en' : 'th')}
-              label={copy.language}
-              hint={copy.languageHint}
+              label={lang === 'th' ? 'ภาษาไทย' : 'Thai language'}
+              hint={lang === 'th' ? 'แสดงข้อความราชการเป็นภาษาไทยทั้งพอร์ทัล' : 'Display official copy in Thai across the portal.'}
+            />
+            <SpringToggle
+              on={Boolean(rain)}
+              onToggle={() => setRain?.(!rain)}
+              label={t('settings.rain')}
+              hint={t('settings.rainHint')}
+            />
+            <SpringToggle
+              on={Boolean(glassVisible)}
+              onToggle={() => setGlassVisible?.(!glassVisible)}
+              label={t('settings.glass')}
+              hint={t('settings.glassHint')}
+            />
+            <SpringToggle
+              on={Boolean(glassMotion)}
+              onToggle={() => setGlassMotion?.(!glassMotion)}
+              label={t('settings.glassMotion')}
+              hint={t('settings.glassMotionHint')}
             />
           </div>
-        </section>
-
-        <section>
-          <h2 className="mb-2 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.accounts}</h2>
-          <p className="mb-4 text-sm text-slate-500">{copy.accountsLead}</p>
-          <LinkedIdentityPulse
-            linked={linked}
-            personName={personName}
-            personAvatar={personAvatar}
-            discordName={linked ? discord.username : 'Discord'}
-            discordAvatar={linked ? discord.avatar : ''}
-          />
-          <p className="mt-3 text-sm font-medium text-slate-700 dark:text-slate-200">
-            {linked ? copy.linked : copy.notLinked}
-          </p>
-          {linked ? (
-            <p className="mt-2 text-sm text-slate-500">{copy.unlinkHint}</p>
-          ) : (
-            <button
-              type="button"
-              onClick={handleLinkDiscord}
-              disabled={busy}
-              className="mt-4 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#5865F2] px-4 text-sm font-semibold text-white disabled:opacity-70"
-            >
-              <DiscordMark className="h-4 w-4" />
-              {busy ? copy.linking : copy.link}
+          <div className="mt-4 flex items-center gap-3">
+            <button type="button" className={btnGhost} onClick={() => setPickerOpen((value) => !value)}>
+              +
             </button>
-          )}
-          {error ? (
-            <p className="mt-3 text-sm text-rose-600" role="alert">
-              {error}
-            </p>
+            <span className="text-sm text-slate-500">{t('settings.createTheme')}</span>
+          </div>
+          {pickerOpen ? (
+            <div className="mt-4 grid gap-3">
+              <canvas
+                ref={canvasRef}
+                width={220}
+                height={220}
+                className="justify-self-start rounded-full"
+                onPointerDown={pickFromWheel}
+                onPointerMove={(event) => {
+                  if (event.buttons) {
+                    pickFromWheel(event);
+                  }
+                }}
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <span className="h-8 w-8 rounded-full border border-slate-200" style={{ background: accent }} />
+                <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+                  Hex
+                  <input
+                    className={fieldClass}
+                    maxLength={7}
+                    value={accent}
+                    onChange={(event) => {
+                      const hex = event.target.value.trim();
+                      setAccent(hex);
+                      if (/^#[0-9A-Fa-f]{6}$/.test(hex)) {
+                        applyAccent(hex);
+                      }
+                    }}
+                    placeholder="#1E4E8C"
+                  />
+                </label>
+                <button type="button" className={btnPrimary} onClick={saveTheme}>
+                  {t('common.save')}
+                </button>
+              </div>
+            </div>
           ) : null}
-        </section>
+        </article>
 
-        <section className="rounded-3xl border border-slate-200/80 bg-white/75 p-5 dark:border-white/10 dark:bg-slate-950/55">
-          <p className="text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">{copy.personnel}</p>
-          <p className="mt-2 text-sm font-semibold text-slate-800 dark:text-slate-100">{personName}</p>
-          <p className="mt-1 text-sm text-slate-500">
-            {activePersonnel?.military_rank || session?.user?.email || copy.none}
-          </p>
-        </section>
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.ui')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('settings.uiHint')}</p>
+          {!reactUiAvailable() ? <p className="mt-2 text-sm text-amber-700 dark:text-amber-300">{t('settings.uiUnavailable')}</p> : null}
+          <div className="mt-4 grid gap-2">
+            {[
+              { id: 'html', label: t('settings.uiHtml') },
+              { id: 'jsx', label: t('settings.uiJsx') }
+            ].map((option) => (
+              <button
+                key={option.id}
+                type="button"
+                onClick={() => setUiMode(option.id)}
+                className={`rounded-2xl border px-4 py-3 text-left text-sm font-semibold ${
+                  uiMode === option.id
+                    ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                    : 'border-slate-200/80 bg-white/70 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                }`}
+              >
+                {option.label}
+              </button>
+            ))}
+          </div>
+          <button type="button" className={`${btnPrimary} mt-4`} onClick={saveUiMode}>
+            {t('settings.uiSave')}
+          </button>
+        </article>
+
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.privacy')}</h2>
+          <CommandCheck className="mt-4" checked={bioPublic} onChange={savePrivacy}>
+            {t('settings.bioPublic')}
+          </CommandCheck>
+        </article>
       </div>
     </section>
   );

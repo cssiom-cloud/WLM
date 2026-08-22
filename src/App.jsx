@@ -1,56 +1,47 @@
-import { AnimatePresence, motion } from 'framer-motion';
-import { BrowserRouter, Navigate, Route, Routes, useLocation } from 'react-router-dom';
+import { BrowserRouter, Navigate, NavLink, Outlet, Route, Routes } from 'react-router-dom';
 import { CommandProvider, GlobalLayout, useCommand } from './components/GlobalLayout.jsx';
+import { ToastProvider } from './components/LiquidToast.jsx';
 import Login from './pages/Login.jsx';
-import CharacterSelect from './pages/CharacterSelect.jsx';
 import Dashboard from './pages/Dashboard.jsx';
+import Directory from './pages/Directory.jsx';
+import OrgChart from './pages/OrgChart.jsx';
+import Units from './pages/Units.jsx';
+import UnitDetail from './pages/UnitDetail.jsx';
+import UnitManage from './pages/UnitManage.jsx';
 import OperationsBoard from './pages/OperationsBoard.jsx';
+import OperationDetail from './pages/OperationDetail.jsx';
+import OperationCreate from './pages/OperationCreate.jsx';
 import OfficialDocument from './pages/OfficialDocument.jsx';
+import Documents from './pages/Documents.jsx';
 import Settings from './pages/Settings.jsx';
+import Announcements from './pages/Announcements.jsx';
+import AnnouncementDetail from './pages/AnnouncementDetail.jsx';
+import AnnounceCreate from './pages/AnnounceCreate.jsx';
+import Tickets from './pages/Tickets.jsx';
+import Admin from './pages/Admin.jsx';
+import Accounts from './pages/Accounts.jsx';
+import Logs from './pages/Logs.jsx';
+import Lore from './pages/Lore.jsx';
+import { SITE_LOGO } from './lib/brand.js';
 
-const pageMotion = {
-  initial: { opacity: 0, y: 18, filter: 'blur(10px)' },
-  animate: { opacity: 1, y: 0, filter: 'blur(0px)' },
-  exit: { opacity: 0, y: -12, filter: 'blur(8px)' },
-  transition: { duration: 0.46, ease: [0.22, 1, 0.36, 1] }
-};
-
-const routerBasename = String(import.meta.env.BASE_URL || '/')
-  .replace(/\/$/, '')
-  .replace(/^\.$/, '');
-
-function PageFrame({ children }) {
-  const location = useLocation();
+function BootScreen() {
   return (
-    <motion.div
-      key={location.pathname}
-      className="min-h-full"
-      initial={pageMotion.initial}
-      animate={pageMotion.animate}
-      exit={pageMotion.exit}
-      transition={pageMotion.transition}
-    >
-      {children}
-    </motion.div>
+    <div className="grid min-h-[56vh] place-items-center">
+      <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">Establishing command channel</p>
+    </div>
   );
 }
 
-function Guarded({ children, allowGuest = false, requireSelection = false }) {
-  const { bootstrapping, session, profiles, activePersonnel } = useCommand();
+function Guarded({ children, allowGuest = false }) {
+  const { bootstrapping, session, authHold } = useCommand();
 
   if (bootstrapping) {
-    return (
-      <div className="grid min-h-[56vh] place-items-center">
-        <p className="text-[0.72rem] font-semibold uppercase tracking-[0.22em] text-slate-500">
-          Establishing command channel
-        </p>
-      </div>
-    );
+    return <BootScreen />;
   }
 
-  if (allowGuest && session && !requireSelection) {
-    if (profiles.length > 1 && !activePersonnel) {
-      return <Navigate to="/select" replace />;
+  if (allowGuest && session) {
+    if (authHold) {
+      return children;
     }
     return <Navigate to="/" replace />;
   }
@@ -59,96 +50,116 @@ function Guarded({ children, allowGuest = false, requireSelection = false }) {
     return <Navigate to="/login" replace />;
   }
 
-  if (session && profiles.length > 1 && !activePersonnel && !requireSelection) {
-    return <Navigate to="/select" replace />;
-  }
-
-  if (requireSelection && !session) {
-    return <Navigate to="/login" replace />;
-  }
-
   return children;
 }
 
-function AnimatedRoutes() {
-  const location = useLocation();
-
+function GuestChrome() {
+  const { lang, setLang, t } = useCommand();
   return (
-    <AnimatePresence mode="wait">
-      <Routes location={location} key={location.pathname}>
-        <Route
-          path="/login"
-          element={
-            <PageFrame>
-              <Guarded allowGuest>
-                <Login />
-              </Guarded>
-            </PageFrame>
-          }
-        />
-        <Route
-          path="/select"
-          element={
-            <PageFrame>
-              <Guarded requireSelection>
-                <CharacterSelect />
-              </Guarded>
-            </PageFrame>
-          }
-        />
-        <Route
-          element={
-            <Guarded>
-              <GlobalLayout />
-            </Guarded>
-          }
-        >
-          <Route
-            path="/"
-            element={
-              <PageFrame>
-                <Dashboard />
-              </PageFrame>
-            }
-          />
-          <Route
-            path="/operations"
-            element={
-              <PageFrame>
-                <OperationsBoard />
-              </PageFrame>
-            }
-          />
-          <Route
-            path="/documents"
-            element={
-              <PageFrame>
-                <OfficialDocument />
-              </PageFrame>
-            }
-          />
-          <Route
-            path="/settings"
-            element={
-              <PageFrame>
-                <Settings />
-              </PageFrame>
-            }
-          />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-    </AnimatePresence>
+    <div className="min-h-screen">
+      <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between border-b border-stone-200/70 bg-white/55 px-4 backdrop-blur-xl dark:border-slate-800/80 dark:bg-slate-950/55">
+        <NavLink to="/" className="flex items-center gap-3 text-sm font-semibold tracking-[0.14em] text-slate-800 no-underline dark:text-slate-100">
+          <img src={SITE_LOGO} alt="" className="h-10 w-10 rounded-xl border border-stone-200/80 bg-white object-contain p-0.5 dark:border-slate-700 dark:bg-slate-900" />
+          WHITE LION REGIMENT
+        </NavLink>
+        <div className="flex items-center gap-2">
+          {['th', 'en'].map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLang(code)}
+              className={`min-h-11 rounded-xl px-3 text-xs font-semibold uppercase ${
+                lang === code ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'text-slate-500'
+              }`}
+            >
+              {code}
+            </button>
+          ))}
+          <NavLink to="/login" className="rounded-xl px-3 py-2 text-sm font-semibold text-slate-600 no-underline">
+            {t('auth.signinTitle')}
+          </NavLink>
+        </div>
+      </header>
+      <main className="px-4 py-6 sm:px-6">
+        <Outlet />
+      </main>
+    </div>
+  );
+}
+
+function TicketsGate() {
+  const { bootstrapping, session } = useCommand();
+  if (bootstrapping) {
+    return <BootScreen />;
+  }
+  if (!session) {
+    return <GuestChrome />;
+  }
+  return (
+    <Guarded>
+      <GlobalLayout />
+    </Guarded>
+  );
+}
+
+function AppRoutes() {
+  return (
+    <Routes>
+      <Route
+        path="/login"
+        element={
+          <Guarded allowGuest>
+            <Login />
+          </Guarded>
+        }
+      />
+      <Route path="/select" element={<Navigate to="/settings" replace />} />
+      <Route path="/tickets" element={<TicketsGate />}>
+        <Route index element={<Tickets />} />
+      </Route>
+      <Route
+        element={
+          <Guarded>
+            <GlobalLayout />
+          </Guarded>
+        }
+      >
+        <Route path="/" element={<Dashboard />} />
+        <Route path="/directory" element={<Directory />} />
+        <Route path="/org" element={<OrgChart />} />
+        <Route path="/units" element={<Units />} />
+        <Route path="/units/:code" element={<UnitDetail />} />
+        <Route path="/units/:code/manage" element={<UnitManage />} />
+        <Route path="/operations" element={<OperationsBoard />} />
+        <Route path="/operations/create" element={<OperationCreate />} />
+        <Route path="/operations/:id" element={<OperationDetail />} />
+        <Route path="/operations/:id/edit" element={<OperationCreate />} />
+        <Route path="/announcements" element={<Announcements />} />
+        <Route path="/announcements/create" element={<AnnounceCreate />} />
+        <Route path="/announcements/:id" element={<AnnouncementDetail />} />
+        <Route path="/memo" element={<OfficialDocument />} />
+        <Route path="/documents" element={<Navigate to="/memo" replace />} />
+        <Route path="/library" element={<Documents />} />
+        <Route path="/lore" element={<Lore />} />
+        <Route path="/settings" element={<Settings />} />
+        <Route path="/admin" element={<Admin />} />
+        <Route path="/accounts" element={<Accounts />} />
+        <Route path="/logs" element={<Logs />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
 export default function App() {
   return (
-    <BrowserRouter basename={routerBasename || undefined}>
+    <BrowserRouter basename="/app">
       <CommandProvider>
-        <div className="min-h-screen bg-[#f4f1ea] text-slate-900 antialiased dark:bg-[#16181d] dark:text-slate-100">
-          <AnimatedRoutes />
-        </div>
+        <ToastProvider>
+          <div className="theme-surface min-h-screen antialiased">
+            <AppRoutes />
+          </div>
+        </ToastProvider>
       </CommandProvider>
     </BrowserRouter>
   );

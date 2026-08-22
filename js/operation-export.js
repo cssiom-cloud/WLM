@@ -1,6 +1,6 @@
 import { hideLoading, showLoading, showToast } from './ui.js';
 import { t } from './i18n.js';
-import { renderMapStill } from './tactical-map.js';
+import { rasterizeLiveMap, renderMapStill } from './tactical-map.js';
 
 // html-to-image avoids html2canvas crashing on CSS color() / color-mix().
 // jspdf places the captured image onto A4 pages.
@@ -93,32 +93,51 @@ async function waitForExportLayout() {
 
 async function prepareExportView(root, mapUrl, drawings) {
   const viewer = root.querySelector('#map-viewer');
+  const host = viewer?.closest('.tactical-map-host') || viewer;
   const stage = viewer?.querySelector('[data-tac-stage]');
   const frame = viewer?.querySelector('.tac-frame');
   if (stage) {
     stage.style.transform = 'none';
   }
   let still = null;
-  if (frame && mapUrl) {
+  let dataUrl = rasterizeLiveMap(host, drawings || []);
+  if (!dataUrl && mapUrl) {
     try {
-      const dataUrl = await renderMapStill(mapUrl, drawings);
-      still = document.createElement('img');
-      still.className = 'tac-export-still';
-      still.alt = '';
-      still.crossOrigin = 'anonymous';
-      still.src = dataUrl;
-      frame.classList.add('is-export-still');
-      frame.appendChild(still);
+      dataUrl = await renderMapStill(mapUrl, drawings || [], 1200, 720);
     } catch {
-      still = null;
+      dataUrl = '';
     }
   }
-  return { stage, still, frame };
+  if (dataUrl) {
+    still = document.createElement('img');
+    still.className = 'tac-export-still ops-map-still';
+    still.alt = '';
+    still.src = dataUrl;
+    still.style.display = 'block';
+    still.style.width = '100%';
+    still.style.maxHeight = '26rem';
+    still.style.height = 'auto';
+    still.style.objectFit = 'contain';
+    if (host) {
+      host.insertAdjacentElement('afterend', still);
+      host.style.display = 'none';
+    } else if (frame) {
+      frame.classList.add('is-export-still');
+      frame.appendChild(still);
+    }
+  }
+  return { stage, still, frame, host, transform: root.style.transform };
 }
 
-function restoreExportView(prep) {
+function restoreExportView(prep, root) {
   prep?.still?.remove();
   prep?.frame?.classList.remove('is-export-still');
+  if (prep?.host) {
+    prep.host.style.display = '';
+  }
+  if (root) {
+    root.style.transform = prep?.transform || '';
+  }
 }
 
 function captureFilter(node) {
@@ -133,6 +152,23 @@ function captureFilter(node) {
     node.classList.contains('ops-export') ||
     node.classList.contains('ops-export-spin')
   );
+}
+
+function applyPrintClone(clonedDoc, clonedNode) {
+  if (!clonedDoc || clonedDoc === document) {
+    return;
+  }
+  clonedDoc.documentElement.setAttribute('data-theme', 'light');
+  clonedDoc.body?.classList.add('is-exporting');
+  if (clonedDoc.body) {
+    clonedDoc.body.style.background = PAPER;
+  }
+  const root = clonedNode || clonedDoc.querySelector('#op-dossier');
+  if (root) {
+    root.style.transform = 'none';
+    root.style.background = PAPER;
+    root.style.filter = 'none';
+  }
 }
 
 function writePdf(jsPDF, shot, filename) {
@@ -167,15 +203,17 @@ function writePdf(jsPDF, shot, filename) {
 
 async function captureDossier(root, libs) {
   const options = {
-    cacheBust: true,
+    cacheBust: false,
     pixelRatio: Math.min(2, 1600 / Math.max(1, root.offsetWidth)),
     backgroundColor: PAPER,
     quality: 0.92,
     filter: captureFilter,
     skipAutoScale: true,
+    onclone: applyPrintClone,
     style: {
       backgroundColor: PAPER,
-      backgroundImage: 'none'
+      backgroundImage: 'none',
+      transform: 'none'
     }
   };
   if (libs.getFontEmbedCSS) {
@@ -220,6 +258,7 @@ async function runExport({ title, mapUrl, drawings, format }) {
   setExportBusy(true, format);
   showLoading(t('ops.export.generating'), 120000);
   document.body.classList.add('is-exporting');
+  root.style.transform = 'none';
   let prep = null;
   try {
     await waitForExportLayout();
@@ -235,10 +274,12 @@ async function runExport({ title, mapUrl, drawings, format }) {
       writePdf(libs.jsPDF, shot, `${name}.pdf`);
     }
     showToast(t('ops.export.ready'), 'success');
+    return true;
   } catch (error) {
     showToast(error.message || t('ops.export.failed'), 'error', 5000);
+    return false;
   } finally {
-    restoreExportView(prep);
+    restoreExportView(prep, root);
     document.body.classList.remove('is-exporting');
     setExportBusy(false, format);
     hideLoading();

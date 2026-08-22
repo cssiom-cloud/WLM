@@ -1483,12 +1483,40 @@ body.is-local-test .page-shell {
   border: 1px solid var(--border);
 }
 
-.switch {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
+.ui-mode-picks {
+  display: grid;
   gap: 0.7rem;
+  margin: 0.85rem 0 1rem;
+}
+
+.ui-mode-pick {
+  display: grid;
+  justify-items: start;
+  gap: 0.2rem;
+  width: 100%;
+  min-height: 52px;
+  padding: 0.75rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
   cursor: pointer;
+}
+
+.ui-mode-pick strong {
+  font-size: 0.95rem;
+}
+
+.ui-mode-pick small {
+  color: var(--text-muted);
+}
+
+.ui-mode-pick.is-active {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
 }
 
 .switch input {
@@ -1718,22 +1746,146 @@ body.is-local-test .page-shell {
 }
 
 .choice-trigger {
+  display: flex;
   width: 100%;
   min-height: 42px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
   padding: 0.55rem 0.85rem;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--bg);
+  color: var(--text);
   text-align: left;
   cursor: pointer;
 }
 
-select.select-field.is-native-hidden {
+.choice-trigger::after {
+  content: "";
+  width: 0.4rem;
+  height: 0.4rem;
+  flex-shrink: 0;
+  border-right: 2px solid currentColor;
+  border-bottom: 2px solid currentColor;
+  opacity: 0.7;
+  transform: rotate(45deg);
+}
+
+select.select-field.is-native-hidden,
+select.is-native-hidden {
   position: absolute;
   width: 1px;
   height: 1px;
   opacity: 0;
   pointer-events: none;
+}
+
+.cmd-select-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 180;
+}
+
+.cmd-select-menu {
+  position: fixed;
+  z-index: 181;
+  max-height: 20rem;
+  overflow: auto;
+  margin: 0;
+  padding: 0.35rem;
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: 0.9rem;
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow);
+}
+
+.cmd-select-option {
+  display: flex;
+  width: 100%;
+  min-height: 2.4rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.6rem;
+  padding: 0.4rem 0.7rem;
+  border: 0;
+  border-radius: 0.65rem;
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.cmd-select-option:hover,
+.cmd-select-option.is-active {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
+input[type="checkbox"] {
+  appearance: none;
+  -webkit-appearance: none;
+  display: inline-grid;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin: 0;
+  place-items: center;
+  border: 2px solid var(--accent);
+  border-radius: 0.32rem;
+  background: var(--bg-elevated);
+  vertical-align: middle;
+  cursor: pointer;
+  flex-shrink: 0;
+}
+
+input[type="checkbox"]:checked {
+  background: var(--accent);
+  border-color: var(--accent);
+}
+
+input[type="checkbox"]:checked::after {
+  content: "";
+  width: 0.28rem;
+  height: 0.5rem;
+  border: solid #fff;
+  border-width: 0 2px 2px 0;
+  transform: rotate(45deg) translate(-1px, -1px);
+}
+
+.tac-fullscreen-shell {
+  position: fixed;
+  inset: 0;
+  z-index: 240;
+  display: grid;
+  padding: 0.85rem;
+  background: var(--bg);
+  overflow: auto;
+}
+
+.tac-fullscreen-shell .tac-editor {
+  display: grid;
+  gap: 0.75rem;
+  min-height: 100%;
+  align-content: start;
+}
+
+.tac-fullscreen-shell .tac-stage,
+.tactical-map-host:fullscreen .tac-stage,
+.tactical-map-host:-webkit-full-screen .tac-stage {
+  min-height: calc(100dvh - 9rem);
+  height: calc(100dvh - 9rem);
+}
+
+.tactical-map-host:fullscreen,
+.tactical-map-host:-webkit-full-screen {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  padding: 1rem;
+  background: var(--bg);
+  overflow: auto;
 }
 
 .toast-stack {

@@ -1,6 +1,6 @@
 import { isLocalTestMode } from './config.js';
 import { supabaseClient } from './supabase-client.js';
-import { localCreateTicket, localFetchTickets, localUpdateTicket } from './local-station.js';
+import { localCreateTicket, localDeleteTicket, localFetchTickets, localUpdateTicket } from './local-station.js';
 
 export async function fetchTickets(isAdmin, userId) {
   if (isLocalTestMode()) {
@@ -44,6 +44,16 @@ export async function updateTicket(ticketId, payload) {
     return localUpdateTicket(ticketId, payload);
   }
   const { error } = await supabaseClient.from('support_tickets').update(payload).eq('id', ticketId);
+  if (error) {
+    throw error;
+  }
+}
+
+export async function deleteTicket(ticketId) {
+  if (isLocalTestMode()) {
+    return localDeleteTicket(ticketId);
+  }
+  const { error } = await supabaseClient.from('support_tickets').delete().eq('id', ticketId);
   if (error) {
     throw error;
   }

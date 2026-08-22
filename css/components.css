@@ -908,6 +908,25 @@
   padding-left: 1.3rem;
 }
 
+.docs-delete-confirm {
+  display: grid;
+  gap: 0.75rem;
+  padding: 1.25rem;
+  border: 1px solid color-mix(in srgb, var(--danger, #9b1c2c) 35%, var(--border));
+  border-radius: var(--radius);
+  background: var(--danger-soft, #fde8eb);
+}
+
+.docs-delete-confirm h2 {
+  margin: 0;
+  font-size: 1.15rem;
+}
+
+.docs-delete-confirm p {
+  margin: 0;
+  color: var(--text);
+}
+
 .docs-admin-bar {
   display: flex;
   justify-content: flex-end;
@@ -3072,9 +3091,12 @@ body.is-exporting .text-field,
 body.is-exporting .tac-viewport,
 body.is-exporting .tac-stage,
 body.is-exporting .unit-logo,
-body.is-exporting .unit-logo-sm,
-body.is-exporting .ops-stamp {
+body.is-exporting .unit-logo-sm {
   border-radius: 0 !important;
+}
+
+body.is-exporting .ops-stamp {
+  border-radius: 50% !important;
 }
 
 body.is-exporting .ops-doc {
@@ -3896,6 +3918,19 @@ body.is-exporting .memo-paper {
 
 body.is-exporting .memo-paper,
 body.is-exporting .ops-view-page .ops-dossier {
+  transform: none !important;
+}
+
+body.is-ops-handoff #command-header,
+body.is-ops-handoff .ops-web-hero,
+body.is-ops-handoff .ops-chrome,
+body.is-ops-handoff .command-bottom-nav,
+body.is-ops-handoff .hamburger,
+body.is-ops-handoff .local-test-banner {
+  display: none !important;
+}
+
+body.is-ops-handoff .ops-view-page .ops-dossier {
   transform: none !important;
 }
 

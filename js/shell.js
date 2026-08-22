@@ -5,11 +5,15 @@ import { initVisualEffects } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
 import { fetchOwnSettings } from './command-services.js';
 import { applyTranslations, getLang, t } from './i18n.js';
-import { installCrestIcon, showStatus, upgradeSelects } from './ui.js';
+import { installCrestIcon, showStatus, upgradeCheckboxes, upgradeSelects } from './ui.js';
 import { bindImageEditorHost } from './image-editor.js';
 import { enterPage } from './motion.js';
+import { isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
 
 export function bootCommandShell(activePage) {
+  if (maybeRedirectForUiMode()) {
+    return Promise.resolve();
+  }
   document.body.dataset.page = activePage || 'auth';
   document.documentElement.lang = getLang();
   applyTranslations();
@@ -31,6 +35,7 @@ export function bootCommandShell(activePage) {
   enterPage(document.querySelector('.page-content'));
   const ready = Promise.resolve(initCommandNavbar(activePage)).finally(() => {
     upgradeSelects();
+    upgradeCheckboxes();
   });
   if (!window.__wlrNetworkBound) {
     window.__wlrNetworkBound = true;
@@ -48,6 +53,10 @@ async function hydrateRemoteAccent() {
     const settings = await fetchOwnSettings(personnel.id);
     if (settings?.theme_accent) {
       applyAccent(settings.theme_accent);
+    }
+    if (settings?.ui_skin === 'jsx' && !isOpsExportHandoffActive()) {
+      writeUiMode('jsx');
+      maybeRedirectForUiMode();
     }
   } catch {
     return;

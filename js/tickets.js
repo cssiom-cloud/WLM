@@ -3,7 +3,7 @@ import { readCurrentPersonnel } from './session.js';
 import { TICKET_CATEGORIES, formatPersonnelName } from './domain.js';
 import { escapeHtml, showStatus, upgradeSelects } from './ui.js';
 import { getLang, t } from './i18n.js';
-import { createTicket, fetchTickets, updateTicket } from './ticket-service.js';
+import { createTicket, deleteTicket, fetchTickets, updateTicket } from './ticket-service.js';
 import { fetchPersonnelRoster } from './personnel-service.js';
 
 let actor = null;
@@ -90,6 +90,7 @@ function renderTickets() {
           <p class="ticket-meta">${escapeHtml(categoryLabel(ticket.category))}${isAdmin() ? ` · ${escapeHtml(submitterName(ticket))}` : ''}</p>
           <p>${escapeHtml(ticket.body)}</p>
           ${adminPanel}
+          ${isAdmin() || ticket.user_id === actor?.id ? `<button class="btn btn-danger" type="button" data-action="delete-ticket" data-id="${escapeHtml(ticket.id)}">${escapeHtml(t('tickets.delete'))}</button>` : ''}
         </article>
       `;
     })
@@ -156,6 +157,25 @@ document.querySelector('#ticket-form').addEventListener('submit', async (event) 
 });
 
 document.querySelector('#ticket-list').addEventListener('click', async (event) => {
+  const deleteButton = event.target.closest('[data-action="delete-ticket"]');
+  if (deleteButton) {
+    const ticketId = deleteButton.getAttribute('data-id');
+    const ticket = tickets.find((row) => row.id === ticketId);
+    if (!ticket || !(isAdmin() || ticket.user_id === actor?.id)) {
+      return;
+    }
+    if (!window.confirm(t('tickets.confirmDelete'))) {
+      return;
+    }
+    try {
+      await deleteTicket(ticketId);
+      await reload();
+      showStatus(t('tickets.deleted'));
+    } catch (error) {
+      showStatus(error.message, true);
+    }
+    return;
+  }
   const button = event.target.closest('[data-action="save-ticket"]');
   if (!button || !isAdmin()) {
     return;

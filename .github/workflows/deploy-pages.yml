@@ -24,6 +24,17 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install and build React app
+        run: |
+          npm ci
+          npm run build
+
       - name: Prepare static site
         run: |
           mkdir -p dist
@@ -33,8 +44,13 @@ jobs:
             --exclude 'src' \
             --exclude 'node_modules' \
             --exclude 'dist' \
-            --exclude 'package-lock.json' \
+            --exclude 'react-dist' \
+            --exclude '.env' \
+            --exclude '.env.*' \
             ./ dist/
+          cp react-dist/react.html dist/react.html
+          mkdir -p dist/assets
+          rsync -a react-dist/assets/ dist/assets/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
