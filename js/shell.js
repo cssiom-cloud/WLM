@@ -12,8 +12,8 @@ import { isDossierExportHandoffActive, isOpsExportHandoffActive, maybeRedirectFo
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
-  prefsToSettingsPayload,
   readLocalPrefs,
+  savePrefsOrOmitScale,
   setPrefsOwner,
   writeLocalPrefs
 } from './user-prefs.js';
@@ -23,6 +23,7 @@ export function bootCommandShell(activePage) {
     return Promise.resolve();
   }
   document.body.dataset.page = activePage || 'auth';
+  applyPrefsToDom(readLocalPrefs());
   document.documentElement.lang = getLang();
   applyTranslations();
   installCrestIcon();
@@ -66,7 +67,7 @@ async function hydrateRemotePrefs() {
     applyPrefsToDom(prefs);
     applyTranslations();
     if (!settings?.prefs_synced) {
-      saveOwnSettings(personnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
+      savePrefsOrOmitScale((payload) => saveOwnSettings(personnel.id, payload), prefs).catch(() => {});
     }
     if (prefs.ui_skin === 'jsx' && !isOpsExportHandoffActive() && !isDossierExportHandoffActive()) {
       writeUiMode('jsx');
@@ -88,7 +89,7 @@ async function persistCurrentPrefs(patch = {}) {
     setPrefsOwner(personnel.id);
     const prefs = writeLocalPrefs(personnel.id, patch);
     applyPrefsToDom(prefs);
-    await saveOwnSettings(personnel.id, prefsToSettingsPayload(prefs));
+    await savePrefsOrOmitScale((payload) => saveOwnSettings(personnel.id, payload), prefs);
   } catch {
     return;
   }

@@ -7,8 +7,11 @@ const LEGACY = {
   rain: 'wlr-command-rain',
   glass: 'wlr-command-glass',
   glassMotion: 'wlr-command-glass-motion',
-  ui: 'wlr-command-ui'
+  ui: 'wlr-command-ui',
+  scale: 'wlr-command-ui-scale'
 };
+
+export const UI_SCALE_VALUES = ['auto', '1', '2', '3', '4', '5'];
 
 export const DEFAULT_PREFS = {
   locale: 'en',
@@ -17,8 +20,33 @@ export const DEFAULT_PREFS = {
   glass_visible: true,
   glass_motion: true,
   theme_accent: '',
-  ui_skin: 'html'
+  ui_skin: 'html',
+  ui_scale: 'auto'
 };
+
+export function normalizeUiScale(value) {
+  const next = String(value || '').trim();
+  return UI_SCALE_VALUES.includes(next) ? next : 'auto';
+}
+
+export function detectUiScaleLevel() {
+  const width = window.innerWidth || 1024;
+  if (width <= 480) {
+    return '2';
+  }
+  if (width <= 1280) {
+    return '3';
+  }
+  if (width <= 1600) {
+    return '4';
+  }
+  return '5';
+}
+
+export function resolvedUiScale(pref) {
+  const next = normalizeUiScale(pref);
+  return next === 'auto' ? detectUiScaleLevel() : next;
+}
 
 export function getPrefsOwner() {
   return window.localStorage.getItem(OWNER_KEY) || '';
@@ -47,7 +75,8 @@ function fromLegacy() {
     glass_visible: window.localStorage.getItem(LEGACY.glass) !== 'off',
     glass_motion: window.localStorage.getItem(LEGACY.glassMotion) !== 'off',
     theme_accent: window.localStorage.getItem(LEGACY.accent) || '',
-    ui_skin: window.localStorage.getItem(LEGACY.ui) === 'jsx' ? 'jsx' : 'html'
+    ui_skin: window.localStorage.getItem(LEGACY.ui) === 'jsx' ? 'jsx' : 'html',
+    ui_scale: normalizeUiScale(window.localStorage.getItem(LEGACY.scale))
   };
 }
 
@@ -61,7 +90,8 @@ export function normalizePrefs(input = {}) {
     glass_visible: source.glass_visible !== false,
     glass_motion: source.glass_motion !== false,
     theme_accent: /^#[0-9A-Fa-f]{6}$/.test(accent) ? accent : '',
-    ui_skin: source.ui_skin === 'jsx' ? 'jsx' : 'html'
+    ui_skin: source.ui_skin === 'jsx' ? 'jsx' : 'html',
+    ui_scale: normalizeUiScale(source.ui_scale)
   };
 }
 
@@ -78,7 +108,8 @@ export function prefsFromSettingsRow(row, fallback = {}) {
     glass_visible: typeof row.glass_visible === 'boolean' ? row.glass_visible : base.glass_visible,
     glass_motion: typeof row.glass_motion === 'boolean' ? row.glass_motion : base.glass_motion,
     theme_accent: row.theme_accent || base.theme_accent,
-    ui_skin: row.ui_skin || base.ui_skin
+    ui_skin: row.ui_skin || base.ui_skin,
+    ui_scale: row.ui_scale || base.ui_scale
   });
 }
 
@@ -92,6 +123,7 @@ export function prefsToSettingsPayload(prefs, extra = {}) {
     glass_motion: next.glass_motion,
     theme_accent: next.theme_accent || null,
     ui_skin: next.ui_skin,
+    ui_scale: next.ui_scale,
     prefs_synced: true,
     ...extra
   };
@@ -122,6 +154,7 @@ export function writeLocalPrefs(userId, patch = {}) {
   window.localStorage.setItem(LEGACY.glass, next.glass_visible ? 'on' : 'off');
   window.localStorage.setItem(LEGACY.glassMotion, next.glass_motion ? 'on' : 'off');
   window.localStorage.setItem(LEGACY.ui, next.ui_skin);
+  window.localStorage.setItem(LEGACY.scale, next.ui_scale);
   if (next.theme_accent) {
     window.localStorage.setItem(LEGACY.accent, next.theme_accent);
   } else {
@@ -151,6 +184,7 @@ export function applyPrefsToDom(prefs) {
   document.documentElement.lang = next.locale;
   document.documentElement.setAttribute('data-theme', next.color_theme);
   document.documentElement.classList.toggle('dark', next.color_theme === 'dark');
+  document.documentElement.setAttribute('data-ui-scale', next.ui_scale);
   applyAccentCss(next.theme_accent);
   return next;
 }
@@ -161,6 +195,7 @@ export function emptySettingsRow(userId) {
     theme_accent: null,
     bio_public: true,
     ui_skin: 'html',
+    ui_scale: 'auto',
     locale: 'en',
     color_theme: 'light',
     rain: true,
@@ -176,8 +211,24 @@ export function mergeRemoteSettings(row, cached) {
     return normalizePrefs({
       ...local,
       theme_accent: row?.theme_accent || local.theme_accent,
-      ui_skin: row?.ui_skin || local.ui_skin
+      ui_skin: row?.ui_skin || local.ui_skin,
+      ui_scale: row?.ui_scale || local.ui_scale
     });
   }
   return prefsFromSettingsRow(row, local);
+}
+
+export async function savePrefsOrOmitScale(saveFn, prefs) {
+  const payload = prefsToSettingsPayload(prefs);
+  try {
+    return await saveFn(payload);
+  } catch (error) {
+    const message = String(error?.message || error || '');
+    if (/ui_scale|PGRST204|schema cache|column/i.test(message)) {
+      const rest = { ...payload };
+      delete rest.ui_scale;
+      return saveFn(rest);
+    }
+    throw error;
+  }
 }

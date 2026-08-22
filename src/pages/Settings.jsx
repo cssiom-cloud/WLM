@@ -6,6 +6,7 @@ import { initialsFromName, oauthRedirectTo } from '../lib/access.js';
 import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from '../lib/services.js';
 import { applyUiMode, persistUiSkin, readUiMode, reactUiAvailable } from '../../js/ui-mode.js';
 import { applyAccent } from '../../js/theme.js';
+import { resolvedUiScale } from '../../js/user-prefs.js';
 import { btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
@@ -61,7 +62,7 @@ function SpringToggle({ on, onToggle, label, hint }) {
 }
 
 export default function Settings() {
-  const { session, supabase, lang, setLang, theme, setTheme, rain, setRain, glassVisible, setGlassVisible, glassMotion, setGlassMotion, t, profiles, activePersonnel, formatPersonnelName, setActivePersonnel, createPersonnelProfile, refresh } =
+  const { session, supabase, lang, setLang, theme, setTheme, rain, setRain, glassVisible, setGlassVisible, glassMotion, setGlassMotion, uiScale, setUiScale, t, profiles, activePersonnel, formatPersonnelName, setActivePersonnel, createPersonnelProfile, refresh } =
     useCommand();
   const toast = useToast();
   const canvasRef = useRef(null);
@@ -74,6 +75,7 @@ export default function Settings() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [creating, setCreating] = useState(false);
+  const [resolvedScale, setResolvedScale] = useState(() => resolvedUiScale(uiScale));
   const identity = findDiscordIdentity(authUser);
   const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
   const canUnlink = (authUser?.identities || []).length > 1;
@@ -96,6 +98,15 @@ export default function Settings() {
   useEffect(() => {
     loadSettings().catch((error) => toast.alert(error.message));
   }, [loadSettings, toast]);
+
+  useEffect(() => {
+    function syncResolved() {
+      setResolvedScale(resolvedUiScale(uiScale));
+    }
+    syncResolved();
+    window.addEventListener('resize', syncResolved);
+    return () => window.removeEventListener('resize', syncResolved);
+  }, [uiScale]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -438,6 +449,51 @@ export default function Settings() {
               </div>
             </div>
           ) : null}
+        </article>
+
+        <article className={`${glassClass} p-5`}>
+          <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.uiScale')}</h2>
+          <p className="mt-1 text-sm text-slate-500">{t('settings.uiScaleHint')}</p>
+          <button
+            type="button"
+            onClick={() => setUiScale?.('auto')}
+            className={`mt-4 flex w-full items-center justify-between rounded-2xl border px-4 py-3 text-left ${
+              uiScale === 'auto'
+                ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                : 'border-slate-200/80 bg-white/70 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+            }`}
+          >
+            <span>
+              <span className="block text-sm font-semibold">{t('settings.uiScaleAuto')}</span>
+              <span className="mt-1 block text-sm text-slate-500">{t('settings.uiScaleAutoHint')}</span>
+            </span>
+          </button>
+          <div className="mt-3 grid grid-cols-5 gap-2">
+            {['1', '2', '3', '4', '5'].map((level) => {
+              const active = uiScale === level;
+              const preview = uiScale === 'auto' && resolvedScale === level;
+              return (
+                <button
+                  key={level}
+                  type="button"
+                  onClick={() => setUiScale?.(level)}
+                  className={`grid min-h-14 gap-0.5 rounded-2xl border px-1 py-2 text-center ${
+                    active
+                      ? 'border-[var(--accent)] bg-[var(--accent-soft)] text-[var(--accent)]'
+                      : 'border-slate-200/80 bg-white/70 text-slate-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'
+                  } ${preview && !active ? 'ring-1 ring-[var(--accent)]' : ''}`}
+                >
+                  <strong className="text-lg">{level}</strong>
+                  <small className="text-[0.62rem] font-bold uppercase tracking-wide text-slate-500">
+                    {t(`settings.uiScale${level}`)}
+                  </small>
+                </button>
+              );
+            })}
+          </div>
+          <p className="mt-3 text-sm text-slate-500">
+            {t('settings.uiScaleNow').replace('{level}', uiScale === 'auto' ? resolvedScale : uiScale)}
+          </p>
         </article>
 
         <article className={`${glassClass} p-5`}>

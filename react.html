@@ -8,17 +8,23 @@
       (function () {
         try {
           var saved = sessionStorage.getItem('wlr-spa-path');
-          if (!saved) {
-            return;
+          if (saved) {
+            sessionStorage.removeItem('wlr-spa-path');
+            var url = new URL(saved, location.origin);
+            if (url.pathname.indexOf('/app') !== -1) {
+              var search = url.search || location.search;
+              var hash = url.hash || location.hash;
+              history.replaceState(null, '', url.pathname + search + hash);
+            }
           }
-          sessionStorage.removeItem('wlr-spa-path');
-          var url = new URL(saved, location.origin);
-          if (url.pathname.indexOf('/app') === -1) {
-            return;
-          }
-          var search = url.search || location.search;
-          var hash = url.hash || location.hash;
-          history.replaceState(null, '', url.pathname + search + hash);
+        } catch (error) {}
+        try {
+          var scale = localStorage.getItem('wlr-command-ui-scale') || 'auto';
+          if (['1', '2', '3', '4', '5'].indexOf(scale) === -1) scale = 'auto';
+          document.documentElement.setAttribute('data-ui-scale', scale);
+          var theme = localStorage.getItem('wlr-command-theme');
+          document.documentElement.setAttribute('data-theme', theme === 'dark' ? 'dark' : 'light');
+          document.documentElement.classList.toggle('dark', theme === 'dark');
         } catch (error) {}
       })();
     </script>

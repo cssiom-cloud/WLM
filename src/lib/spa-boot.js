@@ -43,5 +43,12 @@ export function leaveReactHtmlShell() {
   window.history.replaceState(null, '', `${base}/login${window.location.search}${window.location.hash}`);
 }
 
+import { applyPrefsToDom, readLocalPrefs } from '../../js/user-prefs.js';
+
 restoreSpaPath();
 leaveReactHtmlShell();
+try {
+  applyPrefsToDom(readLocalPrefs());
+} catch {
+  /* localStorage may be blocked */
+}

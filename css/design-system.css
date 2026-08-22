@@ -15,6 +15,7 @@
   --radius: 14px;
   --nav-height: 72px;
   --page-pad: clamp(1rem, 3vw, 2.5rem);
+  --control-h: 2.75rem;
 }
 
 [data-theme="dark"] {
@@ -63,7 +64,95 @@ body {
   margin: 0;
   min-height: 100%;
   min-height: 100dvh;
+  max-width: 100%;
+  overflow-x: clip;
   background: var(--bg);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+html[data-ui-scale='1'] {
+  font-size: 13px;
+  --nav-height: 3.5rem;
+  --page-pad: 0.7rem;
+  --radius: 11px;
+  --control-h: 2.45rem;
+}
+
+html[data-ui-scale='2'] {
+  font-size: 14.5px;
+  --nav-height: 3.85rem;
+  --page-pad: 0.85rem;
+  --radius: 12px;
+  --control-h: 2.6rem;
+}
+
+html[data-ui-scale='3'] {
+  font-size: 16px;
+  --nav-height: 4.5rem;
+  --page-pad: clamp(1rem, 3vw, 2.5rem);
+  --radius: 14px;
+  --control-h: 2.75rem;
+}
+
+html[data-ui-scale='4'] {
+  font-size: 17.5px;
+  --nav-height: 4.85rem;
+  --page-pad: clamp(1.1rem, 3.2vw, 2.7rem);
+  --radius: 16px;
+  --control-h: 2.95rem;
+}
+
+html[data-ui-scale='5'] {
+  font-size: 19px;
+  --nav-height: 5.25rem;
+  --page-pad: clamp(1.2rem, 3.4vw, 3rem);
+  --radius: 18px;
+  --control-h: 3.15rem;
+}
+
+@media (max-width: 480px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 14.5px;
+    --nav-height: 3.85rem;
+    --page-pad: 0.85rem;
+    --radius: 12px;
+    --control-h: 2.6rem;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 1280px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 16px;
+    --nav-height: 4.5rem;
+    --page-pad: clamp(1rem, 3vw, 2.5rem);
+    --radius: 14px;
+    --control-h: 2.75rem;
+  }
+}
+
+@media (min-width: 1281px) and (max-width: 1600px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 17.5px;
+    --nav-height: 4.85rem;
+    --page-pad: clamp(1.1rem, 3.2vw, 2.7rem);
+    --radius: 16px;
+    --control-h: 2.95rem;
+  }
+}
+
+@media (min-width: 1601px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 19px;
+    --nav-height: 5.25rem;
+    --page-pad: clamp(1.2rem, 3.4vw, 3rem);
+    --radius: 18px;
+    --control-h: 3.15rem;
+  }
 }
 
 body {
@@ -84,6 +173,14 @@ select,
 textarea {
   font: inherit;
   color: inherit;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
 }
 
 a {
@@ -141,8 +238,8 @@ p {
 }
 
 .clan-insignia {
-  width: 52px;
-  height: 52px;
+  width: 3.25rem;
+  height: 3.25rem;
   object-fit: contain;
   border-radius: 12px;
   border: 1px solid var(--border);
@@ -523,7 +620,7 @@ body.is-local-test .page-shell {
 }
 
 .btn {
-  min-height: 44px;
+  min-height: var(--control-h, 44px);
   padding: 0.55rem 0.9rem;
   border-radius: 10px;
   border: 1px solid var(--border);
@@ -1517,6 +1614,85 @@ body.is-local-test .page-shell {
   border-color: var(--accent);
   box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 35%, transparent);
   background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
+.ui-scale-auto {
+  display: flex;
+  width: 100%;
+  min-height: var(--control-h, 44px);
+  margin: 0.85rem 0 0.7rem;
+  padding: 0.7rem 0.95rem;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.ui-scale-auto span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.ui-scale-auto small {
+  margin: 0;
+  font-size: 0.82rem;
+  color: var(--text-muted);
+}
+
+.ui-scale-auto.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 8%, var(--bg-elevated));
+}
+
+.ui-scale-levels {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 0.45rem;
+}
+
+.ui-scale-level {
+  display: grid;
+  gap: 0.15rem;
+  min-height: 3.4rem;
+  padding: 0.45rem 0.2rem;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--bg-elevated);
+  color: var(--text);
+  font: inherit;
+  text-align: center;
+  cursor: pointer;
+}
+
+.ui-scale-level strong {
+  font-size: 1.05rem;
+}
+
+.ui-scale-level small {
+  font-size: 0.62rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+.ui-scale-level.is-active {
+  border-color: var(--accent);
+  background: color-mix(in srgb, var(--accent) 12%, var(--bg-elevated));
+  color: var(--accent);
+}
+
+.ui-scale-level.is-preview {
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--accent) 45%, transparent);
+}
+
+.ui-scale-caption {
+  margin-top: 0.65rem;
+  color: var(--text-muted);
+  font-size: 0.82rem;
 }
 
 .switch input {

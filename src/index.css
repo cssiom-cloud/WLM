@@ -40,6 +40,8 @@ body,
 #root,
 .theme-surface {
   min-height: 100%;
+  max-width: 100%;
+  overflow-x: clip;
   background-color: var(--bg);
   color: var(--text);
   transition:
@@ -72,6 +74,65 @@ html.overlay-lock body {
 
 html {
   scrollbar-gutter: stable;
+  overflow-x: clip;
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+@supports (-webkit-touch-callout: none) {
+  input:not([type='checkbox']):not([type='radio']),
+  select,
+  textarea {
+    font-size: max(16px, 1rem);
+  }
+}
+
+html[data-ui-scale='1'] {
+  font-size: 13px;
+}
+
+html[data-ui-scale='2'] {
+  font-size: 14.5px;
+}
+
+html[data-ui-scale='3'] {
+  font-size: 16px;
+}
+
+html[data-ui-scale='4'] {
+  font-size: 17.5px;
+}
+
+html[data-ui-scale='5'] {
+  font-size: 19px;
+}
+
+@media (max-width: 480px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 14.5px;
+  }
+}
+
+@media (min-width: 481px) and (max-width: 1280px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 16px;
+  }
+}
+
+@media (min-width: 1281px) and (max-width: 1600px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 17.5px;
+  }
+}
+
+@media (min-width: 1601px) {
+  html:not([data-ui-scale]),
+  html[data-ui-scale='auto'] {
+    font-size: 19px;
+  }
 }
 
 * {

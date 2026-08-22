@@ -30,8 +30,8 @@ import { writeUiMode } from '../../js/ui-mode.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
-  prefsToSettingsPayload,
   readLocalPrefs,
+  savePrefsOrOmitScale,
   setPrefsOwner,
   writeLocalPrefs
 } from '../../js/user-prefs.js';
@@ -89,6 +89,7 @@ export function CommandProvider({ children }) {
   const [rain, setRainState] = useState(() => readLocalPrefs().rain);
   const [glassVisible, setGlassVisibleState] = useState(() => readLocalPrefs().glass_visible);
   const [glassMotion, setGlassMotionState] = useState(() => readLocalPrefs().glass_motion);
+  const [uiScale, setUiScaleState] = useState(() => readLocalPrefs().ui_scale);
   const [zenMode, setZenMode] = useState(false);
   const [authHold, setAuthHold] = useState(false);
   const rosterGen = useRef(0);
@@ -107,6 +108,7 @@ export function CommandProvider({ children }) {
     setRainState(cached.rain);
     setGlassVisibleState(cached.glass_visible);
     setGlassMotionState(cached.glass_motion);
+    setUiScaleState(cached.ui_scale);
     try {
       const settings = await fetchOwnSettings(supabase, personnelId);
       const prefs = mergeRemoteSettings(settings, cached);
@@ -117,9 +119,10 @@ export function CommandProvider({ children }) {
       setRainState(prefs.rain);
       setGlassVisibleState(prefs.glass_visible);
       setGlassMotionState(prefs.glass_motion);
+      setUiScaleState(prefs.ui_scale);
       writeUiMode(prefs.ui_skin);
       if (!settings?.prefs_synced) {
-        saveOwnSettings(supabase, personnelId, prefsToSettingsPayload(prefs)).catch(() => {});
+        savePrefsOrOmitScale((payload) => saveOwnSettings(supabase, personnelId, payload), prefs).catch(() => {});
       }
     } catch {
       writeLocalPrefs(personnelId, cached);
@@ -254,6 +257,7 @@ export function CommandProvider({ children }) {
       rain,
       glass_visible: glassVisible,
       glass_motion: glassMotion,
+      ui_scale: uiScale,
       theme_accent: readLocalPrefs(activePersonnel?.id || '').theme_accent,
       ui_skin: readLocalPrefs(activePersonnel?.id || '').ui_skin
     });
@@ -265,10 +269,10 @@ export function CommandProvider({ children }) {
       return undefined;
     }
     const timer = window.setTimeout(() => {
-      saveOwnSettings(supabase, activePersonnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
+      savePrefsOrOmitScale((payload) => saveOwnSettings(supabase, activePersonnel.id, payload), prefs).catch(() => {});
     }, 400);
     return () => window.clearTimeout(timer);
-  }, [lang, theme, rain, glassVisible, glassMotion, activePersonnel]);
+  }, [lang, theme, rain, glassVisible, glassMotion, uiScale, activePersonnel]);
 
   const setActivePersonnel = useCallback(
     async (personnelId) => {
@@ -314,6 +318,7 @@ export function CommandProvider({ children }) {
       rain,
       glassVisible,
       glassMotion,
+      uiScale,
       zenMode,
       authHold,
       copy: layoutCopy(lang),
@@ -326,6 +331,7 @@ export function CommandProvider({ children }) {
       setRain: setRainState,
       setGlassVisible: setGlassVisibleState,
       setGlassMotion: setGlassMotionState,
+      setUiScale: setUiScaleState,
       setZenMode,
       setAuthHold,
       setActivePersonnel,
@@ -357,6 +363,7 @@ export function CommandProvider({ children }) {
       rain,
       glassVisible,
       glassMotion,
+      uiScale,
       zenMode,
       authHold
     ]

@@ -17,7 +17,7 @@ import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js
 import { applyAccent, readStoredAccent } from './theme.js';
 import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from './command-services.js';
 import { applyUiMode, persistUiSkin, readUiMode } from './ui-mode.js';
-import { applyPrefsToDom, mergeRemoteSettings, readLocalPrefs, setPrefsOwner, writeLocalPrefs } from './user-prefs.js';
+import { applyPrefsToDom, mergeRemoteSettings, readLocalPrefs, resolvedUiScale, setPrefsOwner, writeLocalPrefs } from './user-prefs.js';
 
 let currentUser = null;
 let currentAuthUser = null;
@@ -234,6 +234,28 @@ function selectedUiMode() {
   return document.querySelector('[data-ui-mode].is-active')?.getAttribute('data-ui-mode') === 'jsx' ? 'jsx' : 'html';
 }
 
+function syncUiScaleButtons(pref) {
+  const next = pref === 'auto' || ['1', '2', '3', '4', '5'].includes(pref) ? pref : 'auto';
+  const resolved = resolvedUiScale(next);
+  document.querySelectorAll('[data-ui-scale-pick]').forEach((button) => {
+    const value = button.getAttribute('data-ui-scale-pick');
+    button.classList.toggle('is-active', value === next);
+    button.classList.toggle('is-preview', next === 'auto' && value === resolved);
+  });
+  const caption = document.querySelector('#ui-scale-caption');
+  if (caption) {
+    caption.textContent = t('settings.uiScaleNow').replace('{level}', resolved);
+  }
+}
+
+async function persistUiScale(pref) {
+  const next = pref === 'auto' || ['1', '2', '3', '4', '5'].includes(pref) ? pref : 'auto';
+  syncUiScaleButtons(next);
+  const prefs = applyPrefsToDom({ ...readLocalPrefs(currentUser?.id || ''), ui_scale: next });
+  writeLocalPrefs(currentUser?.id || '', prefs);
+  window.dispatchEvent(new CustomEvent('wlr-prefs-changed', { detail: { ui_scale: next } }));
+}
+
 bootCommandShell('settings');
 
 const redirectError = readAuthRedirectError();
@@ -262,6 +284,7 @@ requireAuthenticatedPersonnel()
     document.querySelector('#bio-public').checked = settings.bio_public !== false;
     const uiMode = settings.ui_skin === 'jsx' || settings.ui_skin === 'html' ? settings.ui_skin : readUiMode() || 'html';
     syncUiModeButtons(uiMode);
+    syncUiScaleButtons(prefs.ui_scale);
     document.querySelector('#accent-hex').value = accent;
     document.querySelector('#accent-preview').style.background = accent;
     if (settings.theme_accent) {
@@ -356,7 +379,20 @@ document.querySelector('#save-ui-mode').addEventListener('click', async () => {
   }
 });
 
+document.querySelectorAll('[data-ui-scale-pick]').forEach((button) => {
+  button.addEventListener('click', () => {
+    persistUiScale(button.getAttribute('data-ui-scale-pick'));
+  });
+});
+
+window.addEventListener('resize', () => {
+  if (readLocalPrefs(currentUser?.id || '').ui_scale === 'auto') {
+    syncUiScaleButtons('auto');
+  }
+});
+
 window.addEventListener('wlr-lang-changed', () => {
   renderConnectedAccounts();
   renderOwnedProfiles();
+  syncUiScaleButtons(readLocalPrefs(currentUser?.id || '').ui_scale);
 });
