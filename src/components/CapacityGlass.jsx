@@ -1,3 +1,23 @@
+function WaterSurface({ late = false }) {
+  return (
+    <svg
+      className={`ann-glass-surf${late ? ' is-late' : ''}`}
+      viewBox="0 0 1200 80"
+      preserveAspectRatio="none"
+      aria-hidden="true"
+    >
+      <path
+        className="ann-glass-surf-a"
+        d="M0 40C150 8 350 72 600 40C850 8 1050 72 1200 40V80H0Z"
+      />
+      <path
+        className="ann-glass-surf-b"
+        d="M0 52C150 78 350 26 600 52C850 78 1050 26 1200 52V80H0Z"
+      />
+    </svg>
+  );
+}
+
 export default function CapacityGlass({ item, t, size = 'md' }) {
   const limited = item?.capacity_limited !== false;
   const count = Number(item?.signed_count || 0);
@@ -17,8 +37,18 @@ export default function CapacityGlass({ item, t, size = 'md' }) {
         aria-label={limited ? `${count} / ${max}` : String(count)}
       >
         <div className="ann-glass-water" style={{ '--fill': `${Math.round(fill * 100)}%` }}>
-          <span className="ann-glass-wave" aria-hidden="true" />
-          <span className="ann-glass-wave is-late" aria-hidden="true" />
+          <span className="ann-glass-fill" aria-hidden="true">
+            <span className="ann-glass-blob" />
+            <span className="ann-glass-blob is-alt" />
+          </span>
+          <WaterSurface />
+          <WaterSurface late />
+          <span className="ann-glass-bubbles" aria-hidden="true">
+            <span />
+            <span />
+            <span />
+            <span />
+          </span>
         </div>
         <span className="ann-glass-shine" aria-hidden="true" />
       </div>

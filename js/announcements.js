@@ -117,8 +117,19 @@ function capacityGlass(item) {
         limited ? ` aria-valuemax="${item.max_capacity}"` : ''
       }>
         <div class="ann-glass-water" style="--fill: ${fill}%">
-          <span class="ann-glass-wave" aria-hidden="true"></span>
-          <span class="ann-glass-wave is-late" aria-hidden="true"></span>
+          <span class="ann-glass-fill" aria-hidden="true">
+            <span class="ann-glass-blob"></span>
+            <span class="ann-glass-blob is-alt"></span>
+          </span>
+          <svg class="ann-glass-surf" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
+            <path class="ann-glass-surf-a" d="M0 40C150 8 350 72 600 40C850 8 1050 72 1200 40V80H0Z"></path>
+            <path class="ann-glass-surf-b" d="M0 52C150 78 350 26 600 52C850 78 1050 26 1200 52V80H0Z"></path>
+          </svg>
+          <svg class="ann-glass-surf is-late" viewBox="0 0 1200 80" preserveAspectRatio="none" aria-hidden="true">
+            <path class="ann-glass-surf-a" d="M0 40C150 8 350 72 600 40C850 8 1050 72 1200 40V80H0Z"></path>
+            <path class="ann-glass-surf-b" d="M0 52C150 78 350 26 600 52C850 78 1050 26 1200 52V80H0Z"></path>
+          </svg>
+          <span class="ann-glass-bubbles" aria-hidden="true"><span></span><span></span><span></span><span></span></span>
         </div>
         <span class="ann-glass-shine" aria-hidden="true"></span>
       </div>
