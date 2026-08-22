@@ -12,31 +12,29 @@ permissions:
 
 concurrency:
   group: pages
-  cancel-in-progress: false
+  cancel-in-progress: true
 
 jobs:
-  build:
+  deploy:
     runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Setup Node
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
-          cache: npm
-
-      - name: Install
-        run: npm ci
-
-      - name: Build
-        run: npm run build
-        env:
-          GITHUB_PAGES: 'true'
-
-      - name: SPA fallback
-        run: cp dist/index.html dist/404.html
+      - name: Prepare static site
+        run: |
+          mkdir -p dist
+          rsync -a \
+            --exclude '.git' \
+            --exclude '.github' \
+            --exclude 'src' \
+            --exclude 'node_modules' \
+            --exclude 'dist' \
+            --exclude 'package-lock.json' \
+            ./ dist/
 
       - name: Configure Pages
         uses: actions/configure-pages@v5
@@ -46,13 +44,6 @@ jobs:
         with:
           path: dist
 
-  deploy:
-    needs: build
-    runs-on: ubuntu-latest
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    steps:
       - name: Deploy to GitHub Pages
         id: deployment
         uses: actions/deploy-pages@v4
