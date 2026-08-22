@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import AnimatedCard from '../components/AnimatedCard.jsx';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { LayoutGroup } from 'framer-motion';
+import AnimatedCard, { DossierOverlay } from '../components/AnimatedCard.jsx';
 import { useCommand } from '../components/GlobalLayout.jsx';
 
 function visibleName(row) {
@@ -12,6 +13,7 @@ export default function Dashboard() {
   const [roster, setRoster] = useState([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [selected, setSelected] = useState(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -53,6 +55,18 @@ export default function Dashboard() {
     );
   }, [query, roster]);
 
+  const closeDossier = useCallback(() => setSelected(null), []);
+
+  const selectedPerson = selected
+    ? {
+        id: selected.id,
+        name: formatPersonnelName(selected) || visibleName(selected),
+        rank: selected.military_rank,
+        role: selected.organization_role,
+        avatarUrl: selected.avatar_url
+      }
+    : null;
+
   return (
     <section className="mx-auto max-w-6xl">
       <div className="mb-8 flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
@@ -83,20 +97,27 @@ export default function Dashboard() {
           ))}
         </div>
       ) : filtered.length ? (
-        <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" style={{ perspective: 1200 }}>
-          {filtered.map((row) => (
-            <AnimatedCard
-              key={row.id}
-              name={formatPersonnelName(row) || visibleName(row)}
-              rank={row.military_rank}
-              role={row.organization_role}
-              avatarUrl={row.avatar_url}
-              actionLabel={lang === 'th' ? 'เปิดแฟ้ม' : 'Open dossier'}
-            />
-          ))}
-        </div>
+        <LayoutGroup>
+          <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+            {filtered.map((row) => (
+              <AnimatedCard
+                key={row.id}
+                id={row.id}
+                name={formatPersonnelName(row) || visibleName(row)}
+                rank={row.military_rank}
+                role={row.organization_role}
+                avatarUrl={row.avatar_url}
+                actionLabel={lang === 'th' ? 'เปิดแฟ้ม' : 'Open dossier'}
+                onClick={() => setSelected(row)}
+              />
+            ))}
+          </div>
+          <DossierOverlay person={selectedPerson} lang={lang} onClose={closeDossier} />
+        </LayoutGroup>
       ) : (
-        <p className="text-sm text-slate-500">{lang === 'th' ? 'ไม่พบกำลังพลที่ตรงกับการค้นหา' : 'No personnel matched the search.'}</p>
+        <p className="text-sm text-slate-500">
+          {lang === 'th' ? 'ไม่พบกำลังพลที่ตรงกับการค้นหา' : 'No personnel matched the search.'}
+        </p>
       )}
     </section>
   );
