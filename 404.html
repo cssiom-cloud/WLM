@@ -7,21 +7,15 @@
     <script>
       (function () {
         var path = location.pathname + location.search + location.hash;
-        if (location.pathname === '/app' || location.pathname.indexOf('/app/') === 0) {
+        if (/(^|\/)app(\/|$)/.test(location.pathname)) {
           try {
             sessionStorage.setItem('wlr-spa-path', path);
           } catch (error) {}
-          location.replace('/react.html');
+          var marker = '/app';
+          var at = location.pathname.indexOf(marker);
+          var prefix = at > 0 ? location.pathname.slice(0, at) : '';
+          location.replace((prefix || '') + '/react.html');
           return;
-        }
-        var marker = '/app/';
-        var at = location.pathname.indexOf(marker);
-        if (location.pathname.slice(-4) === '/app' || at !== -1) {
-          try {
-            sessionStorage.setItem('wlr-spa-path', path);
-          } catch (error) {}
-          var prefix = at === -1 ? location.pathname.replace(/\/app\/?$/, '') : location.pathname.slice(0, at);
-          location.replace(prefix + '/react.html');
         }
       })();
     </script>

@@ -1,4 +1,5 @@
 import { comparePersonnelByRank } from '../../js/domain.js';
+import { emptySettingsRow } from '../../js/user-prefs.js';
 
 export async function fetchPersonnelRoster(supabase) {
   const { data, error } = await supabase.from('oc_personnel').select('*');
@@ -601,7 +602,7 @@ export async function fetchOwnSettings(supabase, userId) {
   if (error) {
     throw error;
   }
-  return data || { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html' };
+  return data || emptySettingsRow(userId);
 }
 
 export async function saveOwnSettings(supabase, userId, payload) {

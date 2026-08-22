@@ -1,6 +1,8 @@
-const LANG_STORAGE_KEY = 'wlr-command-lang';
+import { getPrefsOwner, readLocalPrefs, writeLocalPrefs } from './user-prefs.js';
 
-// Central dictionary: every user-facing string swaps between English and Thai.
+export function getLang() {
+  return readLocalPrefs(getPrefsOwner()).locale === 'th' ? 'th' : 'en';
+}
 export const DICTIONARY = {
   en: {
     'nav.home': 'Home',
@@ -1020,10 +1022,6 @@ export const DICTIONARY = {
   }
 };
 
-export function getLang() {
-  return window.localStorage.getItem(LANG_STORAGE_KEY) === 'th' ? 'th' : 'en';
-}
-
 export function t(key) {
   const lang = getLang();
   return DICTIONARY[lang]?.[key] ?? DICTIONARY.en[key] ?? key;
@@ -1053,7 +1051,7 @@ export function applyTranslations(root = document) {
 
 export function setLang(lang) {
   const next = lang === 'th' ? 'th' : 'en';
-  window.localStorage.setItem(LANG_STORAGE_KEY, next);
+  writeLocalPrefs(getPrefsOwner(), { locale: next });
   document.documentElement.lang = next;
   applyTranslations();
   // Pages with dynamic content re-render their cached data on this event.

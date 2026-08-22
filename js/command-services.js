@@ -1,5 +1,6 @@
 import { isLocalTestMode } from './config.js';
 import { supabaseClient } from './supabase-client.js';
+import { emptySettingsRow } from './user-prefs.js';
 import {
   localFetchLogs,
   localFetchOwnSettings,
@@ -35,7 +36,7 @@ export async function fetchOwnSettings(userId) {
   if (error) {
     throw error;
   }
-  return data || { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html' };
+  return data || emptySettingsRow(userId);
 }
 
 export async function saveOwnSettings(userId, payload) {

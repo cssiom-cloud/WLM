@@ -22,6 +22,7 @@ import Admin from './pages/Admin.jsx';
 import Accounts from './pages/Accounts.jsx';
 import Logs from './pages/Logs.jsx';
 import Lore from './pages/Lore.jsx';
+import { getJsxBase } from '../js/ui-mode.js';
 import { SITE_LOGO } from './lib/brand.js';
 
 function BootScreen() {
@@ -153,7 +154,7 @@ function AppRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter basename="/app">
+    <BrowserRouter basename={getJsxBase()}>
       <CommandProvider>
         <ToastProvider>
           <div className="theme-surface min-h-screen antialiased">

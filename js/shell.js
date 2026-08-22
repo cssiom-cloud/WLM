@@ -1,14 +1,22 @@
 import { isLocalTestMode } from './config.js';
-import { applyAccent, applyStoredAccent, initThemeToggle } from './theme.js';
+import { applyStoredAccent, initThemeToggle } from './theme.js';
 import { initCommandNavbar } from './navigation.js';
 import { initVisualEffects } from './effects.js';
 import { readCurrentPersonnel } from './session.js';
-import { fetchOwnSettings } from './command-services.js';
+import { fetchOwnSettings, saveOwnSettings } from './command-services.js';
 import { applyTranslations, getLang, t } from './i18n.js';
 import { installCrestIcon, showStatus, upgradeCheckboxes, upgradeSelects } from './ui.js';
 import { bindImageEditorHost } from './image-editor.js';
 import { enterPage } from './motion.js';
 import { isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
+import {
+  applyPrefsToDom,
+  mergeRemoteSettings,
+  prefsToSettingsPayload,
+  readLocalPrefs,
+  setPrefsOwner,
+  writeLocalPrefs
+} from './user-prefs.js';
 
 export function bootCommandShell(activePage) {
   if (maybeRedirectForUiMode()) {
@@ -31,7 +39,8 @@ export function bootCommandShell(activePage) {
       document.body.appendChild(banner);
     }
   }
-  hydrateRemoteAccent();
+  hydrateRemotePrefs();
+  bindPrefsPersistence();
   enterPage(document.querySelector('.page-content'));
   const ready = Promise.resolve(initCommandNavbar(activePage)).finally(() => {
     upgradeSelects();
@@ -44,23 +53,58 @@ export function bootCommandShell(activePage) {
   return ready;
 }
 
-async function hydrateRemoteAccent() {
+async function hydrateRemotePrefs() {
   try {
     const { session, personnel } = await readCurrentPersonnel();
     if (!session || !personnel) {
       return;
     }
+    setPrefsOwner(personnel.id);
     const settings = await fetchOwnSettings(personnel.id);
-    if (settings?.theme_accent) {
-      applyAccent(settings.theme_accent);
+    const prefs = mergeRemoteSettings(settings, readLocalPrefs(personnel.id));
+    writeLocalPrefs(personnel.id, prefs);
+    applyPrefsToDom(prefs);
+    applyTranslations();
+    if (!settings?.prefs_synced) {
+      saveOwnSettings(personnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
     }
-    if (settings?.ui_skin === 'jsx' && !isOpsExportHandoffActive()) {
+    if (prefs.ui_skin === 'jsx' && !isOpsExportHandoffActive()) {
       writeUiMode('jsx');
       maybeRedirectForUiMode();
+    } else {
+      writeUiMode(prefs.ui_skin);
     }
   } catch {
     return;
   }
+}
+
+async function persistCurrentPrefs(patch = {}) {
+  try {
+    const { personnel } = await readCurrentPersonnel();
+    if (!personnel) {
+      return;
+    }
+    setPrefsOwner(personnel.id);
+    const prefs = writeLocalPrefs(personnel.id, patch);
+    applyPrefsToDom(prefs);
+    await saveOwnSettings(personnel.id, prefsToSettingsPayload(prefs));
+  } catch {
+    return;
+  }
+}
+
+function bindPrefsPersistence() {
+  if (window.__wlrPrefsBound) {
+    return;
+  }
+  window.__wlrPrefsBound = true;
+  window.addEventListener('wlr-lang-changed', (event) => {
+    persistCurrentPrefs({ locale: event.detail?.lang === 'th' ? 'th' : 'en' });
+  });
+  window.addEventListener('wlr-prefs-changed', (event) => {
+    persistCurrentPrefs(event.detail || {});
+  });
 }
 
 export function initAos() {

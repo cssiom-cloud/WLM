@@ -1,5 +1,4 @@
-const THEME_STORAGE_KEY = 'wlr-command-theme';
-const ACCENT_STORAGE_KEY = 'wlr-command-accent';
+import { applyAccentCss, applyPrefsToDom, getPrefsOwner, readLocalPrefs, writeLocalPrefs } from './user-prefs.js';
 
 function sunIcon() {
   return `
@@ -18,39 +17,25 @@ function moonIcon() {
 }
 
 export function applyStoredTheme() {
-  const stored = window.localStorage.getItem(THEME_STORAGE_KEY);
-  const theme = stored === 'dark' ? 'dark' : 'light';
-  document.documentElement.setAttribute('data-theme', theme);
-  applyStoredAccent();
-  return theme;
+  const prefs = applyPrefsToDom(readLocalPrefs(getPrefsOwner()));
+  return prefs.color_theme;
 }
 
 export function applyAccent(hex) {
-  const value = String(hex || '').trim();
-  if (!/^#[0-9A-Fa-f]{6}$/.test(value)) {
-    document.documentElement.style.removeProperty('--accent');
-    document.documentElement.style.removeProperty('--accent-ink');
-    window.localStorage.removeItem(ACCENT_STORAGE_KEY);
-    return;
-  }
-  const r = parseInt(value.slice(1, 3), 16);
-  const g = parseInt(value.slice(3, 5), 16);
-  const b = parseInt(value.slice(5, 7), 16);
-  const luma = (r * 299 + g * 587 + b * 114) / 1000;
-  document.documentElement.style.setProperty('--accent', value);
-  document.documentElement.style.setProperty('--accent-ink', luma > 168 ? '#1c1917' : '#ffffff');
-  window.localStorage.setItem(ACCENT_STORAGE_KEY, value);
+  const value = applyAccentCss(hex);
+  writeLocalPrefs(getPrefsOwner(), { theme_accent: value });
+  return value;
 }
 
 export function applyStoredAccent() {
-  const stored = window.localStorage.getItem(ACCENT_STORAGE_KEY);
+  const stored = readLocalPrefs(getPrefsOwner()).theme_accent;
   if (stored) {
-    applyAccent(stored);
+    applyAccentCss(stored);
   }
 }
 
 export function readStoredAccent() {
-  return window.localStorage.getItem(ACCENT_STORAGE_KEY) || '';
+  return readLocalPrefs(getPrefsOwner()).theme_accent || '';
 }
 
 export function initThemeToggle() {
@@ -66,9 +51,10 @@ export function initThemeToggle() {
 
   button.addEventListener('click', () => {
     const next = document.documentElement.getAttribute('data-theme') === 'dark' ? 'light' : 'dark';
-    document.documentElement.setAttribute('data-theme', next);
-    window.localStorage.setItem(THEME_STORAGE_KEY, next);
+    writeLocalPrefs(getPrefsOwner(), { color_theme: next });
+    applyPrefsToDom(readLocalPrefs(getPrefsOwner()));
     button.innerHTML = next === 'dark' ? sunIcon() : moonIcon();
+    window.dispatchEvent(new CustomEvent('wlr-prefs-changed', { detail: { color_theme: next } }));
   });
 
   document.body.appendChild(button);

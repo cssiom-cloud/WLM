@@ -1,6 +1,6 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
-import { maybeRedirectForUiMode } from '../js/ui-mode.js';
+import { getJsxBase, maybeRedirectForUiMode } from '../js/ui-mode.js';
 import App from './App.jsx';
 import './index.css';
 
@@ -12,7 +12,8 @@ function restoreSpaPath() {
     if (saved) {
       window.sessionStorage.removeItem(SPA_PATH_KEY);
       const url = new URL(saved, window.location.origin);
-      if (url.pathname === '/app' || url.pathname.startsWith('/app/')) {
+      const base = getJsxBase();
+      if (url.pathname === base || url.pathname.startsWith(`${base}/`)) {
         window.history.replaceState(null, '', `${url.pathname}${url.search}${url.hash}`);
       }
     }
@@ -24,7 +25,7 @@ function restoreSpaPath() {
 restoreSpaPath();
 
 if (window.location.pathname.endsWith('/react.html')) {
-  window.location.replace(`/app/login${window.location.search}`);
+  window.location.replace(`${getJsxBase()}/login${window.location.search}`);
 } else if (!maybeRedirectForUiMode()) {
   createRoot(document.getElementById('root')).render(<App />);
 }

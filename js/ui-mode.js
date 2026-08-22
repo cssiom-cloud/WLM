@@ -1,7 +1,52 @@
+import { getPrefsOwner, readLocalPrefs, writeLocalPrefs } from './user-prefs.js';
+
 const UI_MODE_KEY = 'wlr-command-ui';
+
+function viteSiteBase() {
+  try {
+    const url = import.meta.env.BASE_URL;
+    if (typeof url === 'string') {
+      const trimmed = url.replace(/\/$/, '');
+      return trimmed === '.' ? '' : trimmed;
+    }
+  } catch {
+    /* Vanilla pages do not have a Vite base. */
+  }
+  return null;
+}
+
+export function getSiteBasePath() {
+  const fromVite = viteSiteBase();
+  if (fromVite !== null) {
+    return fromVite;
+  }
+  const path = (window.location.pathname.replace(/\/+$/, '') || '/');
+  if (path === '/app' || path.startsWith('/app/')) {
+    return '';
+  }
+  const appMatch = path.match(/^(.*)\/app(?:\/|$)/);
+  if (appMatch) {
+    return appMatch[1];
+  }
+  const file = path.split('/').pop() || '';
+  if (file.includes('.')) {
+    return path.slice(0, Math.max(0, path.length - file.length - 1));
+  }
+  return path === '/' ? '' : path;
+}
+
+export function getJsxBase() {
+  const base = getSiteBasePath();
+  return base ? `${base}/app` : '/app';
+}
+
 export const JSX_BASE = '/app';
 
 export function readUiMode() {
+  const fromPrefs = readLocalPrefs(getPrefsOwner()).ui_skin;
+  if (fromPrefs === 'jsx' || fromPrefs === 'html') {
+    return fromPrefs;
+  }
   const value = window.localStorage.getItem(UI_MODE_KEY);
   if (value === 'jsx' || value === 'html') {
     return value;
@@ -10,36 +55,40 @@ export function readUiMode() {
 }
 
 export function writeUiMode(mode) {
-  window.localStorage.setItem(UI_MODE_KEY, mode === 'jsx' ? 'jsx' : 'html');
+  const next = mode === 'jsx' ? 'jsx' : 'html';
+  writeLocalPrefs(getPrefsOwner(), { ui_skin: next });
+  window.localStorage.setItem(UI_MODE_KEY, next);
 }
 
 export function isReactRuntime() {
-  const path = window.location.pathname;
-  return path === JSX_BASE || path.startsWith(`${JSX_BASE}/`);
+  const path = window.location.pathname.replace(/\/+$/, '') || '/';
+  const base = getJsxBase();
+  return path === base || path.startsWith(`${base}/`);
 }
 
 export function reactUiAvailable() {
-  const host = window.location.hostname;
-  return host === 'localhost' || host === '127.0.0.1';
+  return true;
 }
 
 function stripJsxBase(pathname) {
+  const base = getJsxBase();
   const path = pathname.replace(/\/+$/, '') || '/';
-  if (path === JSX_BASE) {
+  if (path === base || path === '') {
     return '/';
   }
-  if (path.startsWith(`${JSX_BASE}/`)) {
-    return path.slice(JSX_BASE.length) || '/';
+  if (path.startsWith(`${base}/`)) {
+    return path.slice(base.length) || '/';
   }
   return path || '/';
 }
 
 function withJsxBase(route) {
+  const base = getJsxBase();
   const path = route.startsWith('/') ? route : `/${route}`;
   if (path === '/') {
-    return JSX_BASE;
+    return base;
   }
-  return `${JSX_BASE}${path}`;
+  return `${base}${path}`;
 }
 
 function samePage(url) {
@@ -193,23 +242,13 @@ function jsxPathFromHtml(pathname, search) {
   if (file === 'tickets.html') {
     return withJsxBase('/tickets');
   }
-  return JSX_BASE;
+  return getJsxBase();
 }
 
 export function siteRootUrl() {
-  const { origin, pathname } = window.location;
-  if (pathname === '/app' || pathname.startsWith('/app/')) {
-    return `${origin}/`;
-  }
-  if (pathname.endsWith('/app')) {
-    return `${origin}${pathname.slice(0, -3)}`;
-  }
-  const appAt = pathname.indexOf('/app/');
-  if (appAt !== -1) {
-    return `${origin}${pathname.slice(0, appAt)}/`;
-  }
-  const lastSlash = pathname.lastIndexOf('/');
-  return `${origin}${pathname.slice(0, lastSlash + 1)}`;
+  const { origin } = window.location;
+  const base = getSiteBasePath();
+  return `${origin}${base}/`;
 }
 
 export function htmlUrlForCurrentPage() {

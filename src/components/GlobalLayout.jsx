@@ -24,19 +24,21 @@ import TacticalDock from './TacticalDock.jsx';
 import { SITE_LOGO } from '../lib/brand.js';
 import { isAdmin as roleIsAdmin, isDev } from '../lib/access.js';
 import { t as translate } from '../lib/i18n.js';
-import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings } from '../lib/services.js';
+import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings, saveOwnSettings } from '../lib/services.js';
 import { supabase } from '../lib/supabase.js';
-import { applyAccent, applyStoredAccent } from '../../js/theme.js';
 import { writeUiMode } from '../../js/ui-mode.js';
+import {
+  applyPrefsToDom,
+  mergeRemoteSettings,
+  prefsToSettingsPayload,
+  readLocalPrefs,
+  setPrefsOwner,
+  writeLocalPrefs
+} from '../../js/user-prefs.js';
 
 export { supabase };
 
 const ACTIVE_PERSONNEL_KEY = 'wlr-active-personnel-id';
-const LANG_KEY = 'wlr-command-lang';
-const THEME_KEY = 'wlr-command-theme';
-const RAIN_KEY = 'wlr-command-rain';
-const GLASS_KEY = 'wlr-command-glass';
-const GLASS_MOTION_KEY = 'wlr-command-glass-motion';
 
 function layoutCopy(lang) {
   const tx = (key) => translate(lang, key);
@@ -77,23 +79,54 @@ function formatPersonnelName(row) {
   return [row.first_name, row.middle_name, row.last_name].filter(Boolean).join(' ').trim();
 }
 
-function readStoredTheme() {
-  return window.localStorage.getItem(THEME_KEY) === 'dark' ? 'dark' : 'light';
-}
-
 export function CommandProvider({ children }) {
   const [bootstrapping, setBootstrapping] = useState(true);
   const [session, setSession] = useState(null);
   const [profiles, setProfiles] = useState([]);
   const [activePersonnel, setActivePersonnelState] = useState(null);
-  const [lang, setLangState] = useState(() => (window.localStorage.getItem(LANG_KEY) === 'th' ? 'th' : 'en'));
-  const [theme, setThemeState] = useState(readStoredTheme);
-  const [rain, setRainState] = useState(() => window.localStorage.getItem(RAIN_KEY) !== 'off');
-  const [glassVisible, setGlassVisibleState] = useState(() => window.localStorage.getItem(GLASS_KEY) !== 'off');
-  const [glassMotion, setGlassMotionState] = useState(() => window.localStorage.getItem(GLASS_MOTION_KEY) !== 'off');
+  const [lang, setLangState] = useState(() => readLocalPrefs().locale);
+  const [theme, setThemeState] = useState(() => readLocalPrefs().color_theme);
+  const [rain, setRainState] = useState(() => readLocalPrefs().rain);
+  const [glassVisible, setGlassVisibleState] = useState(() => readLocalPrefs().glass_visible);
+  const [glassMotion, setGlassMotionState] = useState(() => readLocalPrefs().glass_motion);
   const [zenMode, setZenMode] = useState(false);
   const [authHold, setAuthHold] = useState(false);
   const rosterGen = useRef(0);
+  const skipPersist = useRef(true);
+
+  const hydratePersonnelPrefs = useCallback(async (personnelId) => {
+    if (!personnelId) {
+      return;
+    }
+    skipPersist.current = true;
+    setPrefsOwner(personnelId);
+    const cached = readLocalPrefs(personnelId);
+    applyPrefsToDom(cached);
+    setLangState(cached.locale);
+    setThemeState(cached.color_theme);
+    setRainState(cached.rain);
+    setGlassVisibleState(cached.glass_visible);
+    setGlassMotionState(cached.glass_motion);
+    try {
+      const settings = await fetchOwnSettings(supabase, personnelId);
+      const prefs = mergeRemoteSettings(settings, cached);
+      writeLocalPrefs(personnelId, prefs);
+      applyPrefsToDom(prefs);
+      setLangState(prefs.locale);
+      setThemeState(prefs.color_theme);
+      setRainState(prefs.rain);
+      setGlassVisibleState(prefs.glass_visible);
+      setGlassMotionState(prefs.glass_motion);
+      writeUiMode(prefs.ui_skin);
+      if (!settings?.prefs_synced) {
+        saveOwnSettings(supabase, personnelId, prefsToSettingsPayload(prefs)).catch(() => {});
+      }
+    } catch {
+      writeLocalPrefs(personnelId, cached);
+    } finally {
+      skipPersist.current = false;
+    }
+  }, []);
 
   const loadRoster = useCallback(async (authSession) => {
     const gen = ++rosterGen.current;
@@ -138,25 +171,13 @@ export function CommandProvider({ children }) {
     const selected = owned.find((row) => row.id === activeId) || owned[0] || null;
     if (selected) {
       window.localStorage.setItem(ACTIVE_PERSONNEL_KEY, selected.id);
-      try {
-        const settings = await fetchOwnSettings(supabase, selected.id);
-        if (settings?.theme_accent) {
-          applyAccent(settings.theme_accent);
-        }
-        if (settings?.ui_skin === 'jsx') {
-          writeUiMode('jsx');
-        } else if (settings?.ui_skin === 'html') {
-          writeUiMode('html');
-        }
-      } catch {
-        /* keep the local preference if settings are unavailable */
-      }
+      await hydratePersonnelPrefs(selected.id);
     }
     if (gen === rosterGen.current) {
       setActivePersonnelState(selected);
     }
     return selected;
-  }, []);
+  }, [hydratePersonnelPrefs]);
 
   useEffect(() => {
     let cancelled = false;
@@ -192,19 +213,28 @@ export function CommandProvider({ children }) {
   }, [loadRoster]);
 
   useEffect(() => {
-    applyStoredAccent();
+    applyPrefsToDom(readLocalPrefs());
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = lang;
-    document.documentElement.setAttribute('data-theme', theme);
-    document.documentElement.classList.toggle('dark', theme === 'dark');
-    window.localStorage.setItem(LANG_KEY, lang);
-    window.localStorage.setItem(THEME_KEY, theme);
-    window.localStorage.setItem(RAIN_KEY, rain ? 'on' : 'off');
-    window.localStorage.setItem(GLASS_KEY, glassVisible ? 'on' : 'off');
-    window.localStorage.setItem(GLASS_MOTION_KEY, glassMotion ? 'on' : 'off');
-  }, [lang, theme, rain, glassVisible, glassMotion]);
+    const prefs = applyPrefsToDom({
+      locale: lang,
+      color_theme: theme,
+      rain,
+      glass_visible: glassVisible,
+      glass_motion: glassMotion,
+      theme_accent: readLocalPrefs(activePersonnel?.id || '').theme_accent,
+      ui_skin: readLocalPrefs(activePersonnel?.id || '').ui_skin
+    });
+    if (!activePersonnel?.id || skipPersist.current) {
+      return undefined;
+    }
+    writeLocalPrefs(activePersonnel.id, prefs);
+    const timer = window.setTimeout(() => {
+      saveOwnSettings(supabase, activePersonnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
+    }, 400);
+    return () => window.clearTimeout(timer);
+  }, [lang, theme, rain, glassVisible, glassMotion, activePersonnel]);
 
   const setActivePersonnel = useCallback(
     async (personnelId) => {
@@ -214,8 +244,9 @@ export function CommandProvider({ children }) {
         throw error;
       }
       setActivePersonnelState(profiles.find((row) => row.id === personnelId) || null);
+      await hydratePersonnelPrefs(personnelId);
     },
-    [profiles]
+    [hydratePersonnelPrefs, profiles]
   );
 
   const createPersonnelProfile = useCallback(

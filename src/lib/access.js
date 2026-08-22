@@ -1,3 +1,5 @@
+import { getJsxBase, getSiteBasePath, isReactRuntime } from '../../js/ui-mode.js';
+
 export function isAdmin(person) {
   return person?.role === 'admin';
 }
@@ -135,10 +137,9 @@ export function initialsFromName(name) {
 export function oauthRedirectTo(path = '/') {
   const origin = window.location.origin;
   const suffix = path.startsWith('/') ? path : `/${path}`;
-  const onApp =
-    window.location.pathname === '/app' || window.location.pathname.startsWith('/app/');
-  if (onApp) {
-    return `${origin}/app${suffix === '/' ? '' : suffix}`;
+  if (isReactRuntime()) {
+    return `${origin}${getJsxBase()}${suffix === '/' ? '' : suffix}`;
   }
-  return `${origin}${suffix}`;
+  const site = getSiteBasePath();
+  return `${origin}${site}${suffix}`;
 }

@@ -3,8 +3,16 @@ import react from '@vitejs/plugin-react';
 import fs from 'node:fs';
 import path from 'node:path';
 
+const base = (() => {
+  const value = String(process.env.VITE_BASE || '/').trim() || '/';
+  if (value === './') {
+    return './';
+  }
+  return value.endsWith('/') ? value : `${value}/`;
+})();
+
 function isReactAppPath(urlPath) {
-  return urlPath === '/app' || urlPath.startsWith('/app/');
+  return /(^|\/)app(\/|$)/.test(urlPath);
 }
 
 function reactSpaFallback() {
@@ -14,7 +22,7 @@ function reactSpaFallback() {
       next();
       return;
     }
-    req.url = '/react.html';
+    req.url = `${base}react.html`.replace(/\/{2,}/g, '/');
     next();
   };
 
@@ -73,6 +81,7 @@ function repoBrandAssets() {
 }
 
 export default defineConfig({
+  base,
   appType: 'mpa',
   plugins: [react(), repoBrandAssets(), reactSpaFallback()],
   server: {

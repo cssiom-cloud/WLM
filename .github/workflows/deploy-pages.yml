@@ -24,6 +24,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Configure Pages
+        id: pages
+        uses: actions/configure-pages@v5
+
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
@@ -31,6 +35,8 @@ jobs:
           cache: npm
 
       - name: Install and build React app
+        env:
+          VITE_BASE: ${{ steps.pages.outputs.base_path }}
         run: |
           npm ci
           npm run build
@@ -51,9 +57,7 @@ jobs:
           cp react-dist/react.html dist/react.html
           mkdir -p dist/assets
           rsync -a react-dist/assets/ dist/assets/
-
-      - name: Configure Pages
-        uses: actions/configure-pages@v5
+          touch dist/.nojekyll
 
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3

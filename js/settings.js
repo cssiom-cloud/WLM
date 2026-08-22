@@ -17,6 +17,7 @@ import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js
 import { applyAccent, readStoredAccent } from './theme.js';
 import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from './command-services.js';
 import { applyUiMode, persistUiSkin, readUiMode } from './ui-mode.js';
+import { applyPrefsToDom, mergeRemoteSettings, readLocalPrefs, setPrefsOwner, writeLocalPrefs } from './user-prefs.js';
 
 let currentUser = null;
 let currentAuthUser = null;
@@ -253,7 +254,11 @@ requireAuthenticatedPersonnel()
       showStatus(t('settings.discordLinked'));
     }
     const settings = await fetchOwnSettings(currentUser.id);
-    const accent = settings.theme_accent || readStoredAccent() || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#8A90FF' : '#1E4E8C');
+    setPrefsOwner(currentUser.id);
+    const prefs = mergeRemoteSettings(settings, readLocalPrefs(currentUser.id));
+    writeLocalPrefs(currentUser.id, prefs);
+    applyPrefsToDom(prefs);
+    const accent = prefs.theme_accent || readStoredAccent() || (document.documentElement.getAttribute('data-theme') === 'dark' ? '#8A90FF' : '#1E4E8C');
     document.querySelector('#bio-public').checked = settings.bio_public !== false;
     const uiMode = settings.ui_skin === 'jsx' || settings.ui_skin === 'html' ? settings.ui_skin : readUiMode() || 'html';
     syncUiModeButtons(uiMode);

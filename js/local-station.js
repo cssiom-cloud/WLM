@@ -672,7 +672,7 @@ export async function localFetchSettings() {
 
 export async function localFetchOwnSettings(userId) {
   const row = settingsRows().find((item) => item.user_id === userId);
-  return row ? clone(row) : { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html' };
+  return row ? clone(row) : { user_id: userId, theme_accent: null, bio_public: true, ui_skin: 'html', locale: 'en', color_theme: 'light', rain: true, glass_visible: true, glass_motion: true };
 }
 
 export async function localUpsertSettings(userId, payload) {
@@ -683,6 +683,11 @@ export async function localUpsertSettings(userId, payload) {
     theme_accent: null,
     bio_public: true,
     ui_skin: 'html',
+    locale: 'en',
+    color_theme: 'light',
+    rain: true,
+    glass_visible: true,
+    glass_motion: true,
     ...(index >= 0 ? rows[index] : {}),
     ...payload,
     updated_at: new Date().toISOString()
