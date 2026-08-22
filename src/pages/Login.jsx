@@ -112,7 +112,7 @@ function MagneticDiscordButton({ label, hint, disabled, onClick }) {
 }
 
 export default function Login({ onAuthenticated } = {}) {
-  const { lang, setLang, t, supabase, refresh, rain, glassVisible, glassMotion, setAuthHold } = useCommand();
+  const { lang, setLang, theme, setTheme, t, supabase, refresh, rain, glassVisible, glassMotion, setAuthHold } = useCommand();
   const toast = useToast();
   const navigate = useNavigate();
   const [mode, setMode] = useState('signin');
@@ -188,7 +188,7 @@ export default function Login({ onAuthenticated } = {}) {
       const { error: authError } = await spinThen(() =>
         supabase.auth.signInWithOAuth({
           provider: 'discord',
-          options: { redirectTo: oauthRedirectTo('/login'), scopes: 'identify email' }
+          options: { redirectTo: oauthRedirectTo('/'), scopes: 'identify email' }
         })
       );
       if (authError) {
@@ -242,29 +242,39 @@ export default function Login({ onAuthenticated } = {}) {
   }
 
   const inputClass =
-    'min-h-11 rounded-xl border border-white/10 bg-slate-950/45 px-3 text-sm font-medium tracking-normal text-slate-100 outline-none transition focus:border-slate-300/50 focus:shadow-[0_0_0_3px_rgba(148,163,184,0.16)]';
+    'min-h-11 rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] px-3 text-sm font-medium tracking-normal text-[var(--text)] outline-none transition focus:border-[var(--accent)] focus:shadow-[0_0_0_3px_var(--accent-soft)]';
+  const isDark = theme === 'dark';
 
   return (
-    <div className="relative isolate flex min-h-screen items-center justify-center px-4 py-10 text-slate-100">
-      <div className="pointer-events-none absolute inset-0 bg-[linear-gradient(180deg,#0b1016_0%,#121821_46%,#0d1218_100%)]" />
-      <CommandAtmosphere theme="dark" rain={rain !== false} glassVisible={glassVisible !== false} glassMotion={glassMotion !== false} />
-      <div className="absolute right-4 top-4 z-20 flex items-center gap-1 rounded-xl border border-white/10 bg-slate-950/40 p-1 backdrop-blur-xl">
-        {['th', 'en'].map((code) => (
-          <button
-            key={code}
-            type="button"
-            onClick={() => setLang?.(code)}
-            className={`min-h-9 rounded-lg px-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] transition ${
-              lang === code ? 'bg-white/12 text-slate-50' : 'text-slate-400 hover:text-slate-200'
-            }`}
-          >
-            {code.toUpperCase()}
-          </button>
-        ))}
+    <div className="relative isolate flex min-h-screen items-center justify-center px-4 py-10 text-[var(--text)]">
+      <div className="pointer-events-none absolute inset-0" style={{ background: 'var(--bg)' }} />
+      <CommandAtmosphere theme={isDark ? 'dark' : 'light'} rain={rain !== false} glassVisible={glassVisible !== false} glassMotion={glassMotion !== false} />
+      <div className="absolute right-4 top-4 z-20 flex items-center gap-2">
+        <div className="flex items-center gap-1 rounded-xl border border-[var(--border)] bg-[var(--glass-bg)] p-1 backdrop-blur-xl">
+          {['th', 'en'].map((code) => (
+            <button
+              key={code}
+              type="button"
+              onClick={() => setLang?.(code)}
+              className={`min-h-9 rounded-lg px-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] transition ${
+                lang === code ? 'bg-[var(--accent)] text-[var(--accent-ink)]' : 'text-[var(--text-muted)] hover:text-[var(--text)]'
+              }`}
+            >
+              {code.toUpperCase()}
+            </button>
+          ))}
+        </div>
+        <button
+          type="button"
+          onClick={() => setTheme?.(isDark ? 'light' : 'dark')}
+          className="min-h-11 rounded-xl border border-[var(--border)] bg-[var(--glass-bg)] px-3 text-[0.68rem] font-semibold uppercase tracking-[0.12em] text-[var(--text)] backdrop-blur-xl"
+        >
+          {isDark ? 'Light' : 'Dark'}
+        </button>
       </div>
 
       <motion.section
-        className={`relative z-10 flex items-center justify-center border border-white/15 bg-slate-950/42 shadow-[0_0_0_1px_rgba(148,163,184,0.12),0_0_48px_rgba(100,116,139,0.12),0_28px_80px_rgba(8,12,20,0.42)] backdrop-blur-xl ${
+        className={`relative z-10 flex items-center justify-center border border-[var(--border)] bg-[var(--glass-bg)] shadow-[0_0_0_1px_var(--accent-soft),0_28px_80px_rgba(8,12,20,0.18)] backdrop-blur-xl ${
           loginState === 'idle' || loginState === 'error' ? 'overflow-hidden' : 'overflow-visible'
         }`}
         animate={morphByState[loginState]}
@@ -275,28 +285,28 @@ export default function Login({ onAuthenticated } = {}) {
           {loginState === 'idle' ? (
             <motion.div key="idle" className="w-full max-w-[22.5rem]" {...innerMotion}>
               <header className="mb-6 flex items-start gap-3">
-                <img src={brandSrc} alt="" className="h-12 w-12 rounded-xl border border-white/15 bg-slate-900 object-contain p-0.5" />
+                <img src={brandSrc} alt="" className="h-12 w-12 rounded-xl border border-[var(--border)] bg-[var(--bg-elevated)] object-contain p-0.5" />
                 <div>
-                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-slate-400">{t('auth.kicker')}</p>
-                  <h1 className="mt-1 text-xl font-semibold tracking-wide text-slate-50">
+                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.22em] text-[var(--text-muted)]">{t('auth.kicker')}</p>
+                  <h1 className="mt-1 text-xl font-semibold tracking-wide text-[var(--text)]">
                     {mode === 'signup' ? t('auth.signupTitle') : t('auth.signinTitle')}
                   </h1>
                 </div>
               </header>
 
               {status && !error ? (
-                <p className="mb-4 text-sm text-slate-300" role="status">
+                <p className="mb-4 text-sm text-[var(--text-muted)]" role="status">
                   {status}
                 </p>
               ) : null}
               {error ? (
-                <p className="mb-4 text-sm text-rose-200/90" role="alert">
+                <p className="mb-4 text-sm text-rose-500 dark:text-rose-200/90" role="alert">
                   {error}
                 </p>
               ) : null}
 
               <form onSubmit={handleSubmit} className="flex flex-col gap-4">
-                <label className="grid gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                <label className="grid gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   Email
                   <input
                     className={inputClass}
@@ -309,8 +319,8 @@ export default function Login({ onAuthenticated } = {}) {
                     required
                   />
                 </label>
-                {mode === 'signup' ? <p className="text-[0.72rem] leading-5 text-slate-500">{t('auth.emailHint')}</p> : null}
-                <label className="grid gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-slate-400">
+                {mode === 'signup' ? <p className="text-[0.72rem] leading-5 text-[var(--text-muted)]">{t('auth.emailHint')}</p> : null}
+                <label className="grid gap-1.5 text-[0.7rem] font-semibold uppercase tracking-[0.14em] text-[var(--text-muted)]">
                   Password
                   <input
                     className={inputClass}
@@ -326,16 +336,16 @@ export default function Login({ onAuthenticated } = {}) {
                 <button
                   type="submit"
                   disabled={busy}
-                  className="min-h-11 rounded-xl bg-slate-100 text-sm font-semibold uppercase tracking-[0.16em] text-slate-900 transition hover:bg-white disabled:cursor-wait disabled:opacity-70"
+                  className="min-h-11 rounded-xl bg-[var(--accent)] text-sm font-semibold uppercase tracking-[0.16em] text-[var(--accent-ink)] transition hover:opacity-90 disabled:cursor-wait disabled:opacity-70"
                 >
                   {mode === 'signup' ? t('auth.signupSubmit') : t('auth.signinSubmit')}
                 </button>
               </form>
 
-              <div className="my-5 flex items-center gap-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-slate-500">
-                <span className="h-px flex-1 bg-white/10" />
+              <div className="my-5 flex items-center gap-3 text-[0.68rem] font-semibold uppercase tracking-[0.18em] text-[var(--text-muted)]">
+                <span className="h-px flex-1 bg-[var(--border)]" />
                 {t('auth.or')}
-                <span className="h-px flex-1 bg-white/10" />
+                <span className="h-px flex-1 bg-[var(--border)]" />
               </div>
 
               <MagneticDiscordButton label={t('auth.discord')} hint={t('auth.discord')} disabled={busy} onClick={handleDiscord} />
@@ -349,25 +359,25 @@ export default function Login({ onAuthenticated } = {}) {
                     setError('');
                     setStatus('');
                   }}
-                  className="text-slate-300 underline-offset-4 hover:underline"
+                  className="text-[var(--text)] underline-offset-4 hover:underline"
                 >
                   {mode === 'signup' ? t('auth.switchSignin') : t('auth.switchSignup')}
                 </button>
               </p>
               <p className="mt-3 text-center text-sm">
-                <Link to="/tickets" className="text-slate-400 no-underline hover:text-slate-200">
+                <Link to="/tickets" className="text-[var(--text-muted)] no-underline hover:text-[var(--text)]">
                   {t('nav.tickets')}
                 </Link>
               </p>
 
               {showLocal ? (
-                <div className="mt-6 grid gap-2 rounded-xl border border-white/10 bg-white/[0.03] p-3">
-                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-slate-500">Local test accounts</p>
+                <div className="mt-6 grid gap-2 rounded-xl border border-[var(--border)] bg-[var(--bg-muted)] p-3">
+                  <p className="text-[0.66rem] font-semibold uppercase tracking-[0.16em] text-[var(--text-muted)]">Local test accounts</p>
                   {LOCAL_TEST_ACCOUNTS.map((account) => (
                     <button
                       key={account.email}
                       type="button"
-                      className="rounded-lg border border-white/10 px-3 py-2 text-left text-xs text-slate-300"
+                      className="rounded-lg border border-[var(--border)] px-3 py-2 text-left text-xs text-[var(--text-muted)]"
                       onClick={() => {
                         setEmail(account.email);
                         setPassword(account.password);
@@ -437,8 +447,8 @@ export default function Login({ onAuthenticated } = {}) {
               >
                 <Umbrella className="h-7 w-7" strokeWidth={1.9} aria-hidden="true" />
               </motion.span>
-              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-sky-100/90">{t('auth.denied')}</p>
-              <p className="max-w-[20rem] text-sm leading-6 text-slate-200" role="alert">
+              <p className="text-[0.72rem] font-semibold uppercase tracking-[0.16em] text-sky-700 dark:text-sky-100/90">{t('auth.denied')}</p>
+              <p className="max-w-[20rem] text-sm leading-6 text-[var(--text)]" role="alert">
                 {error}
               </p>
             </motion.div>

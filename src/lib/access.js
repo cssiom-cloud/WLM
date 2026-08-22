@@ -138,7 +138,11 @@ export function oauthRedirectTo(path = '/') {
   const origin = window.location.origin;
   const suffix = path.startsWith('/') ? path : `/${path}`;
   if (isReactRuntime()) {
-    return `${origin}${getJsxBase()}${suffix === '/' ? '' : suffix}`;
+    const base = getJsxBase();
+    if (suffix === '/') {
+      return `${origin}${base}/`;
+    }
+    return `${origin}${base}${suffix}`;
   }
   const site = getSiteBasePath();
   return `${origin}${site}${suffix}`;

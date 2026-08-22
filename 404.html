@@ -14,7 +14,7 @@
           var marker = '/app';
           var at = location.pathname.indexOf(marker);
           var prefix = at > 0 ? location.pathname.slice(0, at) : '';
-          location.replace((prefix || '') + '/react.html');
+          location.replace((prefix || '') + '/react.html' + location.search + location.hash);
           return;
         }
       })();

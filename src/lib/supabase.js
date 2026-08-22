@@ -1,3 +1,4 @@
+import './spa-boot.js';
 import { createClient } from '@supabase/supabase-js';
 import { WLR_COMMAND_CONFIG } from './config.js';
 

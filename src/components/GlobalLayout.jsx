@@ -181,7 +181,31 @@ export function CommandProvider({ children }) {
 
   useEffect(() => {
     let cancelled = false;
+    async function consumeOAuthCode() {
+      const url = new URL(window.location.href);
+      const hasCode = Boolean(url.searchParams.get('code')) || /access_token|refresh_token/.test(url.hash);
+      if (!hasCode) {
+        return;
+      }
+      const first = await supabase.auth.getSession();
+      if (!first.data.session) {
+        try {
+          await supabase.auth.exchangeCodeForSession(url.href);
+        } catch {
+          /* detectSessionInUrl may already have consumed the code */
+        }
+      }
+      const clean = new URL(window.location.href);
+      ['code', 'state', 'error', 'error_description', 'error_code'].forEach((key) => {
+        clean.searchParams.delete(key);
+      });
+      if (/access_token|refresh_token|error/.test(clean.hash)) {
+        clean.hash = '';
+      }
+      window.history.replaceState(null, '', `${clean.pathname}${clean.search}${clean.hash}`);
+    }
     async function boot() {
+      await consumeOAuthCode();
       const { data } = await supabase.auth.getSession();
       if (cancelled) {
         return;
@@ -191,6 +215,7 @@ export function CommandProvider({ children }) {
         await loadRoster(data.session);
       } finally {
         if (!cancelled) {
+          skipPersist.current = false;
           setBootstrapping(false);
         }
       }
@@ -226,10 +251,13 @@ export function CommandProvider({ children }) {
       theme_accent: readLocalPrefs(activePersonnel?.id || '').theme_accent,
       ui_skin: readLocalPrefs(activePersonnel?.id || '').ui_skin
     });
-    if (!activePersonnel?.id || skipPersist.current) {
+    if (skipPersist.current) {
       return undefined;
     }
-    writeLocalPrefs(activePersonnel.id, prefs);
+    writeLocalPrefs(activePersonnel?.id || '', prefs);
+    if (!activePersonnel?.id) {
+      return undefined;
+    }
     const timer = window.setTimeout(() => {
       saveOwnSettings(supabase, activePersonnel.id, prefsToSettingsPayload(prefs)).catch(() => {});
     }, 400);

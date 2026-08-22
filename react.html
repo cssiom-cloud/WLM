@@ -4,6 +4,24 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>W.L.R Command Personnel</title>
+    <script>
+      (function () {
+        try {
+          var saved = sessionStorage.getItem('wlr-spa-path');
+          if (!saved) {
+            return;
+          }
+          sessionStorage.removeItem('wlr-spa-path');
+          var url = new URL(saved, location.origin);
+          if (url.pathname.indexOf('/app') === -1) {
+            return;
+          }
+          var search = url.search || location.search;
+          var hash = url.hash || location.hash;
+          history.replaceState(null, '', url.pathname + search + hash);
+        } catch (error) {}
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>
