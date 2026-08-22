@@ -1,11 +1,22 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
-import { AnimatePresence, motion } from 'framer-motion';
+import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { ClipboardList, FileText, LogOut, Settings, UserRoundCog, Users } from 'lucide-react';
 
 const AUTH_STORAGE_KEY = 'wlr-command-auth-v1';
 const spring = { type: 'spring', stiffness: 300, damping: 30 };
 const pageTransition = { duration: 0.4, ease: 'easeInOut' };
+const zenFade = { duration: 0.4, ease: 'easeInOut' };
+
+const ZenModeContext = createContext(null);
+
+export function useZenMode() {
+  const value = useContext(ZenModeContext);
+  if (!value) {
+    throw new Error('useZenMode must be used inside GlobalLayout.');
+  }
+  return value;
+}
 
 const PLACEHOLDER_ROSTER = [
   {
@@ -336,11 +347,17 @@ function UserChip({ person }) {
 export function GlobalLayout() {
   const { activePersonnel, logout } = useAuth();
   const [open, setOpen] = useState(false);
+  const [zen, setZen] = useState(false);
+  const reduceMotion = useReducedMotion();
   const location = useLocation();
   const navigate = useNavigate();
+  const zenValue = useMemo(() => ({ zen, setZen }), [zen]);
+  const chromeOpacity = { opacity: zen ? 0.38 : 1 };
+  const chromeFade = reduceMotion ? { duration: 0 } : zenFade;
 
   useEffect(() => {
     setOpen(false);
+    setZen(false);
   }, [location.pathname]);
 
   useEffect(() => {
@@ -371,8 +388,14 @@ export function GlobalLayout() {
   }
 
   return (
-    <div className="min-h-screen bg-ivory lg:pl-[280px]">
-      <aside className="hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[280px] lg:flex-col lg:border-r lg:border-navy/10 lg:bg-white/55 lg:px-4 lg:py-5 lg:shadow-glass lg:backdrop-blur-xl">
+    <ZenModeContext.Provider value={zenValue}>
+    <div className="min-h-screen bg-ivory lg:pl-[280px] print:pl-0" data-zen={zen ? 'true' : 'false'}>
+      <motion.aside
+        className="hidden print:hidden lg:fixed lg:inset-y-0 lg:left-0 lg:flex lg:w-[280px] lg:flex-col lg:border-r lg:border-navy/10 lg:bg-white/55 lg:px-4 lg:py-5 lg:shadow-glass lg:backdrop-blur-xl"
+        animate={chromeOpacity}
+        transition={chromeFade}
+        style={{ pointerEvents: zen ? 'none' : 'auto' }}
+      >
         <div className="mb-6 border-b border-navy/10 pb-5">
           <BrandMark compact />
         </div>
@@ -385,9 +408,14 @@ export function GlobalLayout() {
           <LogOut className="h-4 w-4" strokeWidth={1.75} />
           Sign out
         </button>
-      </aside>
+      </motion.aside>
 
-      <header className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-navy/10 bg-white/55 px-4 shadow-[0_8px_24px_rgba(11,31,58,0.04)] backdrop-blur-xl sm:px-6">
+      <motion.header
+        className="sticky top-0 z-40 flex h-[72px] items-center justify-between gap-4 border-b border-navy/10 bg-white/55 px-4 shadow-[0_8px_24px_rgba(11,31,58,0.04)] backdrop-blur-xl print:hidden sm:px-6"
+        animate={chromeOpacity}
+        transition={chromeFade}
+        style={{ pointerEvents: zen ? 'none' : 'auto' }}
+      >
         <div className="flex min-w-0 items-center gap-3">
           <HamburgerButton open={open} onToggle={() => setOpen((value) => !value)} />
           <div className="lg:hidden">
@@ -408,7 +436,7 @@ export function GlobalLayout() {
             <span className="hidden sm:inline">Sign out</span>
           </button>
         </div>
-      </header>
+      </motion.header>
 
       <AnimatePresence>
         {open ? (
@@ -417,7 +445,7 @@ export function GlobalLayout() {
               key="drawer-backdrop"
               type="button"
               aria-label="Close navigation menu"
-              className="fixed inset-0 z-40 bg-navy/25 backdrop-blur-sm lg:hidden"
+              className="fixed inset-0 z-40 bg-navy/25 backdrop-blur-sm print:hidden lg:hidden"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
@@ -427,7 +455,7 @@ export function GlobalLayout() {
             <motion.aside
               id="command-drawer"
               key="drawer-panel"
-              className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,88vw)] flex-col border-r border-navy/10 bg-white/75 px-4 py-5 shadow-glass backdrop-blur-xl lg:hidden"
+              className="fixed inset-y-0 left-0 z-50 flex w-[min(280px,88vw)] flex-col border-r border-navy/10 bg-white/75 px-4 py-5 shadow-glass backdrop-blur-xl print:hidden lg:hidden"
               initial={{ x: '-100%' }}
               animate={{ x: 0 }}
               exit={{ x: '-100%' }}
@@ -450,7 +478,7 @@ export function GlobalLayout() {
         ) : null}
       </AnimatePresence>
 
-      <main className="px-4 py-6 sm:px-6 lg:px-8">
+      <main className="px-4 py-6 sm:px-6 lg:px-8 print:p-0">
         <AnimatePresence mode="wait">
           <motion.div
             key={location.key}
@@ -464,5 +492,6 @@ export function GlobalLayout() {
         </AnimatePresence>
       </main>
     </div>
+    </ZenModeContext.Provider>
   );
 }

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Sarabun:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Source+Sans+3:ital,wght@0,400;0,500;0,600;0,700;1,400&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -35,6 +35,10 @@ body {
   isolation: isolate;
 }
 
+.font-sarabun {
+  font-family: Sarabun, Tahoma, 'Source Sans 3', sans-serif;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
@@ -43,5 +47,41 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
     scroll-behavior: auto !important;
+  }
+}
+
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 0;
+  }
+
+  html,
+  body,
+  #root {
+    background: #fff !important;
+    min-height: auto !important;
+    height: auto !important;
+  }
+
+  body {
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .print-chrome-hide {
+    display: none !important;
+  }
+
+  .a4-stage,
+  .a4-sheet {
+    transform: none !important;
+    overflow: visible !important;
+    width: 21cm !important;
+    max-width: 21cm !important;
+    height: auto !important;
+    min-height: 29.7cm !important;
+    box-shadow: none !important;
+    margin: 0 !important;
   }
 }

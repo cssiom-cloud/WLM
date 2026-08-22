@@ -12,7 +12,8 @@ export default {
         ivory: '#F7F5F0'
       },
       fontFamily: {
-        sans: ['"Source Sans 3"', 'ui-sans-serif', 'system-ui', 'sans-serif']
+        sans: ['"Source Sans 3"', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+        sarabun: ['Sarabun', 'Tahoma', 'sans-serif']
       },
       boxShadow: {
         glass: '0 18px 48px rgba(11, 31, 58, 0.08)'
