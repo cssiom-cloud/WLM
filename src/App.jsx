@@ -163,7 +163,7 @@ function AnimatedRoutes() {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
       <AuthProvider>
         <div className="min-h-screen bg-ivory font-sans text-slate-800 antialiased">
           <AnimatedRoutes />
