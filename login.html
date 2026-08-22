@@ -8,8 +8,8 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Prompt:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://unpkg.com/aos@2.3.4/dist/aos.css">
-    <link rel="stylesheet" href="./css/design-system.css?v=drop-nav">
-    <link rel="stylesheet" href="./css/animations.css?v=drop-nav">
+    <link rel="stylesheet" href="./css/design-system.css?v=morph-seal">
+    <link rel="stylesheet" href="./css/animations.css?v=morph-seal">
     <script>
       (function () {
         var theme = localStorage.getItem('wlr-command-theme');
@@ -22,39 +22,51 @@
   <body>
     <div class="page-shell">
       <header id="command-header"></header>
-      <main class="page-content">
-        <section class="auth-card">
-          <p class="page-kicker" data-i18n="auth.kicker">Authentication</p>
-          <h1 id="auth-title" class="page-title">Sign In</h1>
-          <p id="status-banner" class="status-banner" role="status"></p>
-          <form id="auth-form">
-            <label>Email
-              <input id="auth-email" class="text-field" type="email" required autocomplete="username">
-            </label>
-            <p id="signup-email-hint" class="auth-hint" hidden data-i18n="auth.emailHint">Use a real personal email. Addresses such as test@gmail.com are not accepted.</p>
-            <label>Password
-              <input id="auth-password" class="text-field" type="password" required autocomplete="current-password">
-            </label>
-            <button id="auth-submit" class="btn btn-primary" type="submit">Sign In</button>
-          </form>
-          <div class="auth-divider"><span data-i18n="auth.or">or</span></div>
-          <button id="auth-discord" class="btn btn-discord" type="button">
-            <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
-              <path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.07.07 0 0 0-.079.035c-.21.375-.444.864-.608 1.25a18.3 18.3 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.08.08 0 0 0-.079-.035A19.7 19.7 0 0 0 3.677 4.37a.08.08 0 0 0-.037.027C.533 9.047-.32 13.58.099 18.057a.08.08 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.08.08 0 0 0 .084-.028 14 14 0 0 0 1.226-1.994.07.07 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.08.08 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.07.07 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.07.07 0 0 1 .078.01c.12.098.246.198.373.292a.08.08 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.892.08.08 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.08.08 0 0 0 .084.028 19.8 19.8 0 0 0 6.002-3.03.08.08 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+      <main class="page-content auth-page">
+        <section class="auth-card" id="auth-card" data-auth-state="idle">
+          <div class="auth-layer auth-layer-idle" id="auth-idle">
+            <p class="page-kicker" data-i18n="auth.kicker">Authentication</p>
+            <h1 id="auth-title" class="page-title">Sign In</h1>
+            <p id="status-banner" class="status-banner" role="status"></p>
+            <form id="auth-form">
+              <label>Email
+                <input id="auth-email" class="text-field" type="email" required autocomplete="username">
+              </label>
+              <p id="signup-email-hint" class="auth-hint" hidden data-i18n="auth.emailHint">Use a real personal email. Addresses such as test@gmail.com are not accepted.</p>
+              <label>Password
+                <input id="auth-password" class="text-field" type="password" required autocomplete="current-password">
+              </label>
+              <button id="auth-submit" class="btn btn-primary" type="submit">Sign In</button>
+            </form>
+            <div class="auth-divider"><span data-i18n="auth.or">or</span></div>
+            <button id="auth-discord" class="btn btn-discord" type="button">
+              <svg class="discord-mark" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20.317 4.37a19.8 19.8 0 0 0-4.885-1.515.07.07 0 0 0-.079.035c-.21.375-.444.864-.608 1.25a18.3 18.3 0 0 0-5.487 0 12.6 12.6 0 0 0-.617-1.25.08.08 0 0 0-.079-.035A19.7 19.7 0 0 0 3.677 4.37a.08.08 0 0 0-.037.027C.533 9.047-.32 13.58.099 18.057a.08.08 0 0 0 .031.057 19.9 19.9 0 0 0 5.993 3.03.08.08 0 0 0 .084-.028 14 14 0 0 0 1.226-1.994.07.07 0 0 0-.041-.106 13.1 13.1 0 0 1-1.872-.892.08.08 0 0 1-.008-.128 10.2 10.2 0 0 0 .372-.292.07.07 0 0 1 .077-.01c3.928 1.793 8.18 1.793 12.062 0a.07.07 0 0 1 .078.01c.12.098.246.198.373.292a.08.08 0 0 1-.006.128 12.3 12.3 0 0 1-1.873.892.08.08 0 0 0-.041.107c.36.698.772 1.362 1.225 1.993a.08.08 0 0 0 .084.028 19.8 19.8 0 0 0 6.002-3.03.08.08 0 0 0 .032-.054c.5-5.177-.838-9.674-3.549-13.66a.06.06 0 0 0-.031-.03zM8.02 15.33c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.956-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.956 2.418-2.157 2.418zm7.975 0c-1.183 0-2.157-1.085-2.157-2.419 0-1.333.955-2.419 2.157-2.419 1.21 0 2.176 1.095 2.157 2.42 0 1.333-.946 2.418-2.157 2.418z"/>
+              </svg>
+              <span data-i18n="auth.discord">Authenticate via Discord</span>
+            </button>
+            <p class="auth-switch">
+              <button id="auth-toggle" type="button">Create an account</button>
+            </p>
+            <p class="auth-switch">
+              <a href="./tickets.html" data-i18n="nav.tickets">Contact Admin</a>
+            </p>
+            <div id="local-test-notes" class="local-test-notes" hidden></div>
+          </div>
+          <div class="auth-layer auth-layer-scanning" id="auth-scanning" aria-hidden="true">
+            <span class="auth-scan-ring" aria-hidden="true"></span>
+            <span class="visually-hidden" data-i18n="auth.scanning">Verifying clearance</span>
+          </div>
+          <div class="auth-layer auth-layer-success" id="auth-success" aria-hidden="true">
+            <svg class="auth-check" viewBox="0 0 24 24" aria-hidden="true">
+              <path fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" d="M20 6 9 17l-5-5"/>
             </svg>
-            <span data-i18n="auth.discord">Authenticate via Discord</span>
-          </button>
-          <p class="auth-switch">
-            <button id="auth-toggle" type="button">Create an account</button>
-          </p>
-          <p class="auth-switch">
-            <a href="./tickets.html" data-i18n="nav.tickets">Contact Admin</a>
-          </p>
-          <div id="local-test-notes" class="local-test-notes" hidden></div>
+            <p class="auth-clearance" data-i18n="auth.clearanceGranted">CLEARANCE GRANTED</p>
+          </div>
         </section>
       </main>
     </div>
     <script src="https://unpkg.com/aos@2.3.4/dist/aos.js"></script>
-    <script type="module" src="./js/login.js?v=nav-rail"></script>
+    <script type="module" src="./js/login.js?v=morph-seal"></script>
   </body>
 </html>

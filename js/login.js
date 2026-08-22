@@ -14,7 +14,174 @@ import { LOCAL_TEST_ACCOUNTS, resetLocalStation } from './local-station.js';
 import { showStatus } from './ui.js';
 import { revealBlurText } from './motion.js';
 
+const MORPH_MS = 550;
+const SCAN_MS = 2000;
+const SUCCESS_HOLD_MS = 280;
+
+const MORPH_BOX = {
+  scanning: { width: '5rem', height: '5rem', borderRadius: '50%', padding: '0px' },
+  success: { width: 'min(20rem, calc(100vw - 2rem))', height: '4rem', borderRadius: '9999px', padding: '0px 1.5rem' },
+  idle: { width: 'min(24rem, 100%)', height: '24rem', borderRadius: '16px', padding: '2rem' }
+};
+
 let mode = 'signin';
+let authBusy = false;
+
+function authCard() {
+  return document.querySelector('#auth-card');
+}
+
+function prefersReducedMotion() {
+  return window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+}
+
+function sleep(ms) {
+  return new Promise((resolve) => {
+    window.setTimeout(resolve, ms);
+  });
+}
+
+function nextFrame() {
+  return new Promise((resolve) => {
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(resolve);
+    });
+  });
+}
+
+function setAuthState(next) {
+  const card = authCard();
+  const idle = document.querySelector('#auth-idle');
+  const scanning = document.querySelector('#auth-scanning');
+  const success = document.querySelector('#auth-success');
+  if (!card) {
+    return;
+  }
+
+  card.dataset.authState = next;
+  if (idle) {
+    idle.setAttribute('aria-hidden', next === 'idle' ? 'false' : 'true');
+  }
+  if (scanning) {
+    scanning.setAttribute('aria-hidden', next === 'scanning' ? 'false' : 'true');
+  }
+  if (success) {
+    success.setAttribute('aria-hidden', next === 'success' ? 'false' : 'true');
+  }
+}
+
+function clearCardBox(card) {
+  card.style.width = '';
+  card.style.height = '';
+  card.style.minHeight = '';
+  card.style.borderRadius = '';
+  card.style.padding = '';
+}
+
+function applyBox(card, box) {
+  card.style.width = box.width;
+  card.style.height = box.height;
+  card.style.minHeight = '0';
+  card.style.borderRadius = box.borderRadius;
+  card.style.padding = box.padding;
+}
+
+function captureCardBox(card) {
+  const rect = card.getBoundingClientRect();
+  const computed = window.getComputedStyle(card);
+  return {
+    width: `${rect.width}px`,
+    height: `${rect.height}px`,
+    borderRadius: computed.borderRadius,
+    padding: computed.padding
+  };
+}
+
+async function morphTo(state) {
+  const card = authCard();
+  if (!card) {
+    return;
+  }
+
+  if (prefersReducedMotion()) {
+    setAuthState(state);
+    if (state === 'idle') {
+      clearCardBox(card);
+    } else {
+      applyBox(card, MORPH_BOX[state]);
+    }
+    return;
+  }
+
+  const from = captureCardBox(card);
+  applyBox(card, from);
+  await nextFrame();
+
+  setAuthState(state);
+  applyBox(card, MORPH_BOX[state]);
+  if (state === 'idle') {
+    card.style.minHeight = '24rem';
+  }
+
+  await new Promise((resolve) => {
+    let settled = false;
+    const done = () => {
+      if (settled) {
+        return;
+      }
+      settled = true;
+      card.removeEventListener('transitionend', onEnd);
+      window.clearTimeout(failSafe);
+      resolve();
+    };
+    const onEnd = (event) => {
+      if (event.target === card && (event.propertyName === 'width' || event.propertyName === 'height')) {
+        done();
+      }
+    };
+    const failSafe = window.setTimeout(done, MORPH_MS + 80);
+    card.addEventListener('transitionend', onEnd);
+  });
+
+  if (state === 'idle') {
+    clearCardBox(card);
+  }
+}
+
+async function playClearanceSeal() {
+  await morphTo('scanning');
+  await sleep(prefersReducedMotion() ? 0 : SCAN_MS);
+  await morphTo('success');
+  await sleep(prefersReducedMotion() ? 0 : SUCCESS_HOLD_MS);
+}
+
+async function restoreAuthForm() {
+  await morphTo('idle');
+  setBusy(false);
+}
+
+function setBusy(busy) {
+  const submit = document.querySelector('#auth-submit');
+  const discord = document.querySelector('#auth-discord');
+  const toggle = document.querySelector('#auth-toggle');
+  const email = document.querySelector('#auth-email');
+  const password = document.querySelector('#auth-password');
+  if (submit) {
+    submit.disabled = busy;
+  }
+  if (discord) {
+    discord.disabled = busy;
+  }
+  if (toggle) {
+    toggle.disabled = busy;
+  }
+  if (email) {
+    email.disabled = busy;
+  }
+  if (password) {
+    password.disabled = busy;
+  }
+}
 
 function syncAuthMode() {
   const submit = document.querySelector('#auth-submit');
@@ -94,6 +261,9 @@ readSession()
   });
 
 document.querySelector('#auth-toggle').addEventListener('click', () => {
+  if (authBusy) {
+    return;
+  }
   mode = mode === 'signin' ? 'signup' : 'signin';
   syncAuthMode();
   revealBlurText(document.querySelector('#auth-title'));
@@ -101,41 +271,53 @@ document.querySelector('#auth-toggle').addEventListener('click', () => {
 
 window.addEventListener('wlr-lang-changed', () => {
   syncAuthMode();
-  revealBlurText(document.querySelector('#auth-title'));
+  if (authCard()?.dataset.authState === 'idle') {
+    revealBlurText(document.querySelector('#auth-title'));
+  }
 });
 
 document.querySelector('#auth-discord').addEventListener('click', async () => {
-  const button = document.querySelector('#auth-discord');
-  if (button.disabled) {
+  if (authBusy) {
     return;
   }
-  button.disabled = true;
+  authBusy = true;
+  setBusy(true);
+
   try {
+    await playClearanceSeal();
     await signInWithDiscord();
   } catch (error) {
+    await restoreAuthForm();
     showStatus(error.message || t('auth.discordError'), true);
-    button.disabled = false;
+  } finally {
+    authBusy = false;
+    if (authCard()?.dataset.authState === 'idle') {
+      setBusy(false);
+    }
   }
 });
 
 document.querySelector('#auth-form').addEventListener('submit', async (event) => {
   event.preventDefault();
-  const submit = document.querySelector('#auth-submit');
-  const email = document.querySelector('#auth-email').value.trim();
-  const password = document.querySelector('#auth-password').value;
-
-  if (submit.disabled) {
+  if (authBusy) {
     return;
   }
-  submit.disabled = true;
+
+  const email = document.querySelector('#auth-email').value.trim();
+  const password = document.querySelector('#auth-password').value;
+  authBusy = true;
+  setBusy(true);
 
   try {
+    await playClearanceSeal();
+
     if (mode === 'signup') {
       const result = await signUpWithEmail(email, password);
       if (result.session) {
         await routeAfterAuth();
         return;
       }
+      await restoreAuthForm();
       showStatus(t('auth.created'));
       mode = 'signin';
       syncAuthMode();
@@ -145,8 +327,12 @@ document.querySelector('#auth-form').addEventListener('submit', async (event) =>
     await signInWithEmail(email, password);
     await routeAfterAuth();
   } catch (error) {
+    await restoreAuthForm();
     showStatus(error.message, true);
   } finally {
-    submit.disabled = false;
+    authBusy = false;
+    if (authCard()?.dataset.authState === 'idle') {
+      setBusy(false);
+    }
   }
 });

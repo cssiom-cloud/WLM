@@ -37,7 +37,6 @@
 .command-navbar,
 .command-drawer,
 .filter-panel,
-.auth-card,
 .profile-panel,
 .roster-row,
 .table-wrap,
@@ -223,6 +222,10 @@
   to { background-position: 0 56px; }
 }
 
+@keyframes auth-scan-spin {
+  to { transform: rotate(360deg); }
+}
+
 .page-enter {
   animation: page-enter 0.58s var(--motion) both;
 }
@@ -345,6 +348,13 @@
   }
 
   .page-enter {
+    animation: none !important;
+  }
+
+  .auth-card,
+  .auth-layer,
+  .auth-scan-ring {
+    transition: none !important;
     animation: none !important;
   }
 }
