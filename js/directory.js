@@ -1,6 +1,7 @@
 import { bootCommandShell } from './shell.js';
 import {
   MILITARY_BRANCHES,
+  NATIONALITIES,
   RANK_STRUCTURE,
   biographyParagraphs,
   formatPersonnelName,
@@ -479,7 +480,7 @@ function assignmentMarkup(record) {
     [t('units.serviceRank'), record.military_rank || '—'],
     [t('dir.deployment'), record.nationality || '—'],
     ['Agency', record.wlc_agency || '—'],
-    ['Organization role', record.organization_role || '—']
+    [t('dir.orgRole'), record.organization_role || '—']
   ];
   return `
     <section class="dossier-panel" aria-labelledby="dossier-assign-title">
@@ -606,6 +607,14 @@ function openDossierEditor(record) {
       Branch
       <select id="dossier-edit-branch" class="select-field">${optionMarkup(MILITARY_BRANCHES, record.military_branch || '')}</select>
     </label>
+    <label>
+      ${escapeHtml(t('dir.deployment'))}
+      <select id="dossier-edit-posting" class="select-field">${optionMarkup(NATIONALITIES, record.nationality || '')}</select>
+    </label>
+    <label>
+      ${escapeHtml(t('dir.orgRole'))}
+      <input id="dossier-edit-org-role" class="text-field" type="text" maxlength="120" value="${escapeHtml(record.organization_role || '')}">
+    </label>
     <div class="full">
       <p class="editor-label">${escapeHtml(t('dir.ribbons'))}</p>
       <div class="dossier-preset-grid" role="list">
@@ -691,6 +700,8 @@ async function persistDossierEditor(event) {
     const updated = await updatePersonnelRecord(record.id, {
       military_rank: document.querySelector('#dossier-edit-rank').value || 'Lieutenant',
       military_branch: document.querySelector('#dossier-edit-branch').value || null,
+      nationality: document.querySelector('#dossier-edit-posting').value || null,
+      organization_role: document.querySelector('#dossier-edit-org-role').value.trim() || null,
       medals: draftMedals,
       service_skills: skills,
       service_timeline: readDraftTimeline()

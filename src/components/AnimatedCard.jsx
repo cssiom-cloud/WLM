@@ -263,7 +263,7 @@ export function DossierOverlay({
                           [translate('units.serviceRank'), row.military_rank || '—'],
                           [translate('dir.deployment'), row.nationality || '—'],
                           ['Agency', row.wlc_agency || '—'],
-                          ['Organization role', row.organization_role || '—']
+                          [translate('dir.orgRole'), row.organization_role || '—']
                         ].map(([label, value]) => (
                           <div key={label}>
                             <dt className="text-[0.68rem] font-semibold uppercase tracking-[0.16em] text-stone-600 dark:text-slate-400">{label}</dt>

@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { RANK_STRUCTURE } from '../../js/domain.js';
+import { NATIONALITIES, RANK_STRUCTURE } from '../../js/domain.js';
 import { RIBBON_PRESETS, SKILL_KEYS, TIMELINE_KINDS, editorTimeline, parseJsonObject, ribbonPalette } from '../lib/dossier.js';
 import { FileUploadButton, btnGhost, btnPrimary, fieldClass, CommandSelect } from '../lib/ui.jsx';
 
@@ -92,6 +92,27 @@ export default function DossierEditor({ record, t, onCancel, onSave, onPickImage
           <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
             {t('dir.trainingCourse')}
             <input className={fieldClass} value={draft.training_course} onChange={(event) => setDraft((current) => ({ ...current, training_course: event.target.value }))} />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {t('dir.deployment')}
+            <CommandSelect
+              value={draft.nationality}
+              onChange={(value) => setDraft((current) => ({ ...current, nationality: value }))}
+              placeholder="—"
+              options={[
+                { value: '', label: '—' },
+                ...NATIONALITIES.map((item) => ({ value: item, label: item }))
+              ]}
+            />
+          </label>
+          <label className="grid gap-1 text-xs font-semibold uppercase tracking-[0.12em] text-slate-500">
+            {t('dir.orgRole')}
+            <input
+              className={fieldClass}
+              value={draft.organization_role}
+              onChange={(event) => setDraft((current) => ({ ...current, organization_role: event.target.value }))}
+              maxLength={120}
+            />
           </label>
         </div>
         {onPickImage && tab === 'details' ? (
