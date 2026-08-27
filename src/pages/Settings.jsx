@@ -9,7 +9,7 @@ import { applyUiMode, persistUiSkin, readUiMode, reactUiAvailable } from '../../
 import { applyAccent } from '../../js/theme.js';
 import { resolvedUiScale } from '../../js/user-prefs.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from '../../js/session-vault.js';
-import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, registerDevicePasskey, verifyDevicePasskey } from '../../js/device-auth.js';
+import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, getSecondaryVerificationStatus, registerDevicePasskey, verifyDevicePasskey } from '../../js/device-auth.js';
 import { btnDanger, btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
@@ -80,10 +80,13 @@ export default function Settings() {
   const [creating, setCreating] = useState(false);
   const [resolvedScale, setResolvedScale] = useState(() => resolvedUiScale(uiScale));
   
-  // Device & Passkey state
+  // Device & Secondary Verification (2FA / Passkey) state
   const [deviceInfo, setDeviceInfo] = useState(() => detectDeviceInfo());
   const [passkeySupported, setPasskeySupported] = useState(false);
-  const [passkeyRegistered, setPasskeyRegistered] = useState(() => Boolean(getRegisteredPasskey()));
+  const [secStatus, setSecStatus] = useState(() => getSecondaryVerificationStatus());
+  const [setup2faOpen, setSetup2faOpen] = useState(false);
+  const [setupPin, setSetupPin] = useState('');
+  const [setupErr, setSetupErr] = useState('');
 
   // Session Vault state
   const [vaultSessions, setVaultSessions] = useState(() => readSessionVault());
@@ -98,7 +101,7 @@ export default function Settings() {
   useEffect(() => {
     isPasskeySupported().then((sup) => {
       setPasskeySupported(sup);
-      setPasskeyRegistered(Boolean(getRegisteredPasskey()));
+      setSecStatus(getSecondaryVerificationStatus());
     });
   }, []);
 
@@ -106,14 +109,25 @@ export default function Settings() {
   const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
   const canUnlink = (authUser?.identities || []).length > 1;
 
-  const handleRegisterPasskey = async () => {
+  const handleOpenSetup2fa = () => {
+    setSetupPin('');
+    setSetupErr('');
+    setSetup2faOpen(true);
+  };
+
+  const handleConfirmSetup2fa = async () => {
+    if (!setupPin || setupPin.trim().length < 4) {
+      setSetupErr(t('settings.sessionPasswordPlaceholder'));
+      return;
+    }
     try {
       const user = activePersonnel?.callsign || activePersonnel?.first_name || 'Personnel';
-      await registerDevicePasskey(user, `${user} (${deviceInfo.defaultLabel})`);
-      setPasskeyRegistered(true);
+      await registerDevicePasskey(user, `${user} (${deviceInfo.defaultLabel})`, setupPin.trim());
+      setSecStatus(getSecondaryVerificationStatus());
+      setSetup2faOpen(false);
       toast.show(t('settings.passkeyRegisteredOk'));
     } catch (err) {
-      toast.alert(err.message);
+      setSetupErr(err.message);
     }
   };
 
@@ -640,7 +654,7 @@ export default function Settings() {
             </div>
           </div>
 
-          {/* Device & Passkey Status Bar */}
+          {/* Device & Secondary Verification Status Bar */}
           <div className="mt-4 flex items-center justify-between flex-wrap gap-3 rounded-2xl border border-slate-200/80 bg-white/60 p-3.5 dark:border-white/10 dark:bg-slate-950/40">
             <div className="flex items-center gap-3">
               <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
@@ -653,25 +667,21 @@ export default function Settings() {
             </div>
             <div className="flex items-center gap-2">
               <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
-                passkeyRegistered
+                secStatus.enabled
                   ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                  : passkeySupported
-                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
-                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                  : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
               }`}>
                 <Fingerprint className="h-3.5 w-3.5" />
-                <span>{passkeyRegistered ? t('settings.passkeyRegistered') : passkeySupported ? t('settings.passkeyTitle') : t('settings.passkeyNotSupported')}</span>
+                <span>{secStatus.enabled ? t('settings.passkeyRegistered') : t('settings.passkeyTitle')}</span>
               </span>
-              {passkeySupported && !passkeyRegistered ? (
-                <button
-                  type="button"
-                  onClick={handleRegisterPasskey}
-                  className={`${btnGhost} flex items-center gap-1 text-xs py-1.5 px-3`}
-                >
-                  <Fingerprint className="h-3.5 w-3.5" />
-                  <span>{t('settings.registerPasskey')}</span>
-                </button>
-              ) : null}
+              <button
+                type="button"
+                onClick={handleOpenSetup2fa}
+                className={`${btnPrimary} flex items-center gap-1 text-xs py-1.5 px-3`}
+              >
+                <Fingerprint className="h-3.5 w-3.5" />
+                <span>{secStatus.enabled ? t('settings.passkeyRegistered') : t('settings.registerPasskey')}</span>
+              </button>
             </div>
           </div>
 
@@ -758,7 +768,7 @@ export default function Settings() {
               </div>
               <div>
                 <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
-                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.4</span>
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.5</span>
                 </strong>
                 <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
               </div>
@@ -777,6 +787,69 @@ export default function Settings() {
 
       {/* Delete Password / Passkey Modal */}
       <AnimatePresence>
+        {/* Setup 2FA Modal */}
+        {setup2faOpen ? (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setSetup2faOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+            >
+              <div className="flex items-center gap-3 text-[var(--accent)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-soft)]">
+                  <Fingerprint className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('settings.setup2faModalTitle')}</h3>
+                  <p className="text-xs text-slate-500">{t('settings.setup2faModalDesc')}</p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.devicePin')}</label>
+                <input
+                  type="password"
+                  autoFocus
+                  maxLength={8}
+                  value={setupPin}
+                  onChange={(e) => { setSetupPin(e.target.value); setSetupErr(''); }}
+                  placeholder="••••"
+                  className={`${fieldClass} mt-1 w-full text-center text-lg tracking-widest`}
+                />
+                {setupErr ? (
+                  <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">{setupErr}</p>
+                ) : null}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setSetup2faOpen(false)}
+                  className={btnGhost}
+                >
+                  {t('btn.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmSetup2fa}
+                  className={btnPrimary}
+                >
+                  {t('settings.save2faBtn')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+
+        {/* Delete Session Modal */}
         {deleteModalOpen ? (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
             <motion.div
@@ -803,32 +876,27 @@ export default function Settings() {
               </div>
 
               {/* Passkey Verification Option */}
-              {passkeySupported ? (
-                <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white/60 p-3 dark:border-white/10 dark:bg-slate-900/40">
-                  <button
-                    type="button"
-                    onClick={handleDeleteWithPasskey}
-                    className={`${btnPrimary} flex w-full items-center justify-center gap-2`}
-                  >
-                    <Fingerprint className="h-4 w-4" />
-                    <span>{t('settings.verifyWithPasskey')}</span>
-                  </button>
-                </div>
-              ) : null}
+              <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white/60 p-3 dark:border-white/10 dark:bg-slate-900/40">
+                <button
+                  type="button"
+                  onClick={handleDeleteWithPasskey}
+                  className={`${btnPrimary} flex w-full items-center justify-center gap-2`}
+                >
+                  <Fingerprint className="h-4 w-4" />
+                  <span>{t('settings.verifyWithPasskey')}</span>
+                </button>
+              </div>
 
-              {passkeySupported ? (
-                <div className="my-3 flex items-center gap-3">
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">OR PIN</span>
-                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
-                </div>
-              ) : null}
+              <div className="my-3 flex items-center gap-3">
+                <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">OR PIN</span>
+                <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+              </div>
 
               <div className="mt-2">
                 <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.devicePin')}</label>
                 <input
                   type="password"
-                  autoFocus={!passkeySupported}
                   value={deletePass}
                   onChange={(e) => { setDeletePass(e.target.value); setDeleteErr(''); }}
                   placeholder="••••••••"

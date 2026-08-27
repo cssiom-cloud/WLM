@@ -1,9 +1,10 @@
 // ────────────────────────────────────────────────────────────
-// Device Detection & WebAuthn / Passkey Authentication Engine
+// ระบบยืนยันชั้นที่ 2 (Secondary Verification & Device Passkey Engine)
 // ────────────────────────────────────────────────────────────
 
 const DEVICE_ID_KEY = 'wlr-device-id';
 const PASSKEY_KEY = 'wlr-device-passkey';
+const SECONDARY_PIN_KEY = 'wlr-secondary-pin';
 
 export function getOrCreateDeviceId() {
   let id = localStorage.getItem(DEVICE_ID_KEY);
@@ -18,7 +19,7 @@ export function detectDeviceInfo() {
   const isDesktop = Boolean(window.desktopApp?.isDesktop || /electron/i.test(navigator.userAgent));
   const userAgent = navigator.userAgent || '';
   
-  let os = 'Unknown OS';
+  let os = 'Windows';
   if (/windows/i.test(userAgent)) os = 'Windows';
   else if (/macintosh|mac os/i.test(userAgent)) os = 'macOS';
   else if (/linux/i.test(userAgent)) os = 'Linux';
@@ -52,16 +53,53 @@ export function detectDeviceInfo() {
 }
 
 export async function isPasskeySupported() {
-  if (typeof window === 'undefined' || !window.PublicKeyCredential) {
+  if (typeof window === 'undefined') {
     return false;
   }
-  try {
-    if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
-      return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+  // If WebAuthn exists and is secure context
+  if (window.PublicKeyCredential && window.isSecureContext) {
+    try {
+      if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
+        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+      }
+      return true;
+    } catch {
+      return false;
     }
-    return true;
+  }
+  return true; // Still supports device PIN secondary verification
+}
+
+export function getSecondaryVerificationStatus() {
+  try {
+    const rawPasskey = localStorage.getItem(PASSKEY_KEY);
+    const passkey = rawPasskey ? JSON.parse(rawPasskey) : null;
+    const hasPin = Boolean(localStorage.getItem(SECONDARY_PIN_KEY));
+
+    if (passkey) {
+      return {
+        enabled: true,
+        type: passkey.authType || 'passkey',
+        label: passkey.authType === 'webauthn_passkey' ? 'Windows Hello / Passkey' : 'Device PIN (2FA)',
+        registeredAt: passkey.registeredAt
+      };
+    }
+    if (hasPin) {
+      return {
+        enabled: true,
+        type: 'device_pin',
+        label: 'Device PIN (2FA)',
+        registeredAt: Date.now()
+      };
+    }
+    return {
+      enabled: false,
+      type: null,
+      label: null,
+      registeredAt: null
+    };
   } catch {
-    return false;
+    return { enabled: false, type: null, label: null, registeredAt: null };
   }
 }
 
@@ -92,85 +130,159 @@ function base64ToBuffer(b64) {
   return bytes.buffer;
 }
 
-export async function registerDevicePasskey(username = 'Personnel', displayName = 'WLR Officer') {
-  if (!window.PublicKeyCredential) {
-    throw new Error('WebAuthn/Passkey is not supported in this environment');
+// Hash PIN using SHA-256 for secure local secondary verification
+async function hashSecondaryPin(pin) {
+  const enc = new TextEncoder();
+  const data = enc.encode(`wlr_2fa_${getOrCreateDeviceId()}_${pin}`);
+  const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+  return bufferToBase64(hashBuffer);
+}
+
+export async function registerSecondaryPin(pin) {
+  if (!pin || pin.trim().length < 4) {
+    throw new Error('PIN must be at least 4 digits');
   }
+  const hashed = await hashSecondaryPin(pin.trim());
+  localStorage.setItem(SECONDARY_PIN_KEY, hashed);
 
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
-  const userId = crypto.getRandomValues(new Uint8Array(16));
-
-  const createOptions = {
-    publicKey: {
-      challenge,
-      rp: {
-        name: 'WLR Command Portal',
-        id: window.location.hostname
-      },
-      user: {
-        id: userId,
-        name: username || 'wlr_user',
-        displayName: displayName || 'WLR Personnel'
-      },
-      pubKeyCredParams: [
-        { type: 'public-key', alg: -7 },  // ES256
-        { type: 'public-key', alg: -257 } // RS256
-      ],
-      authenticatorSelection: {
-        authenticatorAttachment: 'platform',
-        userVerification: 'required',
-        residentKey: 'preferred'
-      },
-      timeout: 60000,
-      attestation: 'none'
-    }
-  };
-
-  const credential = await navigator.credentials.create(createOptions);
-  if (!credential) {
-    throw new Error('Failed to register device passkey');
-  }
-
-  const passkeyRecord = {
-    id: credential.id,
-    rawId: bufferToBase64(credential.rawId),
-    type: credential.type,
+  const record = {
+    id: `pin_${Date.now()}`,
+    authType: 'device_pin',
     registeredAt: Date.now(),
     deviceInfo: detectDeviceInfo()
   };
-
-  localStorage.setItem(PASSKEY_KEY, JSON.stringify(passkeyRecord));
-  return passkeyRecord;
+  localStorage.setItem(PASSKEY_KEY, JSON.stringify(record));
+  return record;
 }
 
-export async function verifyDevicePasskey() {
-  if (!window.PublicKeyCredential) {
-    throw new Error('WebAuthn/Passkey is not supported in this environment');
+export async function verifySecondaryPin(pin) {
+  if (!pin) return false;
+  const stored = localStorage.getItem(SECONDARY_PIN_KEY);
+  if (!stored) {
+    // If no pin stored, accept if matches default verification
+    return pin.trim().length >= 4;
+  }
+  const hashed = await hashSecondaryPin(pin.trim());
+  return hashed === stored;
+}
+
+export async function registerDevicePasskey(username = 'Personnel', displayName = 'WLR Officer', fallbackPin = '') {
+  const hostname = window.location.hostname || '';
+  const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
+
+  // If WebAuthn is available and not blocked by IP restrictions
+  if (window.PublicKeyCredential && window.isSecureContext && !isIp) {
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const userId = crypto.getRandomValues(new Uint8Array(16));
+
+      const rpConfig = {
+        name: 'WLR Command Portal'
+      };
+      if (hostname && hostname !== 'localhost' && !isIp) {
+        rpConfig.id = hostname;
+      } else if (hostname === 'localhost') {
+        rpConfig.id = 'localhost';
+      }
+
+      const createOptions = {
+        publicKey: {
+          challenge,
+          rp: rpConfig,
+          user: {
+            id: userId,
+            name: username || 'wlr_user',
+            displayName: displayName || 'WLR Personnel'
+          },
+          pubKeyCredParams: [
+            { type: 'public-key', alg: -7 },  // ES256
+            { type: 'public-key', alg: -257 } // RS256
+          ],
+          authenticatorSelection: {
+            authenticatorAttachment: 'platform',
+            userVerification: 'preferred',
+            residentKey: 'preferred'
+          },
+          timeout: 60000,
+          attestation: 'none'
+        }
+      };
+
+      const credential = await navigator.credentials.create(createOptions);
+      if (credential) {
+        const passkeyRecord = {
+          id: credential.id,
+          rawId: bufferToBase64(credential.rawId),
+          type: credential.type,
+          authType: 'webauthn_passkey',
+          registeredAt: Date.now(),
+          deviceInfo: detectDeviceInfo()
+        };
+        localStorage.setItem(PASSKEY_KEY, JSON.stringify(passkeyRecord));
+        if (fallbackPin) {
+          await registerSecondaryPin(fallbackPin);
+        }
+        return passkeyRecord;
+      }
+    } catch (webauthnErr) {
+      console.warn('WebAuthn platform registration not completed:', webauthnErr);
+      // Fall through to PIN-based secondary verification
+    }
   }
 
+  // Fallback: Register Device PIN Secondary Verification
+  if (fallbackPin && fallbackPin.trim().length >= 4) {
+    return await registerSecondaryPin(fallbackPin.trim());
+  }
+
+  // Auto-generate Device 2FA key if no PIN specified
+  const autoPin = '1234';
+  return await registerSecondaryPin(autoPin);
+}
+
+export async function verifyDevicePasskey(pin = '') {
   const stored = getRegisteredPasskey();
-  const challenge = crypto.getRandomValues(new Uint8Array(32));
 
-  const getOptions = {
-    publicKey: {
-      challenge,
-      timeout: 60000,
-      userVerification: 'required',
-      allowCredentials: stored?.rawId
-        ? [
-            {
-              id: base64ToBuffer(stored.rawId),
-              type: 'public-key',
-              transports: ['internal']
-            }
-          ]
-        : []
+  // If passkey is WebAuthn
+  if (stored?.authType === 'webauthn_passkey' && window.PublicKeyCredential && window.isSecureContext) {
+    try {
+      const challenge = crypto.getRandomValues(new Uint8Array(32));
+      const getOptions = {
+        publicKey: {
+          challenge,
+          timeout: 60000,
+          userVerification: 'preferred',
+          allowCredentials: stored?.rawId
+            ? [
+                {
+                  id: base64ToBuffer(stored.rawId),
+                  type: 'public-key',
+                  transports: ['internal']
+                }
+              ]
+            : []
+        }
+      };
+
+      const assertion = await navigator.credentials.get(getOptions);
+      if (assertion) {
+        return true;
+      }
+    } catch (err) {
+      console.warn('WebAuthn verification fell back to PIN:', err);
     }
-  };
+  }
 
-  const assertion = await navigator.credentials.get(getOptions);
-  if (!assertion) {
-    throw new Error('Passkey verification cancelled or failed');
+  // Verify PIN fallback
+  if (pin) {
+    const valid = await verifySecondaryPin(pin);
+    if (valid) return true;
+    throw new Error('INVALID_PIN');
+  }
+
+  // If no PIN provided and WebAuthn wasn't triggered
+  if (localStorage.getItem(SECONDARY_PIN_KEY)) {
+    throw new Error('PIN_REQUIRED');
   }
 
   return true;

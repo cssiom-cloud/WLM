@@ -106,10 +106,10 @@
             </label>
           </article>
           <article class="settings-row" data-aos="fade-up">
-            <h2 data-i18n="settings.sessionVault">Encrypted Session Vault</h2>
-            <p class="settings-lead" data-i18n="settings.sessionVaultHint">Save encrypted snapshots of your active session bound automatically to this device. Protect with Device Passkey (Windows Hello) or PIN.</p>
+            <h2 data-i18n="settings.sessionVault">Secondary Verification &amp; Session Vault</h2>
+            <p class="settings-lead" data-i18n="settings.sessionVaultHint">Save encrypted snapshots of your active session bound automatically to this device with Secondary Verification (2FA / Passkey / PIN).</p>
             
-            <!-- Device Info & Passkey Status Bar -->
+            <!-- Device Info & Secondary Verification Status Bar -->
             <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;padding:0.9rem 1.1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-muted);margin-bottom:1.25rem;">
               <div style="display:flex;align-items:center;gap:0.65rem;">
                 <div style="width:36px;height:36px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;">
@@ -121,10 +121,10 @@
                 </div>
               </div>
               <div style="display:flex;align-items:center;gap:0.5rem;">
-                <span id="passkey-status-badge" class="badge badge-blue">Checking Passkey...</span>
-                <button id="register-passkey-btn" class="btn" type="button" style="font-size:0.82rem;padding:0.35rem 0.75rem;">
+                <span id="passkey-status-badge" class="badge badge-blue">Checking 2FA...</span>
+                <button id="register-passkey-btn" class="btn btn-primary" type="button" style="font-size:0.82rem;padding:0.35rem 0.75rem;">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.25rem;"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zM9 7a3 3 0 0 1 6 0v3H9V7z"/></svg>
-                  <span data-i18n="settings.registerPasskey">Register Device Passkey</span>
+                  <span data-i18n="settings.registerPasskey">Set Up Secondary Verification</span>
                 </button>
               </div>
             </div>
@@ -137,8 +137,8 @@
                 <input id="vault-label-input" class="text-field" style="width:100%;" type="text" placeholder="Auto-filled with this device name" data-i18n-placeholder="settings.sessionLabelPlaceholder">
               </div>
               <div>
-                <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;" data-i18n="settings.devicePin">Device PIN / Passphrase</label>
-                <input id="vault-password-input" class="text-field" style="width:100%;" type="password" placeholder="e.g. 4-6 digit PIN or device password" data-i18n-placeholder="settings.devicePinPlaceholder">
+                <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;" data-i18n="settings.devicePin">Secondary PIN / Passphrase</label>
+                <input id="vault-password-input" class="text-field" style="width:100%;" type="password" placeholder="e.g. 4-6 digit PIN or secondary passcode" data-i18n-placeholder="settings.devicePinPlaceholder">
               </div>
               <button id="save-vault-btn" class="btn btn-primary" type="button" style="justify-self:start;margin-top:0.25rem;">
                 <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -160,7 +160,7 @@
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <div>
-                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.4</span></strong>
+                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.5</span></strong>
                   <small style="color:var(--text-muted);" data-i18n="settings.updateStatusUpToDate">You are running the latest version with persistent session isolation.</small>
                 </div>
               </div>
@@ -174,6 +174,32 @@
       </main>
     </div>
 
+    <!-- Setup Secondary Verification Modal -->
+    <div id="setup-passkey-modal" class="wlr-notice" hidden>
+      <div class="wlr-notice-card" style="max-width:460px;text-align:left;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:0.75rem;">
+          <div style="width:44px;height:44px;border-radius:50%;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zM9 7a3 3 0 0 1 6 0v3H9V7z"/></svg>
+          </div>
+          <div>
+            <strong style="font-size:1.05rem;display:block;" data-i18n="settings.setup2faModalTitle">Set Up Secondary Verification (2FA / Passkey)</strong>
+            <small style="color:var(--text-muted);" data-i18n="settings.setup2faModalDesc">Set a 4-6 digit PIN or pair with Windows Hello to secure sessions on this device.</small>
+          </div>
+        </div>
+
+        <div style="margin-bottom:1rem;">
+          <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;" data-i18n="settings.devicePin">Secondary PIN (4-6 digits)</label>
+          <input id="setup-pin-input" class="text-field" style="width:100%;" type="password" placeholder="••••" maxlength="8">
+          <p id="setup-pin-error" style="color:var(--danger);font-size:0.82rem;margin-top:0.4rem;display:none;"></p>
+        </div>
+
+        <div class="btn-row" style="justify-content:flex-end;">
+          <button id="cancel-setup-pin-btn" class="btn" type="button" data-i18n="btn.cancel">Cancel</button>
+          <button id="confirm-setup-pin-btn" class="btn btn-primary" type="button" data-i18n="settings.save2faBtn">Save & Activate 2FA</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Password / Passkey Verification Modal for Session Deletion -->
     <div id="delete-session-modal" class="wlr-notice" hidden>
       <div class="wlr-notice-card" style="max-width:460px;text-align:left;">
@@ -182,16 +208,16 @@
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--danger)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
           <div>
-            <strong style="font-size:1.05rem;display:block;" data-i18n="settings.deleteSessionModalTitle">Confirm Authentication to Delete Session</strong>
-            <small style="color:var(--text-muted);" data-i18n="settings.deleteSessionModalDesc">Verify your identity using this device’s Passkey (Windows Hello) or your PIN to remove this session.</small>
+            <strong style="font-size:1.05rem;display:block;" data-i18n="settings.deleteSessionModalTitle">Secondary Verification: Confirm Session Deletion</strong>
+            <small style="color:var(--text-muted);" data-i18n="settings.deleteSessionModalDesc">Verify your identity with Secondary Verification (2FA / Passkey) or PIN to permanently delete this session.</small>
           </div>
         </div>
 
-        <!-- Passkey Verification Button (if supported) -->
+        <!-- Passkey Verification Button -->
         <div id="passkey-delete-opt" style="margin-bottom:1rem;padding:0.75rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-muted);">
           <button id="verify-passkey-delete-btn" class="btn btn-primary" type="button" style="width:100%;">
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zM9 7a3 3 0 0 1 6 0v3H9V7z"/></svg>
-            <span data-i18n="settings.verifyWithPasskey">Verify with Device Passkey / Windows Hello</span>
+            <span data-i18n="settings.verifyWithPasskey">Verify with Secondary Verification / Passkey</span>
           </button>
         </div>
 
@@ -202,7 +228,7 @@
         </div>
 
         <div style="margin-bottom:1rem;">
-          <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;" data-i18n="settings.devicePin">Device PIN / Passphrase</label>
+          <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.3rem;" data-i18n="settings.devicePin">Secondary PIN / Passphrase</label>
           <input id="delete-password-input" class="text-field" style="width:100%;" type="password" placeholder="••••••••">
           <p id="delete-modal-error" style="color:var(--danger);font-size:0.82rem;margin-top:0.4rem;display:none;"></p>
         </div>

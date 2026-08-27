@@ -13,7 +13,7 @@ import {
   unlinkDiscordIdentity
 } from './session.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from './session-vault.js';
-import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, registerDevicePasskey, verifyDevicePasskey } from './device-auth.js';
+import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, getSecondaryVerificationStatus, registerDevicePasskey, verifyDevicePasskey } from './device-auth.js';
 import { formatPersonnelName } from './domain.js';
 import { t } from './i18n.js';
 import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js';
@@ -390,7 +390,7 @@ document.querySelectorAll('[data-ui-scale-pick]').forEach((button) => {
   });
 });
 
-// ── Encrypted Session Vault & Device Authentication ────────
+// ── Secondary Verification & Session Vault ────────────────
 let pendingDeleteSessionId = null;
 
 async function initDeviceAndPasskeyUI() {
@@ -406,25 +406,20 @@ async function initDeviceAndPasskeyUI() {
   const registerBtn = document.querySelector('#register-passkey-btn');
   const passkeyDeleteOpt = document.querySelector('#passkey-delete-opt');
 
-  const supported = await isPasskeySupported();
-  const registered = getRegisteredPasskey();
+  const status = getSecondaryVerificationStatus();
 
-  if (!supported) {
-    if (passkeyBadge) {
-      passkeyBadge.className = 'badge badge-gold';
-      passkeyBadge.textContent = t('settings.passkeyNotSupported');
-    }
-    if (registerBtn) registerBtn.style.display = 'none';
-    if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'none';
-    return;
-  }
-
-  if (registered) {
+  if (status.enabled) {
     if (passkeyBadge) {
       passkeyBadge.className = 'badge badge-green';
       passkeyBadge.textContent = t('settings.passkeyRegistered');
     }
-    if (registerBtn) registerBtn.textContent = t('settings.passkeyReady');
+    if (registerBtn) {
+      registerBtn.className = 'btn';
+      registerBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.25rem;"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zM9 7a3 3 0 0 1 6 0v3H9V7z"/></svg>
+        <span>${escapeHtml(t('settings.passkeyRegistered'))}</span>
+      `;
+    }
     if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'block';
   } else {
     if (passkeyBadge) {
@@ -432,21 +427,64 @@ async function initDeviceAndPasskeyUI() {
       passkeyBadge.textContent = t('settings.passkeyTitle');
     }
     if (registerBtn) {
-      registerBtn.style.display = 'inline-flex';
-      registerBtn.textContent = t('settings.registerPasskey');
+      registerBtn.className = 'btn btn-primary';
+      registerBtn.innerHTML = `
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.25rem;"><path d="M12 2a5 5 0 0 0-5 5v3H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8a2 2 0 0 0-2-2h-1V7a5 5 0 0 0-5-5zM9 7a3 3 0 0 1 6 0v3H9V7z"/></svg>
+        <span>${escapeHtml(t('settings.registerPasskey'))}</span>
+      `;
     }
     if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'block';
   }
 }
 
-document.querySelector('#register-passkey-btn')?.addEventListener('click', async () => {
+// Open Setup 2FA Modal
+document.querySelector('#register-passkey-btn')?.addEventListener('click', () => {
+  const modal = document.querySelector('#setup-passkey-modal');
+  const input = document.querySelector('#setup-pin-input');
+  const err = document.querySelector('#setup-pin-error');
+  if (input) input.value = '';
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  if (modal) modal.hidden = false;
+  if (input) input.focus();
+});
+
+document.querySelector('#cancel-setup-pin-btn')?.addEventListener('click', () => {
+  const modal = document.querySelector('#setup-passkey-modal');
+  if (modal) modal.hidden = true;
+});
+
+document.querySelector('#setup-passkey-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    const modal = document.querySelector('#setup-passkey-modal');
+    if (modal) modal.hidden = true;
+  }
+});
+
+document.querySelector('#confirm-setup-pin-btn')?.addEventListener('click', async () => {
+  const input = document.querySelector('#setup-pin-input');
+  const err = document.querySelector('#setup-pin-error');
+  const pin = input?.value?.trim() || '';
+
+  if (!pin || pin.length < 4) {
+    if (err) {
+      err.textContent = t('settings.sessionPasswordPlaceholder');
+      err.style.display = 'block';
+    }
+    return;
+  }
+
   try {
     const user = currentUser?.callsign || currentUser?.first_name || 'Personnel';
-    await registerDevicePasskey(user, `${user} (${detectDeviceInfo().defaultLabel})`);
+    await registerDevicePasskey(user, `${user} (${detectDeviceInfo().defaultLabel})`, pin);
+    const modal = document.querySelector('#setup-passkey-modal');
+    if (modal) modal.hidden = true;
     await initDeviceAndPasskeyUI();
     showStatus(t('settings.passkeyRegisteredOk'));
   } catch (error) {
-    showStatus(error.message, true);
+    if (err) {
+      err.textContent = error.message;
+      err.style.display = 'block';
+    }
   }
 });
 
