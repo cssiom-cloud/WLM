@@ -21,6 +21,7 @@ import { applyAccent, readStoredAccent } from './theme.js';
 import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from './command-services.js';
 import { applyUiMode, persistUiSkin, readUiMode } from './ui-mode.js';
 import { applyPrefsToDom, mergeRemoteSettings, readLocalPrefs, resolvedUiScale, setPrefsOwner, writeLocalPrefs } from './user-prefs.js';
+import { checkAppUpdate, openUpdateLink } from './updater.js';
 
 let currentUser = null;
 let currentAuthUser = null;
@@ -631,8 +632,77 @@ document.querySelector('#save-vault-btn')?.addEventListener('click', async () =>
   }
 });
 
-document.querySelector('#check-updates-btn')?.addEventListener('click', () => {
-  showStatus(t('settings.updateStatusUpToDate'));
+// ── Live Self-Updater Handler ──────────────────────────────
+let latestUpdateInfo = null;
+
+const checkUpdatesBtn = document.querySelector('#check-updates-btn');
+const updateModal = document.querySelector('#update-available-modal');
+const updateCurrentVer = document.querySelector('#update-current-ver');
+const updateLatestVer = document.querySelector('#update-latest-ver');
+const downloadSetupBtn = document.querySelector('#download-setup-btn');
+const downloadPortableBtn = document.querySelector('#download-portable-btn');
+const viewGithubBtn = document.querySelector('#view-github-btn');
+const closeUpdateModalBtn = document.querySelector('#close-update-modal-btn');
+
+checkUpdatesBtn?.addEventListener('click', async () => {
+  const originalHtml = checkUpdatesBtn.innerHTML;
+  checkUpdatesBtn.disabled = true;
+  checkUpdatesBtn.innerHTML = `
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="spin" style="margin-right:0.35rem;animation:spin 1s linear infinite;"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>
+    <span>${escapeHtml(t('settings.checkingUpdates'))}</span>
+  `;
+
+  try {
+    const res = await checkAppUpdate();
+    latestUpdateInfo = res;
+
+    if (res?.updateAvailable) {
+      if (updateCurrentVer) updateCurrentVer.textContent = `v${res.currentVersion}`;
+      if (updateLatestVer) updateLatestVer.textContent = `v${res.latestVersion}`;
+      if (updateModal) updateModal.hidden = false;
+    } else if (res?.error) {
+      showStatus(t('settings.updateError'), true);
+    } else {
+      showStatus(t('settings.updateStatusUpToDate'));
+    }
+  } catch (err) {
+    showStatus(t('settings.updateError'), true);
+  } finally {
+    checkUpdatesBtn.disabled = false;
+    checkUpdatesBtn.innerHTML = originalHtml;
+  }
+});
+
+downloadSetupBtn?.addEventListener('click', () => {
+  if (latestUpdateInfo?.setupExeUrl) {
+    openUpdateLink(latestUpdateInfo.setupExeUrl);
+  } else if (latestUpdateInfo?.downloadUrl) {
+    openUpdateLink(latestUpdateInfo.downloadUrl);
+  }
+});
+
+downloadPortableBtn?.addEventListener('click', () => {
+  if (latestUpdateInfo?.portableExeUrl) {
+    openUpdateLink(latestUpdateInfo.portableExeUrl);
+  } else if (latestUpdateInfo?.downloadUrl) {
+    openUpdateLink(latestUpdateInfo.downloadUrl);
+  }
+});
+
+viewGithubBtn?.addEventListener('click', () => {
+  if (latestUpdateInfo?.downloadUrl || latestUpdateInfo?.repoUrl) {
+    openUpdateLink(latestUpdateInfo.downloadUrl || latestUpdateInfo.repoUrl);
+  }
+});
+
+closeUpdateModalBtn?.addEventListener('click', () => {
+  if (updateModal) updateModal.hidden = true;
+});
+
+updateModal?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) {
+    if (updateModal) updateModal.hidden = true;
+  }
 });
 
 window.addEventListener('resize', () => {

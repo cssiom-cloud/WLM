@@ -1,7 +1,9 @@
 const { app, BrowserWindow, shell, Notification, ipcMain } = require('electron');
 const http = require('node:http');
+const https = require('node:https');
 const fs = require('node:fs');
 const path = require('node:path');
+const { execFile } = require('node:child_process');
 
 // Ensure a single persistent userData directory across all versions (Zero duplicate sessions)
 const USER_DATA_PATH = path.join(app.getPath('appData'), 'wlr-command-portal');
@@ -262,6 +264,141 @@ app.whenReady().then(async () => {
         return false;
       }
     });
+
+    // ── Native Windows Hello Biometrics & PIN Engine ──────
+    ipcMain.handle('check-windows-hello', async () => {
+      return new Promise((resolve) => {
+        if (process.platform !== 'win32') {
+          return resolve({ available: false, status: 'NotWindows' });
+        }
+        const psScript = `
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+$asTaskGeneric = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { 
+    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' 
+} | Select-Object -First 1
+
+[Windows.Security.Credentials.UI.UserConsentVerifier, Windows.Security.Credentials.UI, ContentType = WindowsRuntime] | Out-Null
+$op = [Windows.Security.Credentials.UI.UserConsentVerifier]::CheckAvailabilityAsync()
+$task = $asTaskGeneric.MakeGenericMethod([Windows.Security.Credentials.UI.UserConsentVerifierAvailability]).Invoke($null, @($op))
+$task.Wait()
+Write-Output $task.Result.ToString()
+        `.trim();
+
+        execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript], (err, stdout) => {
+          if (err) {
+            resolve({ available: false, status: 'Error', error: err.message });
+          } else {
+            const out = stdout ? stdout.trim() : '';
+            resolve({ available: out === 'Available', status: out });
+          }
+        });
+      });
+    });
+
+    ipcMain.handle('verify-windows-hello', async (event, promptMessage = 'ยืนยันตัวตนสำหรับ WLR Command Portal') => {
+      return new Promise((resolve) => {
+        if (process.platform !== 'win32') {
+          return resolve({ success: false, status: 'NotWindows' });
+        }
+        const safePrompt = String(promptMessage).replace(/"/g, '`"');
+        const psScript = `
+Add-Type -AssemblyName System.Runtime.WindowsRuntime
+$asTaskGeneric = [System.WindowsRuntimeSystemExtensions].GetMethods() | Where-Object { 
+    $_.Name -eq 'AsTask' -and $_.GetParameters().Count -eq 1 -and $_.GetParameters()[0].ParameterType.Name -eq 'IAsyncOperation\`1' 
+} | Select-Object -First 1
+
+[Windows.Security.Credentials.UI.UserConsentVerifier, Windows.Security.Credentials.UI, ContentType = WindowsRuntime] | Out-Null
+$op = [Windows.Security.Credentials.UI.UserConsentVerifier]::RequestVerificationAsync("${safePrompt}")
+$task = $asTaskGeneric.MakeGenericMethod([Windows.Security.Credentials.UI.UserConsentVerificationResult]).Invoke($null, @($op))
+$task.Wait()
+Write-Output $task.Result.ToString()
+        `.trim();
+
+        execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript], (err, stdout) => {
+          if (err) {
+            resolve({ success: false, status: 'Error', error: err.message });
+          } else {
+            const out = stdout ? stdout.trim() : '';
+            resolve({ success: out === 'Verified', status: out });
+          }
+        });
+      });
+    });
+
+    // ── Working Live Update Checker Engine ───────────────
+    ipcMain.handle('check-system-updates', async () => {
+      return new Promise((resolve) => {
+        const currentVersion = app.getVersion() || '1.0.5';
+        const url = 'https://raw.githubusercontent.com/cssiom-cloud/WLM/main/package.json';
+
+        const req = https.get(url, { headers: { 'User-Agent': 'WLR-Command-Portal' } }, (res) => {
+          let data = '';
+          res.on('data', (chunk) => { data += chunk; });
+          res.on('end', () => {
+            try {
+              const remotePkg = JSON.parse(data);
+              const remoteVersion = remotePkg.version || currentVersion;
+              const isNewer = compareSemVer(remoteVersion, currentVersion) > 0;
+              resolve({
+                updateAvailable: isNewer,
+                currentVersion,
+                latestVersion: remoteVersion,
+                downloadUrl: `https://github.com/cssiom-cloud/WLM/tree/main/release/v${remoteVersion}`,
+                setupExeUrl: `https://github.com/cssiom-cloud/WLM/raw/main/release/v${remoteVersion}/WLR%20Command%20Portal%20Setup%20${remoteVersion}.exe`,
+                portableExeUrl: `https://github.com/cssiom-cloud/WLM/raw/main/release/v${remoteVersion}/WLR%20Command%20Portal-v${remoteVersion}-Portable.exe`,
+                repoUrl: 'https://github.com/cssiom-cloud/WLM'
+              });
+            } catch (err) {
+              resolve({
+                updateAvailable: false,
+                currentVersion,
+                latestVersion: currentVersion,
+                error: err.message
+              });
+            }
+          });
+        });
+
+        req.on('error', (err) => {
+          resolve({
+            updateAvailable: false,
+            currentVersion,
+            latestVersion: currentVersion,
+            error: err.message
+          });
+        });
+
+        req.setTimeout(6000, () => {
+          req.destroy();
+          resolve({
+            updateAvailable: false,
+            currentVersion,
+            latestVersion: currentVersion,
+            error: 'Update check timed out'
+          });
+        });
+      });
+    });
+
+    ipcMain.handle('open-external-url', (event, targetUrl) => {
+      if (targetUrl && (targetUrl.startsWith('https://') || targetUrl.startsWith('http://'))) {
+        shell.openExternal(targetUrl);
+        return true;
+      }
+      return false;
+    });
+
+    function compareSemVer(v1, v2) {
+      const parts1 = String(v1).replace(/^v/, '').split('.').map(Number);
+      const parts2 = String(v2).replace(/^v/, '').split('.').map(Number);
+      for (let i = 0; i < Math.max(parts1.length, parts2.length); i++) {
+        const num1 = parts1[i] || 0;
+        const num2 = parts2[i] || 0;
+        if (num1 > num2) return 1;
+        if (num1 < num2) return -1;
+      }
+      return 0;
+    }
 
     app.on('second-instance', () => {
       if (mainWindow) {

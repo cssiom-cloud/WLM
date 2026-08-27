@@ -10,6 +10,7 @@ import { applyAccent } from '../../js/theme.js';
 import { resolvedUiScale } from '../../js/user-prefs.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from '../../js/session-vault.js';
 import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, getSecondaryVerificationStatus, registerDevicePasskey, verifyDevicePasskey } from '../../js/device-auth.js';
+import { checkAppUpdate, openUpdateLink } from '../../js/updater.js';
 import { btnDanger, btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
@@ -98,12 +99,36 @@ export default function Settings() {
   const [deletePass, setDeletePass] = useState('');
   const [deleteErr, setDeleteErr] = useState('');
 
+  // Live Updater state
+  const [updateModalOpen, setUpdateModalOpen] = useState(false);
+  const [updateInfo, setUpdateInfo] = useState(null);
+  const [checkingUpdates, setCheckingUpdates] = useState(false);
+
   useEffect(() => {
     isPasskeySupported().then((sup) => {
       setPasskeySupported(sup);
       setSecStatus(getSecondaryVerificationStatus());
     });
   }, []);
+
+  const handleCheckUpdates = async () => {
+    setCheckingUpdates(true);
+    try {
+      const res = await checkAppUpdate();
+      setUpdateInfo(res);
+      if (res?.updateAvailable) {
+        setUpdateModalOpen(true);
+      } else if (res?.error) {
+        toast.alert(t('settings.updateError'));
+      } else {
+        toast.show(t('settings.updateStatusUpToDate'));
+      }
+    } catch {
+      toast.alert(t('settings.updateError'));
+    } finally {
+      setCheckingUpdates(false);
+    }
+  };
 
   const identity = findDiscordIdentity(authUser);
   const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
@@ -768,18 +793,19 @@ export default function Settings() {
               </div>
               <div>
                 <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
-                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.5</span>
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.6</span>
                 </strong>
                 <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
               </div>
             </div>
             <button
               type="button"
-              onClick={() => toast.show(t('settings.updateStatusUpToDate'))}
+              disabled={checkingUpdates}
+              onClick={handleCheckUpdates}
               className={`${btnGhost} flex items-center gap-1.5 text-sm`}
             >
-              <RefreshCw className="h-4 w-4" />
-              <span>{t('settings.checkUpdates')}</span>
+              <RefreshCw className={`h-4 w-4 ${checkingUpdates ? 'animate-spin' : ''}`} />
+              <span>{checkingUpdates ? t('settings.checkingUpdates') : t('settings.checkUpdates')}</span>
             </button>
           </div>
         </article>
@@ -921,6 +947,83 @@ export default function Settings() {
                   className={btnDanger}
                 >
                   {t('settings.confirmDelete')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+
+        {/* Live Update Available Modal */}
+        {updateModalOpen && updateInfo ? (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setUpdateModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+            >
+              <div className="flex items-center gap-3 text-[var(--accent)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-soft)]">
+                  <RefreshCw className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('settings.updateAvailableTitle')}</h3>
+                  <p className="text-xs text-slate-500">{t('settings.updateAvailableDesc')}</p>
+                </div>
+              </div>
+
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900/50">
+                <div>
+                  <small className="block text-[11px] uppercase tracking-wider text-slate-400">Current</small>
+                  <strong className="text-sm font-semibold text-slate-900 dark:text-slate-100">v{updateInfo.currentVersion}</strong>
+                </div>
+                <span className="text-slate-400">→</span>
+                <div>
+                  <small className="block text-[11px] uppercase tracking-wider text-slate-400">Latest</small>
+                  <strong className="text-sm font-semibold text-[var(--accent)]">v{updateInfo.latestVersion}</strong>
+                </div>
+              </div>
+
+              <div className="mt-4 grid gap-2">
+                <button
+                  type="button"
+                  onClick={() => openUpdateLink(updateInfo.setupExeUrl || updateInfo.downloadUrl)}
+                  className={`${btnPrimary} flex w-full items-center justify-center gap-2`}
+                >
+                  <Laptop className="h-4 w-4" />
+                  <span>{t('settings.downloadSetup')}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => openUpdateLink(updateInfo.portableExeUrl || updateInfo.downloadUrl)}
+                  className={`${btnGhost} flex w-full items-center justify-center gap-2`}
+                >
+                  <Smartphone className="h-4 w-4" />
+                  <span>{t('settings.downloadPortable')}</span>
+                </button>
+              </div>
+
+              <div className="mt-6 flex items-center justify-between">
+                <button
+                  type="button"
+                  onClick={() => openUpdateLink(updateInfo.downloadUrl || updateInfo.repoUrl)}
+                  className={`${btnGhost} text-xs`}
+                >
+                  {t('settings.viewOnGithub')}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setUpdateModalOpen(false)}
+                  className={btnGhost}
+                >
+                  {t('btn.close') || 'Close'}
                 </button>
               </div>
             </motion.div>

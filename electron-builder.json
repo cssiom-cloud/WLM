@@ -4,7 +4,7 @@
   "productName": "WLR Command Portal",
   "copyright": "Copyright © 2026 White Lion Regiment",
   "directories": {
-    "output": "release/v1.0.5"
+    "output": "release/v1.0.6"
   },
   "files": [
     "*.html",
@@ -35,9 +35,17 @@
   "nsis": {
     "oneClick": false,
     "allowToChangeInstallationDirectory": true,
-    "createDesktopShortcut": true,
+    "allowElevation": true,
+    "installerIcon": "assets/icon.ico",
+    "uninstallerIcon": "assets/icon.ico",
+    "installerHeaderIcon": "assets/icon.ico",
+    "createDesktopShortcut": "always",
     "createStartMenuShortcut": true,
-    "shortcutName": "WLR Command Portal"
+    "shortcutName": "WLR Command Portal",
+    "uninstallDisplayName": "WLR Command Portal (White Lion Regiment)",
+    "deleteAppDataOnUninstall": false,
+    "runAfterFinish": true,
+    "artifactName": "${productName} Setup ${version}.${ext}"
   },
   "portable": {
     "artifactName": "${productName}-v${version}-Portable.${ext}"

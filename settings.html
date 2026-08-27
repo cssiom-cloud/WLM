@@ -160,7 +160,7 @@
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <div>
-                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.5</span></strong>
+                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.6</span></strong>
                   <small style="color:var(--text-muted);" data-i18n="settings.updateStatusUpToDate">You are running the latest version with persistent session isolation.</small>
                 </div>
               </div>
@@ -236,6 +236,52 @@
         <div class="btn-row" style="justify-content:flex-end;">
           <button id="cancel-delete-session-btn" class="btn" type="button" data-i18n="btn.cancel">Cancel</button>
           <button id="confirm-delete-session-btn" class="btn btn-danger" type="button" data-i18n="settings.confirmDelete">Verify & Delete</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Live Update Available Modal -->
+    <div id="update-available-modal" class="wlr-notice" hidden>
+      <div class="wlr-notice-card" style="max-width:480px;text-align:left;">
+        <div style="display:flex;align-items:center;gap:0.75rem;margin-bottom:1rem;">
+          <div style="width:46px;height:46px;border-radius:12px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;">
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </div>
+          <div>
+            <strong style="font-size:1.1rem;display:block;" data-i18n="settings.updateAvailableTitle">New System Update Available</strong>
+            <small style="color:var(--text-muted);" data-i18n="settings.updateAvailableDesc">A new version is available on GitHub. You can download and install it in-place seamlessly.</small>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:10px;background:var(--bg-muted);margin-bottom:1.25rem;">
+          <div>
+            <small style="color:var(--text-muted);display:block;font-size:0.75rem;">Current Version</small>
+            <strong id="update-current-ver" style="font-size:0.9rem;">v1.0.5</strong>
+          </div>
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          <div>
+            <small style="color:var(--text-muted);display:block;font-size:0.75rem;">New Version</small>
+            <strong id="update-latest-ver" style="font-size:0.95rem;color:var(--accent);">v1.0.6</strong>
+          </div>
+        </div>
+
+        <div style="display:grid;gap:0.5rem;margin-bottom:1rem;">
+          <button id="download-setup-btn" class="btn btn-primary" type="button" style="width:100%;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+            <span data-i18n="settings.downloadSetup">Download Setup Installer (.exe)</span>
+          </button>
+          <button id="download-portable-btn" class="btn" type="button" style="width:100%;justify-content:center;">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><rect x="2" y="2" width="20" height="8" rx="2" ry="2"/><rect x="2" y="14" width="20" height="8" rx="2" ry="2"/><line x1="6" y1="6" x2="6.01" y2="6"/><line x1="6" y1="18" x2="6.01" y2="18"/></svg>
+            <span data-i18n="settings.downloadPortable">Download Portable (.exe)</span>
+          </button>
+        </div>
+
+        <div class="btn-row" style="justify-content:space-between;">
+          <button id="view-github-btn" class="btn" type="button" style="font-size:0.8rem;">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.25rem;"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+            <span data-i18n="settings.viewOnGithub">View on GitHub</span>
+          </button>
+          <button id="close-update-modal-btn" class="btn" type="button" data-i18n="btn.close">Close</button>
         </div>
       </div>
     </div>

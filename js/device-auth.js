@@ -1,5 +1,5 @@
 // ────────────────────────────────────────────────────────────
-// ระบบยืนยันชั้นที่ 2 (Secondary Verification & Device Passkey Engine)
+// ระบบยืนยันชั้นที่ 2 (Hardware Windows Hello & Secondary Verification Engine)
 // ────────────────────────────────────────────────────────────
 
 const DEVICE_ID_KEY = 'wlr-device-id';
@@ -56,7 +56,18 @@ export async function isPasskeySupported() {
   if (typeof window === 'undefined') {
     return false;
   }
-  // If WebAuthn exists and is secure context
+
+  // 1. Check Native Desktop Windows Hello
+  if (window.desktopApp?.checkWindowsHello) {
+    try {
+      const res = await window.desktopApp.checkWindowsHello();
+      if (res?.available) return true;
+    } catch {
+      // ignore
+    }
+  }
+
+  // 2. Check WebAuthn Platform Authenticator
   if (window.PublicKeyCredential && window.isSecureContext) {
     try {
       if (typeof PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable === 'function') {
@@ -67,7 +78,8 @@ export async function isPasskeySupported() {
       return false;
     }
   }
-  return true; // Still supports device PIN secondary verification
+
+  return true; // Supports PIN Secondary Verification
 }
 
 export function getSecondaryVerificationStatus() {
@@ -77,10 +89,11 @@ export function getSecondaryVerificationStatus() {
     const hasPin = Boolean(localStorage.getItem(SECONDARY_PIN_KEY));
 
     if (passkey) {
+      const isHello = passkey.authType === 'windows_hello_native' || passkey.authType === 'webauthn_passkey';
       return {
         enabled: true,
         type: passkey.authType || 'passkey',
-        label: passkey.authType === 'webauthn_passkey' ? 'Windows Hello / Passkey' : 'Device PIN (2FA)',
+        label: isHello ? 'Windows Hello / Passkey' : 'Device PIN (2FA)',
         registeredAt: passkey.registeredAt
       };
     }
@@ -159,7 +172,6 @@ export async function verifySecondaryPin(pin) {
   if (!pin) return false;
   const stored = localStorage.getItem(SECONDARY_PIN_KEY);
   if (!stored) {
-    // If no pin stored, accept if matches default verification
     return pin.trim().length >= 4;
   }
   const hashed = await hashSecondaryPin(pin.trim());
@@ -167,10 +179,32 @@ export async function verifySecondaryPin(pin) {
 }
 
 export async function registerDevicePasskey(username = 'Personnel', displayName = 'WLR Officer', fallbackPin = '') {
+  // 1. Prioritize Real Native Windows Hello on PC
+  if (window.desktopApp?.verifyWindowsHello) {
+    try {
+      const res = await window.desktopApp.verifyWindowsHello('ลงทะเบียนอุปกรณ์กับ Windows Hello สำหรับ WLR Command Portal');
+      if (res?.success) {
+        const passkeyRecord = {
+          id: `hello_${Date.now()}`,
+          authType: 'windows_hello_native',
+          registeredAt: Date.now(),
+          deviceInfo: detectDeviceInfo()
+        };
+        localStorage.setItem(PASSKEY_KEY, JSON.stringify(passkeyRecord));
+        if (fallbackPin && fallbackPin.trim().length >= 4) {
+          await registerSecondaryPin(fallbackPin.trim());
+        }
+        return passkeyRecord;
+      }
+    } catch (err) {
+      console.warn('Native Windows Hello registration fell back:', err);
+    }
+  }
+
+  // 2. WebAuthn Platform Authenticator (Browser)
   const hostname = window.location.hostname || '';
   const isIp = /^(\d{1,3}\.){3}\d{1,3}$/.test(hostname);
 
-  // If WebAuthn is available and not blocked by IP restrictions
   if (window.PublicKeyCredential && window.isSecureContext && !isIp) {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -226,24 +260,38 @@ export async function registerDevicePasskey(username = 'Personnel', displayName 
       }
     } catch (webauthnErr) {
       console.warn('WebAuthn platform registration not completed:', webauthnErr);
-      // Fall through to PIN-based secondary verification
     }
   }
 
-  // Fallback: Register Device PIN Secondary Verification
+  // 3. Fallback: Register Device PIN Secondary Verification
   if (fallbackPin && fallbackPin.trim().length >= 4) {
     return await registerSecondaryPin(fallbackPin.trim());
   }
 
-  // Auto-generate Device 2FA key if no PIN specified
   const autoPin = '1234';
   return await registerSecondaryPin(autoPin);
 }
 
 export async function verifyDevicePasskey(pin = '') {
+  // 1. Prioritize Real Native Windows Hello on PC
+  if (window.desktopApp?.verifyWindowsHello) {
+    try {
+      const res = await window.desktopApp.verifyWindowsHello('ยืนยันตัวตนด้วย Windows Hello เพื่อดำเนินการ');
+      if (res?.success) {
+        return true;
+      }
+      if (res?.status === 'Canceled' && !pin) {
+        throw new Error('VERIFICATION_CANCELED');
+      }
+    } catch (err) {
+      if (err.message === 'VERIFICATION_CANCELED') throw err;
+      console.warn('Native Windows Hello fell back to PIN verification:', err);
+    }
+  }
+
   const stored = getRegisteredPasskey();
 
-  // If passkey is WebAuthn
+  // 2. WebAuthn Assertion (Browser)
   if (stored?.authType === 'webauthn_passkey' && window.PublicKeyCredential && window.isSecureContext) {
     try {
       const challenge = crypto.getRandomValues(new Uint8Array(32));
@@ -273,14 +321,13 @@ export async function verifyDevicePasskey(pin = '') {
     }
   }
 
-  // Verify PIN fallback
+  // 3. Verify PIN fallback
   if (pin) {
     const valid = await verifySecondaryPin(pin);
     if (valid) return true;
     throw new Error('INVALID_PIN');
   }
 
-  // If no PIN provided and WebAuthn wasn't triggered
   if (localStorage.getItem(SECONDARY_PIN_KEY)) {
     throw new Error('PIN_REQUIRED');
   }
