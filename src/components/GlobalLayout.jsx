@@ -27,6 +27,7 @@ import { t as translate } from '../lib/i18n.js';
 import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings, saveOwnSettings } from '../lib/services.js';
 import { supabase } from '../lib/supabase.js';
 import { writeUiMode } from '../../js/ui-mode.js';
+import { startAnnouncementWatcher } from '../../js/notification-service.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
@@ -248,6 +249,9 @@ export function CommandProvider({ children }) {
 
   useEffect(() => {
     applyPrefsToDom(readLocalPrefs());
+    if (supabase) {
+      startAnnouncementWatcher(supabase);
+    }
   }, []);
 
   useEffect(() => {

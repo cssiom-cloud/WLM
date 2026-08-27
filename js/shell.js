@@ -9,6 +9,8 @@ import { installCrestIcon, showStatus, upgradeCheckboxes, upgradeSelects } from 
 import { bindImageEditorHost } from './image-editor.js';
 import { enterPage } from './motion.js';
 import { isDossierExportHandoffActive, isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
+import { supabaseClient } from './supabase-client.js';
+import { startAnnouncementWatcher } from './notification-service.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
@@ -50,6 +52,9 @@ export function bootCommandShell(activePage) {
   if (!window.__wlrNetworkBound) {
     window.__wlrNetworkBound = true;
     window.addEventListener('offline', () => showStatus(t('notice.offline'), true));
+  }
+  if (supabaseClient) {
+    startAnnouncementWatcher(supabaseClient);
   }
   return ready;
 }

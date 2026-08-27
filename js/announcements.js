@@ -168,7 +168,7 @@ function participantRoster(item) {
 
 function announcementCard(item, index) {
   return `
-    <article class="announcement-card"${window.AOS ? ` data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}"` : ''}>
+    <article id="announcement-${escapeHtml(item.id)}" class="announcement-card"${window.AOS ? ` data-aos="fade-up" data-aos-delay="${Math.min(index * 60, 240)}"` : ''}>
       <span class="card-glare" aria-hidden="true"></span>
       ${coverMarkup(item)}
       <div class="announcement-body">
@@ -201,6 +201,24 @@ function renderBoard() {
     window.requestAnimationFrame(() => {
       initAos();
       window.AOS.refreshHard?.();
+    });
+  }
+
+  // Check if URL has ?id=... to auto-scroll and highlight
+  const targetId = new URLSearchParams(window.location.search).get('id') || (window.location.hash || '').replace(/^#/, '').replace(/^announcement-/, '');
+  if (targetId) {
+    window.requestAnimationFrame(() => {
+      const targetCard = document.querySelector(`#announcement-${targetId}`) || document.querySelector(`[data-join-id="${targetId}"]`)?.closest('.announcement-card');
+      if (targetCard) {
+        targetCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        targetCard.style.transition = 'box-shadow 0.4s ease, border-color 0.4s ease, transform 0.4s ease';
+        targetCard.style.borderColor = 'var(--accent)';
+        targetCard.style.boxShadow = '0 0 0 3px var(--accent-soft), 0 10px 30px rgba(0,0,0,0.3)';
+        targetCard.style.transform = 'translateY(-4px)';
+        setTimeout(() => {
+          targetCard.style.transform = '';
+        }, 800);
+      }
     });
   }
 }

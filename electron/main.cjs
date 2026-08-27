@@ -1,4 +1,4 @@
-const { app, BrowserWindow, shell } = require('electron');
+const { app, BrowserWindow, shell, Notification, ipcMain } = require('electron');
 const http = require('node:http');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -218,6 +218,50 @@ app.whenReady().then(async () => {
     app.setAppUserModelId('com.wlr.command.portal');
     await startInternalServer();
     createMainWindow();
+
+    // Register Native Announcement Notification handler
+    ipcMain.handle('notify-announcement', (event, payload = {}) => {
+      try {
+        if (!Notification.isSupported()) {
+          return false;
+        }
+        const { id, title = 'Announcement', content = '', author = '', url = '' } = payload;
+        const iconPath = getAppIcon();
+        const cleanContent = content ? content.replace(/<[^>]*>?/gm, '').trim() : '';
+        const bodyText = cleanContent
+          ? (cleanContent.length > 90 ? cleanContent.slice(0, 87) + '...' : cleanContent)
+          : (author ? `โดย ${author}` : 'คลิกเพื่อเปิดดูรายละเอียดประกาศในโปรแกรม');
+
+        const notification = new Notification({
+          title: `มีประกาศใหม่: ${title}`,
+          body: bodyText,
+          icon: iconPath,
+          silent: false
+        });
+
+        notification.on('click', () => {
+          if (mainWindow) {
+            if (mainWindow.isMinimized()) mainWindow.restore();
+            mainWindow.show();
+            mainWindow.focus();
+
+            let targetUrl = url;
+            if (!targetUrl) {
+              targetUrl = `http://127.0.0.1:${serverPort}/announcements.html?id=${encodeURIComponent(id || '')}`;
+            } else if (targetUrl.startsWith('/')) {
+              targetUrl = `http://127.0.0.1:${serverPort}${targetUrl}`;
+            }
+            mainWindow.loadURL(targetUrl);
+          }
+        });
+
+        notification.show();
+        return true;
+      } catch (err) {
+        console.error('Failed to show native notification:', err);
+        return false;
+      }
+    });
 
     app.on('second-instance', () => {
       if (mainWindow) {

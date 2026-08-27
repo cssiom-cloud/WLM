@@ -758,7 +758,7 @@ export default function Settings() {
               </div>
               <div>
                 <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
-                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.3</span>
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.4</span>
                 </strong>
                 <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
               </div>

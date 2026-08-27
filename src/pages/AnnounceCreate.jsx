@@ -4,6 +4,7 @@ import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
 import { isAdmin } from '../lib/access.js';
 import { createAnnouncement, fetchAnnouncementBoard, updateAnnouncement } from '../lib/services.js';
+import { sendDeviceAnnouncementNotification } from '../../js/notification-service.js';
 import { PageHeader, btnGhost, btnPrimary, fieldClass, FileUploadButton, glassClass, CommandCheck } from '../lib/ui.jsx';
 import ImageCropper from '../components/ImageCropper.jsx';
 
@@ -77,8 +78,15 @@ export default function AnnounceCreate() {
         await updateAnnouncement(supabase, editId, payload);
         toast.success(t('ann.updated'));
       } else {
-        await createAnnouncement(supabase, payload);
+        const created = await createAnnouncement(supabase, payload);
         toast.success(t('create.published'));
+        await sendDeviceAnnouncementNotification({
+          id: created?.id,
+          title: payload.title,
+          content: payload.content,
+          author: activePersonnel?.callsign || activePersonnel?.first_name || '',
+          url: `/app/announcements/${created?.id || ''}`
+        });
       }
       navigate('/announcements');
     } catch (error) {

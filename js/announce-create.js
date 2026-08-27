@@ -5,6 +5,7 @@ import { t } from './i18n.js';
 import { createAnnouncement, fetchAnnouncementBoard, updateAnnouncement } from './announcement-service.js';
 import { supabaseClient } from './supabase-client.js';
 import { openImageEditor, assignFileToInput } from './image-editor.js';
+import { sendDeviceAnnouncementNotification } from './notification-service.js';
 
 let currentAdmin = null;
 let editingId = new URLSearchParams(window.location.search).get('id');
@@ -157,18 +158,29 @@ document.querySelector('#announce-form').addEventListener('submit', async (event
       ? await updateAnnouncement(editingId, payload)
       : await createAnnouncement(payload);
 
-    if (!editingId && supabaseClient) {
-      const { error: notifyError } = await supabaseClient.functions.invoke('notify-discord', {
-        body: {
-          title,
-          content,
-          maxCapacity,
-          imageUrl: saved?.image_url || ''
+    if (!editingId) {
+      if (supabaseClient) {
+        const { error: notifyError } = await supabaseClient.functions.invoke('notify-discord', {
+          body: {
+            title,
+            content,
+            maxCapacity,
+            imageUrl: saved?.image_url || ''
+          }
+        });
+        if (notifyError) {
+          console.warn('Discord notify failed', notifyError.message);
         }
-      });
-      if (notifyError) {
-        console.warn('Discord notify failed', notifyError.message);
       }
+
+      // Trigger Native Device Notification
+      await sendDeviceAnnouncementNotification({
+        id: saved?.id,
+        title,
+        content,
+        author: currentAdmin?.callsign || currentAdmin?.first_name || '',
+        url: `./announcements.html?id=${encodeURIComponent(saved?.id || '')}`
+      });
     }
 
     showToast(editingId ? t('ann.updated') : t('create.published'), 'success');

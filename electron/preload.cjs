@@ -3,5 +3,6 @@ const { contextBridge, ipcRenderer } = require('electron');
 contextBridge.exposeInMainWorld('desktopApp', {
   isDesktop: true,
   platform: process.platform,
-  version: process.env.npm_package_version || '1.0.0'
+  version: process.env.npm_package_version || '1.0.4',
+  sendAnnouncementNotification: (data) => ipcRenderer.invoke('notify-announcement', data)
 });
