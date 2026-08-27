@@ -1,0 +1,45 @@
+{
+  "$schema": "https://raw.githubusercontent.com/electron-userland/electron-builder/master/packages/app-builder-lib/scheme.json",
+  "appId": "com.wlr.command.portal",
+  "productName": "WLR Command Portal",
+  "copyright": "Copyright © 2026 White Lion Regiment",
+  "directories": {
+    "output": "release/v1.0.2"
+  },
+  "files": [
+    "*.html",
+    "css/**/*",
+    "js/**/*",
+    "assets/**/*",
+    "react-dist/**/*",
+    "electron/**/*",
+    "package.json"
+  ],
+  "extraMetadata": {
+    "main": "electron/main.cjs"
+  },
+  "win": {
+    "icon": "assets/icon.ico",
+    "target": [
+      {
+        "target": "portable",
+        "arch": ["x64"]
+      },
+      {
+        "target": "nsis",
+        "arch": ["x64"]
+      }
+    ],
+    "requestedExecutionLevel": "asInvoker"
+  },
+  "nsis": {
+    "oneClick": false,
+    "allowToChangeInstallationDirectory": true,
+    "createDesktopShortcut": true,
+    "createStartMenuShortcut": true,
+    "shortcutName": "WLR Command Portal"
+  },
+  "portable": {
+    "artifactName": "${productName}-v${version}-Portable.${ext}"
+  }
+}

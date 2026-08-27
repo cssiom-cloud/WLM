@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { motion } from 'framer-motion';
+import { AnimatePresence, motion } from 'framer-motion';
+import { Lock, Trash2, Shield, RefreshCw, Key, CheckCircle, AlertCircle } from 'lucide-react';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
 import { initialsFromName, oauthRedirectTo } from '../lib/access.js';
@@ -7,7 +8,8 @@ import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from '../lib/serv
 import { applyUiMode, persistUiSkin, readUiMode, reactUiAvailable } from '../../js/ui-mode.js';
 import { applyAccent } from '../../js/theme.js';
 import { resolvedUiScale } from '../../js/user-prefs.js';
-import { btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
+import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from '../../js/session-vault.js';
+import { btnDanger, btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
 
@@ -76,9 +78,68 @@ export default function Settings() {
   const [lastName, setLastName] = useState('');
   const [creating, setCreating] = useState(false);
   const [resolvedScale, setResolvedScale] = useState(() => resolvedUiScale(uiScale));
+  
+  // Session Vault state
+  const [vaultSessions, setVaultSessions] = useState(() => readSessionVault());
+  const [vaultLabel, setVaultLabel] = useState('');
+  const [vaultPass, setVaultPass] = useState('');
+  const [vaultBusy, setVaultBusy] = useState(false);
+  const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+  const [pendingDeleteId, setPendingDeleteId] = useState(null);
+  const [deletePass, setDeletePass] = useState('');
+  const [deleteErr, setDeleteErr] = useState('');
+
   const identity = findDiscordIdentity(authUser);
   const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
   const canUnlink = (authUser?.identities || []).length > 1;
+
+  const handleSaveVault = async (e) => {
+    e.preventDefault();
+    if (!vaultLabel.trim() || !vaultPass) {
+      toast.alert(t('settings.sessionFillRequired'));
+      return;
+    }
+    setVaultBusy(true);
+    try {
+      await saveSessionToVault({
+        label: vaultLabel,
+        password: vaultPass,
+        session,
+        activePersonnel
+      });
+      setVaultLabel('');
+      setVaultPass('');
+      setVaultSessions(readSessionVault());
+      toast.show(t('settings.sessionSavedOk'));
+    } catch (err) {
+      toast.alert(err.message);
+    } finally {
+      setVaultBusy(false);
+    }
+  };
+
+  const openDeleteModal = (sessionId) => {
+    setPendingDeleteId(sessionId);
+    setDeletePass('');
+    setDeleteErr('');
+    setDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deletePass) {
+      setDeleteErr(t('settings.sessionPassword'));
+      return;
+    }
+    try {
+      await deleteSessionFromVault(pendingDeleteId, deletePass);
+      setDeleteModalOpen(false);
+      setPendingDeleteId(null);
+      setVaultSessions(readSessionVault());
+      toast.show(t('settings.sessionDeletedOk'));
+    } catch (err) {
+      setDeleteErr(err.message === 'INVALID_PASSWORD' ? t('settings.sessionInvalidPass') : err.message);
+    }
+  };
 
   const loadSettings = useCallback(async () => {
     if (!activePersonnel) {
@@ -530,7 +591,171 @@ export default function Settings() {
             {t('settings.bioPublic')}
           </CommandCheck>
         </article>
+
+        {/* Encrypted Session Vault */}
+        <article className={`${glassClass} p-5`}>
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+              <Key className="h-5 w-5" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">{t('settings.sessionVault')}</h2>
+              <p className="text-sm text-slate-500">{t('settings.sessionVaultHint')}</p>
+            </div>
+          </div>
+
+          <form onSubmit={handleSaveVault} className="mt-4 rounded-2xl border border-slate-200/80 bg-white/50 p-4 dark:border-white/10 dark:bg-slate-950/40">
+            <strong className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('settings.saveSession')}</strong>
+            <div className="mt-3 grid gap-3 sm:grid-cols-2">
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.sessionLabel')}</label>
+                <input
+                  type="text"
+                  value={vaultLabel}
+                  onChange={(e) => setVaultLabel(e.target.value)}
+                  placeholder={t('settings.sessionLabelPlaceholder')}
+                  className={`${fieldClass} mt-1 w-full`}
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.sessionPassword')}</label>
+                <input
+                  type="password"
+                  value={vaultPass}
+                  onChange={(e) => setVaultPass(e.target.value)}
+                  placeholder={t('settings.sessionPasswordPlaceholder')}
+                  className={`${fieldClass} mt-1 w-full`}
+                />
+              </div>
+            </div>
+            <button type="submit" disabled={vaultBusy} className={`${btnPrimary} mt-3 flex items-center gap-2`}>
+              <Lock className="h-4 w-4" />
+              <span>{t('settings.sessionSaveBtn')}</span>
+            </button>
+          </form>
+
+          <h3 className="mt-6 text-sm font-bold uppercase tracking-wider text-slate-500">{t('settings.savedSessions')}</h3>
+          <div className="mt-2 grid gap-2">
+            {vaultSessions.length === 0 ? (
+              <p className="text-sm text-slate-500">{t('settings.noSavedSessions')}</p>
+            ) : (
+              vaultSessions.map((s) => {
+                const d = new Date(s.saved_at);
+                const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                return (
+                  <div key={s.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/75 p-3 dark:border-white/10 dark:bg-slate-950/50">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)] flex-shrink-0">
+                        <Lock className="h-4 w-4" />
+                      </div>
+                      <div className="min-w-0">
+                        <strong className="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{s.label}</strong>
+                        <span className="block text-xs text-slate-500">{s.personnel_name || s.user_email || 'Session'} • {dateStr}</span>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => openDeleteModal(s.id)}
+                      className={`${btnDanger} flex items-center gap-1 text-xs`}
+                    >
+                      <Trash2 className="h-3.5 w-3.5" />
+                      <span>{t('settings.deleteSession')}</span>
+                    </button>
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </article>
+
+        {/* System Version & Clean Updates */}
+        <article className={`${glassClass} p-5`}>
+          <div className="flex items-center justify-between flex-wrap gap-4">
+            <div className="flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+                <Shield className="h-5 w-5" />
+              </div>
+              <div>
+                <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.2</span>
+                </strong>
+                <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
+              </div>
+            </div>
+            <button
+              type="button"
+              onClick={() => toast.show(t('settings.updateStatusUpToDate'))}
+              className={`${btnGhost} flex items-center gap-1.5 text-sm`}
+            >
+              <RefreshCw className="h-4 w-4" />
+              <span>{t('settings.checkUpdates')}</span>
+            </button>
+          </div>
+        </article>
       </div>
+
+      {/* Delete Password Modal */}
+      <AnimatePresence>
+        {deleteModalOpen ? (
+          <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setDeleteModalOpen(false)}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 16 }}
+              className="relative w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+            >
+              <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-red-100 dark:bg-red-950/80">
+                  <AlertCircle className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('settings.deleteSessionModalTitle')}</h3>
+                  <p className="text-xs text-slate-500">{t('settings.deleteSessionModalDesc')}</p>
+                </div>
+              </div>
+
+              <div className="mt-4">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.sessionPassword')}</label>
+                <input
+                  type="password"
+                  autoFocus
+                  value={deletePass}
+                  onChange={(e) => { setDeletePass(e.target.value); setDeleteErr(''); }}
+                  placeholder="••••••••"
+                  className={`${fieldClass} mt-1 w-full`}
+                />
+                {deleteErr ? (
+                  <p className="mt-2 text-xs font-semibold text-red-600 dark:text-red-400">{deleteErr}</p>
+                ) : null}
+              </div>
+
+              <div className="mt-6 flex justify-end gap-2">
+                <button
+                  type="button"
+                  onClick={() => setDeleteModalOpen(false)}
+                  className={btnGhost}
+                >
+                  {t('btn.cancel')}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleConfirmDelete}
+                  className={btnDanger}
+                >
+                  {t('settings.confirmDelete')}
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        ) : null}
+      </AnimatePresence>
     </section>
   );
 }

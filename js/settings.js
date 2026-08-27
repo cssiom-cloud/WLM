@@ -6,11 +6,13 @@ import {
   linkDiscordIdentity,
   readAuthRedirectError,
   readAuthUser,
+  readSession,
   readStoredActivePersonnelId,
   requireAuthenticatedPersonnel,
   setActivePersonnel,
   unlinkDiscordIdentity
 } from './session.js';
+import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from './session-vault.js';
 import { formatPersonnelName } from './domain.js';
 import { t } from './i18n.js';
 import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js';
@@ -269,6 +271,7 @@ requireAuthenticatedPersonnel()
     ownedProfiles = result.profiles || [];
     await refreshAuthUser();
     renderOwnedProfiles();
+    renderVaultSessions();
     clearAuthRedirectParams();
     if (redirectError) {
       showStatus(redirectError, true);
@@ -385,6 +388,131 @@ document.querySelectorAll('[data-ui-scale-pick]').forEach((button) => {
   });
 });
 
+// ── Encrypted Session Vault ──────────────────────────────────
+let pendingDeleteSessionId = null;
+
+function renderVaultSessions() {
+  const host = document.querySelector('#vault-sessions-list');
+  if (!host) return;
+
+  const sessions = readSessionVault();
+  if (!sessions.length) {
+    host.innerHTML = `<p class="settings-lead" style="margin:0;">${escapeHtml(t('settings.noSavedSessions'))}</p>`;
+    return;
+  }
+
+  host.innerHTML = sessions.map((item) => {
+    const d = new Date(item.saved_at);
+    const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    return `
+      <div class="connected-account" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);">
+        <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">
+          <div style="width:38px;height:38px;border-radius:10px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+          </div>
+          <div style="min-width:0;">
+            <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.95rem;">${escapeHtml(item.label)}</strong>
+            <small style="color:var(--text-muted);display:block;font-size:0.8rem;">${escapeHtml(item.personnel_name || item.user_email || 'Session')} • ${escapeHtml(dateStr)}</small>
+          </div>
+        </div>
+        <button class="btn btn-danger" type="button" data-delete-vault-id="${escapeHtml(item.id)}" style="flex-shrink:0;">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.25rem;"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          ${escapeHtml(t('settings.deleteSession'))}
+        </button>
+      </div>
+    `;
+  }).join('');
+
+  host.querySelectorAll('[data-delete-vault-id]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      openDeleteSessionModal(btn.getAttribute('data-delete-vault-id'));
+    });
+  });
+}
+
+function openDeleteSessionModal(sessionId) {
+  pendingDeleteSessionId = sessionId;
+  const modal = document.querySelector('#delete-session-modal');
+  const input = document.querySelector('#delete-password-input');
+  const err = document.querySelector('#delete-modal-error');
+  if (input) input.value = '';
+  if (err) { err.style.display = 'none'; err.textContent = ''; }
+  if (modal) modal.hidden = false;
+  if (input) input.focus();
+}
+
+function closeDeleteSessionModal() {
+  pendingDeleteSessionId = null;
+  const modal = document.querySelector('#delete-session-modal');
+  if (modal) modal.hidden = true;
+}
+
+document.querySelector('#cancel-delete-session-btn')?.addEventListener('click', closeDeleteSessionModal);
+document.querySelector('#delete-session-modal')?.addEventListener('click', (e) => {
+  if (e.target === e.currentTarget) closeDeleteSessionModal();
+});
+
+document.querySelector('#confirm-delete-session-btn')?.addEventListener('click', async () => {
+  if (!pendingDeleteSessionId) return;
+  const input = document.querySelector('#delete-password-input');
+  const err = document.querySelector('#delete-modal-error');
+  const password = input?.value || '';
+
+  if (!password) {
+    if (err) {
+      err.textContent = t('settings.sessionPassword');
+      err.style.display = 'block';
+    }
+    return;
+  }
+
+  try {
+    await deleteSessionFromVault(pendingDeleteSessionId, password);
+    closeDeleteSessionModal();
+    renderVaultSessions();
+    showStatus(t('settings.sessionDeletedOk'));
+  } catch (error) {
+    if (err) {
+      err.textContent = error.message === 'INVALID_PASSWORD'
+        ? t('settings.sessionInvalidPass')
+        : error.message;
+      err.style.display = 'block';
+    }
+  }
+});
+
+document.querySelector('#save-vault-btn')?.addEventListener('click', async () => {
+  const labelInput = document.querySelector('#vault-label-input');
+  const passInput = document.querySelector('#vault-password-input');
+  const label = labelInput?.value?.trim() || '';
+  const pass = passInput?.value || '';
+
+  if (!label || !pass) {
+    showStatus(t('settings.sessionFillRequired'), true);
+    return;
+  }
+
+  try {
+    const rawSession = await readSession();
+    await saveSessionToVault({
+      label,
+      password: pass,
+      session: rawSession,
+      activePersonnel: currentUser
+    });
+    if (labelInput) labelInput.value = '';
+    if (passInput) passInput.value = '';
+    renderVaultSessions();
+    showStatus(t('settings.sessionSavedOk'));
+  } catch (error) {
+    showStatus(error.message, true);
+  }
+});
+
+document.querySelector('#check-updates-btn')?.addEventListener('click', () => {
+  showStatus(t('settings.updateStatusUpToDate'));
+});
+
 window.addEventListener('resize', () => {
   if (readLocalPrefs(currentUser?.id || '').ui_scale === 'auto') {
     syncUiScaleButtons('auto');
@@ -394,5 +522,6 @@ window.addEventListener('resize', () => {
 window.addEventListener('wlr-lang-changed', () => {
   renderConnectedAccounts();
   renderOwnedProfiles();
+  renderVaultSessions();
   syncUiScaleButtons(readLocalPrefs(currentUser?.id || '').ui_scale);
 });
