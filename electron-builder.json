@@ -4,7 +4,7 @@
   "productName": "WLR Command Portal",
   "copyright": "Copyright © 2026 White Lion Regiment",
   "directories": {
-    "output": "release/v1.0.2"
+    "output": "release/v1.0.3"
   },
   "files": [
     "*.html",

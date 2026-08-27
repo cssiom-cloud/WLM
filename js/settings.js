@@ -13,6 +13,7 @@ import {
   unlinkDiscordIdentity
 } from './session.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from './session-vault.js';
+import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, registerDevicePasskey, verifyDevicePasskey } from './device-auth.js';
 import { formatPersonnelName } from './domain.js';
 import { t } from './i18n.js';
 import { confirmNotice, escapeHtml, initialsFromName, showStatus } from './ui.js';
@@ -272,6 +273,7 @@ requireAuthenticatedPersonnel()
     await refreshAuthUser();
     renderOwnedProfiles();
     renderVaultSessions();
+    await initDeviceAndPasskeyUI();
     clearAuthRedirectParams();
     if (redirectError) {
       showStatus(redirectError, true);
@@ -388,8 +390,65 @@ document.querySelectorAll('[data-ui-scale-pick]').forEach((button) => {
   });
 });
 
-// ── Encrypted Session Vault ──────────────────────────────────
+// ── Encrypted Session Vault & Device Authentication ────────
 let pendingDeleteSessionId = null;
+
+async function initDeviceAndPasskeyUI() {
+  const deviceInfo = detectDeviceInfo();
+  const labelEl = document.querySelector('#current-device-label');
+  const labelInput = document.querySelector('#vault-label-input');
+  if (labelEl) labelEl.textContent = deviceInfo.defaultLabel;
+  if (labelInput && !labelInput.value) {
+    labelInput.value = deviceInfo.defaultLabel;
+  }
+
+  const passkeyBadge = document.querySelector('#passkey-status-badge');
+  const registerBtn = document.querySelector('#register-passkey-btn');
+  const passkeyDeleteOpt = document.querySelector('#passkey-delete-opt');
+
+  const supported = await isPasskeySupported();
+  const registered = getRegisteredPasskey();
+
+  if (!supported) {
+    if (passkeyBadge) {
+      passkeyBadge.className = 'badge badge-gold';
+      passkeyBadge.textContent = t('settings.passkeyNotSupported');
+    }
+    if (registerBtn) registerBtn.style.display = 'none';
+    if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'none';
+    return;
+  }
+
+  if (registered) {
+    if (passkeyBadge) {
+      passkeyBadge.className = 'badge badge-green';
+      passkeyBadge.textContent = t('settings.passkeyRegistered');
+    }
+    if (registerBtn) registerBtn.textContent = t('settings.passkeyReady');
+    if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'block';
+  } else {
+    if (passkeyBadge) {
+      passkeyBadge.className = 'badge badge-blue';
+      passkeyBadge.textContent = t('settings.passkeyTitle');
+    }
+    if (registerBtn) {
+      registerBtn.style.display = 'inline-flex';
+      registerBtn.textContent = t('settings.registerPasskey');
+    }
+    if (passkeyDeleteOpt) passkeyDeleteOpt.style.display = 'block';
+  }
+}
+
+document.querySelector('#register-passkey-btn')?.addEventListener('click', async () => {
+  try {
+    const user = currentUser?.callsign || currentUser?.first_name || 'Personnel';
+    await registerDevicePasskey(user, `${user} (${detectDeviceInfo().defaultLabel})`);
+    await initDeviceAndPasskeyUI();
+    showStatus(t('settings.passkeyRegisteredOk'));
+  } catch (error) {
+    showStatus(error.message, true);
+  }
+});
 
 function renderVaultSessions() {
   const host = document.querySelector('#vault-sessions-list');
@@ -404,6 +463,9 @@ function renderVaultSessions() {
   host.innerHTML = sessions.map((item) => {
     const d = new Date(item.saved_at);
     const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+    const devInfo = item.device_info || {};
+    const devOs = devInfo.os || 'Device';
+    const isPasskey = item.auth_method === 'passkey';
     return `
       <div class="connected-account" style="display:flex;align-items:center;justify-content:space-between;gap:0.75rem;padding:0.75rem 1rem;border:1px solid var(--border);border-radius:var(--radius);background:var(--bg-elevated);">
         <div style="display:flex;align-items:center;gap:0.75rem;min-width:0;">
@@ -411,8 +473,11 @@ function renderVaultSessions() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           </div>
           <div style="min-width:0;">
-            <strong style="display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.95rem;">${escapeHtml(item.label)}</strong>
-            <small style="color:var(--text-muted);display:block;font-size:0.8rem;">${escapeHtml(item.personnel_name || item.user_email || 'Session')} • ${escapeHtml(dateStr)}</small>
+            <div style="display:flex;align-items:center;gap:0.4rem;flex-wrap:wrap;">
+              <strong style="white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:0.95rem;">${escapeHtml(item.label)}</strong>
+              <span class="badge ${isPasskey ? 'badge-green' : 'badge-blue'}" style="font-size:0.7rem;">${isPasskey ? 'Passkey' : 'PIN Protected'}</span>
+            </div>
+            <small style="color:var(--text-muted);display:block;font-size:0.8rem;">${escapeHtml(devOs)} • ${escapeHtml(item.personnel_name || item.user_email || 'Session')} • ${escapeHtml(dateStr)}</small>
           </div>
         </div>
         <button class="btn btn-danger" type="button" data-delete-vault-id="${escapeHtml(item.id)}" style="flex-shrink:0;">
@@ -452,6 +517,24 @@ document.querySelector('#delete-session-modal')?.addEventListener('click', (e) =
   if (e.target === e.currentTarget) closeDeleteSessionModal();
 });
 
+// Verify with Passkey / Windows Hello button
+document.querySelector('#verify-passkey-delete-btn')?.addEventListener('click', async () => {
+  if (!pendingDeleteSessionId) return;
+  const err = document.querySelector('#delete-modal-error');
+  try {
+    await deleteSessionFromVault(pendingDeleteSessionId, { usePasskey: true });
+    closeDeleteSessionModal();
+    renderVaultSessions();
+    showStatus(t('settings.sessionDeletedOk'));
+  } catch (error) {
+    if (err) {
+      err.textContent = t('settings.passkeyFailed');
+      err.style.display = 'block';
+    }
+  }
+});
+
+// Verify with PIN / Password button
 document.querySelector('#confirm-delete-session-btn')?.addEventListener('click', async () => {
   if (!pendingDeleteSessionId) return;
   const input = document.querySelector('#delete-password-input');
@@ -460,14 +543,14 @@ document.querySelector('#confirm-delete-session-btn')?.addEventListener('click',
 
   if (!password) {
     if (err) {
-      err.textContent = t('settings.sessionPassword');
+      err.textContent = t('settings.pinRequired');
       err.style.display = 'block';
     }
     return;
   }
 
   try {
-    await deleteSessionFromVault(pendingDeleteSessionId, password);
+    await deleteSessionFromVault(pendingDeleteSessionId, { password });
     closeDeleteSessionModal();
     renderVaultSessions();
     showStatus(t('settings.sessionDeletedOk'));
@@ -487,20 +570,21 @@ document.querySelector('#save-vault-btn')?.addEventListener('click', async () =>
   const label = labelInput?.value?.trim() || '';
   const pass = passInput?.value || '';
 
-  if (!label || !pass) {
+  if (!pass) {
     showStatus(t('settings.sessionFillRequired'), true);
     return;
   }
 
   try {
     const rawSession = await readSession();
+    const registeredPasskey = getRegisteredPasskey();
     await saveSessionToVault({
       label,
       password: pass,
+      authMethod: registeredPasskey ? 'passkey' : 'pin',
       session: rawSession,
       activePersonnel: currentUser
     });
-    if (labelInput) labelInput.value = '';
     if (passInput) passInput.value = '';
     renderVaultSessions();
     showStatus(t('settings.sessionSavedOk'));

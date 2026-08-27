@@ -98,10 +98,15 @@ function writeSessionVault(list) {
   localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
 }
 
-export async function saveSessionToVault({ label, password, session, activePersonnel }) {
+import { detectDeviceInfo, verifyDevicePasskey } from './device-auth.js';
+
+export async function saveSessionToVault({ label, password, authMethod = 'pin', session, activePersonnel }) {
   if (!password || password.trim().length < 4) {
-    throw new Error('Password must be at least 4 characters');
+    throw new Error('PIN / Password must be at least 4 characters');
   }
+
+  const deviceInfo = detectDeviceInfo();
+  const sessionLabel = (label && label.trim()) ? label.trim() : deviceInfo.defaultLabel;
 
   const payload = {
     user_id: session?.user?.id || '',
@@ -110,6 +115,7 @@ export async function saveSessionToVault({ label, password, session, activePerso
     refresh_token: session?.refresh_token || '',
     active_personnel_id: activePersonnel?.id || '',
     active_personnel_name: activePersonnel?.callsign || activePersonnel?.first_name || '',
+    device_id: deviceInfo.deviceId,
     saved_at: Date.now()
   };
 
@@ -118,9 +124,11 @@ export async function saveSessionToVault({ label, password, session, activePerso
   const id = `vault_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
   const record = {
     id,
-    label: label.trim() || 'Session Snapshot',
+    label: sessionLabel,
     user_email: payload.email,
     personnel_name: payload.active_personnel_name,
+    auth_method: authMethod, // 'passkey' | 'pin'
+    device_info: deviceInfo,
     saved_at: payload.saved_at,
     salt: encrypted.salt,
     iv: encrypted.iv,
@@ -128,27 +136,40 @@ export async function saveSessionToVault({ label, password, session, activePerso
   };
 
   const existing = readSessionVault();
-  // Filter out any duplicate label or replace
   const updated = [record, ...existing.filter((item) => item.id !== id)];
   writeSessionVault(updated);
   return record;
 }
 
-export async function deleteSessionFromVault(sessionId, password) {
+export async function deleteSessionFromVault(sessionId, authOptions = {}) {
   const existing = readSessionVault();
   const target = existing.find((item) => item.id === sessionId);
   if (!target) {
     throw new Error('Session not found');
   }
 
-  // Attempt decryption to verify password
-  try {
-    await decryptSessionData(target, password);
-  } catch {
-    throw new Error('INVALID_PASSWORD');
+  const { password, usePasskey } = typeof authOptions === 'string' ? { password: authOptions } : authOptions;
+
+  if (usePasskey) {
+    // Verify via Device Passkey / Windows Hello
+    try {
+      await verifyDevicePasskey();
+    } catch (err) {
+      throw new Error('PASSKEY_FAILED');
+    }
+  } else {
+    // Attempt decryption to verify password/PIN
+    if (!password) {
+      throw new Error('PIN_REQUIRED');
+    }
+    try {
+      await decryptSessionData(target, password);
+    } catch {
+      throw new Error('INVALID_PASSWORD');
+    }
   }
 
-  // If password verified, remove record
+  // If verified, remove record
   const next = existing.filter((item) => item.id !== sessionId);
   writeSessionVault(next);
   return true;

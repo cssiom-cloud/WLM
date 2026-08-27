@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lock, Trash2, Shield, RefreshCw, Key, CheckCircle, AlertCircle } from 'lucide-react';
+import { Lock, Trash2, Shield, RefreshCw, Key, CheckCircle, AlertCircle, Fingerprint, Laptop, Smartphone } from 'lucide-react';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
 import { initialsFromName, oauthRedirectTo } from '../lib/access.js';
@@ -9,6 +9,7 @@ import { applyUiMode, persistUiSkin, readUiMode, reactUiAvailable } from '../../
 import { applyAccent } from '../../js/theme.js';
 import { resolvedUiScale } from '../../js/user-prefs.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from '../../js/session-vault.js';
+import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, registerDevicePasskey, verifyDevicePasskey } from '../../js/device-auth.js';
 import { btnDanger, btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
@@ -79,9 +80,14 @@ export default function Settings() {
   const [creating, setCreating] = useState(false);
   const [resolvedScale, setResolvedScale] = useState(() => resolvedUiScale(uiScale));
   
+  // Device & Passkey state
+  const [deviceInfo, setDeviceInfo] = useState(() => detectDeviceInfo());
+  const [passkeySupported, setPasskeySupported] = useState(false);
+  const [passkeyRegistered, setPasskeyRegistered] = useState(() => Boolean(getRegisteredPasskey()));
+
   // Session Vault state
   const [vaultSessions, setVaultSessions] = useState(() => readSessionVault());
-  const [vaultLabel, setVaultLabel] = useState('');
+  const [vaultLabel, setVaultLabel] = useState(() => detectDeviceInfo().defaultLabel);
   const [vaultPass, setVaultPass] = useState('');
   const [vaultBusy, setVaultBusy] = useState(false);
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
@@ -89,25 +95,43 @@ export default function Settings() {
   const [deletePass, setDeletePass] = useState('');
   const [deleteErr, setDeleteErr] = useState('');
 
+  useEffect(() => {
+    isPasskeySupported().then((sup) => {
+      setPasskeySupported(sup);
+      setPasskeyRegistered(Boolean(getRegisteredPasskey()));
+    });
+  }, []);
+
   const identity = findDiscordIdentity(authUser);
   const discord = useMemo(() => discordDisplay(identity, authUser), [authUser, identity]);
   const canUnlink = (authUser?.identities || []).length > 1;
 
+  const handleRegisterPasskey = async () => {
+    try {
+      const user = activePersonnel?.callsign || activePersonnel?.first_name || 'Personnel';
+      await registerDevicePasskey(user, `${user} (${deviceInfo.defaultLabel})`);
+      setPasskeyRegistered(true);
+      toast.show(t('settings.passkeyRegisteredOk'));
+    } catch (err) {
+      toast.alert(err.message);
+    }
+  };
+
   const handleSaveVault = async (e) => {
     e.preventDefault();
-    if (!vaultLabel.trim() || !vaultPass) {
+    if (!vaultPass) {
       toast.alert(t('settings.sessionFillRequired'));
       return;
     }
     setVaultBusy(true);
     try {
       await saveSessionToVault({
-        label: vaultLabel,
+        label: vaultLabel || deviceInfo.defaultLabel,
         password: vaultPass,
+        authMethod: passkeyRegistered ? 'passkey' : 'pin',
         session,
         activePersonnel
       });
-      setVaultLabel('');
       setVaultPass('');
       setVaultSessions(readSessionVault());
       toast.show(t('settings.sessionSavedOk'));
@@ -125,13 +149,25 @@ export default function Settings() {
     setDeleteModalOpen(true);
   };
 
+  const handleDeleteWithPasskey = async () => {
+    try {
+      await deleteSessionFromVault(pendingDeleteId, { usePasskey: true });
+      setDeleteModalOpen(false);
+      setPendingDeleteId(null);
+      setVaultSessions(readSessionVault());
+      toast.show(t('settings.sessionDeletedOk'));
+    } catch (err) {
+      setDeleteErr(t('settings.passkeyFailed'));
+    }
+  };
+
   const handleConfirmDelete = async () => {
     if (!deletePass) {
-      setDeleteErr(t('settings.sessionPassword'));
+      setDeleteErr(t('settings.pinRequired'));
       return;
     }
     try {
-      await deleteSessionFromVault(pendingDeleteId, deletePass);
+      await deleteSessionFromVault(pendingDeleteId, { password: deletePass });
       setDeleteModalOpen(false);
       setPendingDeleteId(null);
       setVaultSessions(readSessionVault());
@@ -604,6 +640,41 @@ export default function Settings() {
             </div>
           </div>
 
+          {/* Device & Passkey Status Bar */}
+          <div className="mt-4 flex items-center justify-between flex-wrap gap-3 rounded-2xl border border-slate-200/80 bg-white/60 p-3.5 dark:border-white/10 dark:bg-slate-950/40">
+            <div className="flex items-center gap-3">
+              <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[var(--accent-soft)] text-[var(--accent)]">
+                <Laptop className="h-4 w-4" />
+              </div>
+              <div>
+                <small className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.thisDevice')}</small>
+                <strong className="block text-sm font-semibold text-slate-900 dark:text-slate-100">{deviceInfo.defaultLabel}</strong>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <span className={`inline-flex items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${
+                passkeyRegistered
+                  ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                  : passkeySupported
+                  ? 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                  : 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+              }`}>
+                <Fingerprint className="h-3.5 w-3.5" />
+                <span>{passkeyRegistered ? t('settings.passkeyRegistered') : passkeySupported ? t('settings.passkeyTitle') : t('settings.passkeyNotSupported')}</span>
+              </span>
+              {passkeySupported && !passkeyRegistered ? (
+                <button
+                  type="button"
+                  onClick={handleRegisterPasskey}
+                  className={`${btnGhost} flex items-center gap-1 text-xs py-1.5 px-3`}
+                >
+                  <Fingerprint className="h-3.5 w-3.5" />
+                  <span>{t('settings.registerPasskey')}</span>
+                </button>
+              ) : null}
+            </div>
+          </div>
+
           <form onSubmit={handleSaveVault} className="mt-4 rounded-2xl border border-slate-200/80 bg-white/50 p-4 dark:border-white/10 dark:bg-slate-950/40">
             <strong className="text-sm font-semibold text-slate-900 dark:text-slate-100">{t('settings.saveSession')}</strong>
             <div className="mt-3 grid gap-3 sm:grid-cols-2">
@@ -618,12 +689,12 @@ export default function Settings() {
                 />
               </div>
               <div>
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.sessionPassword')}</label>
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.devicePin')}</label>
                 <input
                   type="password"
                   value={vaultPass}
                   onChange={(e) => setVaultPass(e.target.value)}
-                  placeholder={t('settings.sessionPasswordPlaceholder')}
+                  placeholder={t('settings.devicePinPlaceholder')}
                   className={`${fieldClass} mt-1 w-full`}
                 />
               </div>
@@ -642,6 +713,8 @@ export default function Settings() {
               vaultSessions.map((s) => {
                 const d = new Date(s.saved_at);
                 const dateStr = d.toLocaleDateString() + ' ' + d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                const isPasskey = s.auth_method === 'passkey';
+                const devOs = s.device_info?.os || 'Device';
                 return (
                   <div key={s.id} className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200/80 bg-white/75 p-3 dark:border-white/10 dark:bg-slate-950/50">
                     <div className="flex items-center gap-3 min-w-0">
@@ -649,8 +722,16 @@ export default function Settings() {
                         <Lock className="h-4 w-4" />
                       </div>
                       <div className="min-w-0">
-                        <strong className="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{s.label}</strong>
-                        <span className="block text-xs text-slate-500">{s.personnel_name || s.user_email || 'Session'} • {dateStr}</span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <strong className="block truncate text-sm font-semibold text-slate-900 dark:text-slate-100">{s.label}</strong>
+                          <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold ${
+                            isPasskey ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20' : 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border border-blue-500/20'
+                          }`}>
+                            {isPasskey ? <Fingerprint className="h-2.5 w-2.5" /> : <Key className="h-2.5 w-2.5" />}
+                            <span>{isPasskey ? 'Passkey' : 'PIN Protected'}</span>
+                          </span>
+                        </div>
+                        <span className="block text-xs text-slate-500">{devOs} • {s.personnel_name || s.user_email || 'Session'} • {dateStr}</span>
                       </div>
                     </div>
                     <button
@@ -677,7 +758,7 @@ export default function Settings() {
               </div>
               <div>
                 <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
-                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.2</span>
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.3</span>
                 </strong>
                 <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
               </div>
@@ -694,7 +775,7 @@ export default function Settings() {
         </article>
       </div>
 
-      {/* Delete Password Modal */}
+      {/* Delete Password / Passkey Modal */}
       <AnimatePresence>
         {deleteModalOpen ? (
           <div className="fixed inset-0 z-[120] flex items-center justify-center p-4">
@@ -721,11 +802,33 @@ export default function Settings() {
                 </div>
               </div>
 
-              <div className="mt-4">
-                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.sessionPassword')}</label>
+              {/* Passkey Verification Option */}
+              {passkeySupported ? (
+                <div className="mt-4 rounded-2xl border border-slate-200/80 bg-white/60 p-3 dark:border-white/10 dark:bg-slate-900/40">
+                  <button
+                    type="button"
+                    onClick={handleDeleteWithPasskey}
+                    className={`${btnPrimary} flex w-full items-center justify-center gap-2`}
+                  >
+                    <Fingerprint className="h-4 w-4" />
+                    <span>{t('settings.verifyWithPasskey')}</span>
+                  </button>
+                </div>
+              ) : null}
+
+              {passkeySupported ? (
+                <div className="my-3 flex items-center gap-3">
+                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">OR PIN</span>
+                  <div className="h-px flex-1 bg-slate-200 dark:bg-white/10" />
+                </div>
+              ) : null}
+
+              <div className="mt-2">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-slate-500">{t('settings.devicePin')}</label>
                 <input
                   type="password"
-                  autoFocus
+                  autoFocus={!passkeySupported}
                   value={deletePass}
                   onChange={(e) => { setDeletePass(e.target.value); setDeleteErr(''); }}
                   placeholder="••••••••"
