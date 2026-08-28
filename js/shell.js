@@ -11,6 +11,7 @@ import { enterPage } from './motion.js';
 import { isDossierExportHandoffActive, isOpsExportHandoffActive, maybeRedirectForUiMode, writeUiMode } from './ui-mode.js';
 import { supabaseClient } from './supabase-client.js';
 import { startAnnouncementWatcher } from './notification-service.js';
+import { checkStartupUpdate, showStartupUpdateModal } from './app-updater.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
@@ -55,6 +56,13 @@ export function bootCommandShell(activePage) {
   }
   if (supabaseClient) {
     startAnnouncementWatcher(supabaseClient);
+    checkStartupUpdate(supabaseClient).then((updateInfo) => {
+      if (updateInfo?.updateAvailable && !updateInfo.dismissed) {
+        showStartupUpdateModal(updateInfo);
+      }
+    }).catch((err) => {
+      console.warn('Startup update check skipped:', err);
+    });
   }
   return ready;
 }

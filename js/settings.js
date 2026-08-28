@@ -22,6 +22,7 @@ import { fetchOwnSettings, saveOwnSettings, writeActivityLog } from './command-s
 import { applyUiMode, persistUiSkin, readUiMode } from './ui-mode.js';
 import { applyPrefsToDom, mergeRemoteSettings, readLocalPrefs, resolvedUiScale, setPrefsOwner, writeLocalPrefs } from './user-prefs.js';
 import { checkAppUpdate, openUpdateLink } from './updater.js';
+import { applyLiveHotPatch } from './hot-updater.js';
 
 let currentUser = null;
 let currentAuthUser = null;
@@ -670,6 +671,43 @@ checkUpdatesBtn?.addEventListener('click', async () => {
   } finally {
     checkUpdatesBtn.disabled = false;
     checkUpdatesBtn.innerHTML = originalHtml;
+  }
+});
+
+const applyHotpatchBtn = document.querySelector('#apply-hotpatch-btn');
+const hotpatchProgressBox = document.querySelector('#hotpatch-progress-box');
+const hotpatchStatusText = document.querySelector('#hotpatch-status-text');
+const hotpatchPctText = document.querySelector('#hotpatch-pct-text');
+const hotpatchProgressFill = document.querySelector('#hotpatch-progress-fill');
+
+applyHotpatchBtn?.addEventListener('click', async () => {
+  if (!applyHotpatchBtn) return;
+  applyHotpatchBtn.disabled = true;
+  if (hotpatchProgressBox) hotpatchProgressBox.style.display = 'block';
+
+  try {
+    await applyLiveHotPatch((p) => {
+      if (p.stage === 'downloading') {
+        const pct = Math.round((p.current / p.total) * 100);
+        if (hotpatchStatusText) hotpatchStatusText.textContent = `Downloading ${p.fileName}...`;
+        if (hotpatchPctText) hotpatchPctText.textContent = `${pct}%`;
+        if (hotpatchProgressFill) hotpatchProgressFill.style.width = `${pct}%`;
+      } else if (p.stage === 'applying') {
+        if (hotpatchStatusText) hotpatchStatusText.textContent = t('hotUpdate.applying');
+      } else if (p.stage === 'success') {
+        if (hotpatchStatusText) hotpatchStatusText.textContent = t('hotUpdate.success');
+        if (hotpatchPctText) hotpatchPctText.textContent = '100%';
+        if (hotpatchProgressFill) hotpatchProgressFill.style.width = '100%';
+      }
+    });
+
+    showStatus(t('hotUpdate.success'));
+    setTimeout(() => {
+      window.location.reload();
+    }, 1800);
+  } catch (err) {
+    showStatus(err.message, true);
+    applyHotpatchBtn.disabled = false;
   }
 });
 

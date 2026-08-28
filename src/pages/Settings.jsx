@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { AnimatePresence, motion } from 'framer-motion';
-import { Lock, Trash2, Shield, RefreshCw, Key, CheckCircle, AlertCircle, Fingerprint, Laptop, Smartphone } from 'lucide-react';
+import { Lock, Trash2, Shield, RefreshCw, Key, CheckCircle, AlertCircle, Fingerprint, Laptop, Smartphone, Zap } from 'lucide-react';
 import { useCommand } from '../components/GlobalLayout.jsx';
 import { useToast } from '../components/LiquidToast.jsx';
 import { initialsFromName, oauthRedirectTo } from '../lib/access.js';
@@ -11,6 +11,7 @@ import { resolvedUiScale } from '../../js/user-prefs.js';
 import { readSessionVault, saveSessionToVault, deleteSessionFromVault } from '../../js/session-vault.js';
 import { detectDeviceInfo, isPasskeySupported, getRegisteredPasskey, getSecondaryVerificationStatus, registerDevicePasskey, verifyDevicePasskey } from '../../js/device-auth.js';
 import { checkAppUpdate, openUpdateLink } from '../../js/updater.js';
+import { applyLiveHotPatch } from '../../js/hot-updater.js';
 import { btnDanger, btnGhost, btnPrimary, fieldClass, glassClass, CommandCheck } from '../lib/ui.jsx';
 
 const ACCENT_KEY = 'wlr-command-accent';
@@ -103,6 +104,9 @@ export default function Settings() {
   const [updateModalOpen, setUpdateModalOpen] = useState(false);
   const [updateInfo, setUpdateInfo] = useState(null);
   const [checkingUpdates, setCheckingUpdates] = useState(false);
+  const [hotpatching, setHotpatching] = useState(false);
+  const [hotpatchStatus, setHotpatchStatus] = useState('');
+  const [hotpatchPct, setHotpatchPct] = useState(0);
 
   useEffect(() => {
     isPasskeySupported().then((sup) => {
@@ -127,6 +131,31 @@ export default function Settings() {
       toast.alert(t('settings.updateError'));
     } finally {
       setCheckingUpdates(false);
+    }
+  };
+
+  const handleApplyHotPatchClick = async () => {
+    setHotpatching(true);
+    try {
+      await applyLiveHotPatch((p) => {
+        if (p.stage === 'downloading') {
+          const pct = Math.round((p.current / p.total) * 100);
+          setHotpatchStatus(`Downloading ${p.fileName}...`);
+          setHotpatchPct(pct);
+        } else if (p.stage === 'applying') {
+          setHotpatchStatus(t('hotUpdate.applying'));
+        } else if (p.stage === 'success') {
+          setHotpatchStatus(t('hotUpdate.success'));
+          setHotpatchPct(100);
+        }
+      });
+      toast.show(t('hotUpdate.success'));
+      setTimeout(() => {
+        window.location.reload();
+      }, 1800);
+    } catch (err) {
+      toast.alert(err.message);
+      setHotpatching(false);
     }
   };
 
@@ -793,7 +822,7 @@ export default function Settings() {
               </div>
               <div>
                 <strong className="block text-base font-semibold text-slate-900 dark:text-slate-100">
-                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.6</span>
+                  WLR Command Portal <span className="ml-2 inline-flex items-center rounded-full bg-[var(--accent-soft)] px-2.5 py-0.5 text-xs font-semibold text-[var(--accent)]">v1.0.7</span>
                 </strong>
                 <p className="text-xs text-slate-500">{t('settings.systemVersionHint')}</p>
               </div>
@@ -992,6 +1021,31 @@ export default function Settings() {
               </div>
 
               <div className="mt-4 grid gap-2">
+                <button
+                  type="button"
+                  disabled={hotpatching}
+                  onClick={handleApplyHotPatchClick}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  <Zap className={`h-4 w-4 ${hotpatching ? 'animate-bounce' : ''}`} />
+                  <span>{hotpatching ? t('hotUpdate.applying') : t('hotUpdate.btn')}</span>
+                </button>
+
+                {hotpatching ? (
+                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900/50">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>{hotpatchStatus || 'Downloading...'}</span>
+                      <span>{hotpatchPct}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                        style={{ width: `${hotpatchPct}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
                 <button
                   type="button"
                   onClick={() => openUpdateLink(updateInfo.setupExeUrl || updateInfo.downloadUrl)}

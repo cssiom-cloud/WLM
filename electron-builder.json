@@ -4,7 +4,7 @@
   "productName": "WLR Command Portal",
   "copyright": "Copyright © 2026 White Lion Regiment",
   "directories": {
-    "output": "release/v1.0.6"
+    "output": "release/v1.0.7"
   },
   "files": [
     "*.html",
@@ -33,9 +33,9 @@
     "requestedExecutionLevel": "asInvoker"
   },
   "nsis": {
-    "oneClick": false,
-    "allowToChangeInstallationDirectory": true,
-    "allowElevation": true,
+    "oneClick": true,
+    "perMachine": false,
+    "allowElevation": false,
     "installerIcon": "assets/icon.ico",
     "uninstallerIcon": "assets/icon.ico",
     "installerHeaderIcon": "assets/icon.ico",

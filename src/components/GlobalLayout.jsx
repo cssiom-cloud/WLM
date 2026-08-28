@@ -17,7 +17,10 @@ import {
   Settings,
   Shield,
   Ticket,
-  Users
+  Users,
+  Zap,
+  AlertTriangle,
+  Download
 } from 'lucide-react';
 import CommandAtmosphere from './CommandAtmosphere.jsx';
 import TacticalDock from './TacticalDock.jsx';
@@ -28,6 +31,9 @@ import { createPersonnelProfile as createPersonnelProfileRow, fetchOwnSettings, 
 import { supabase } from '../lib/supabase.js';
 import { writeUiMode } from '../../js/ui-mode.js';
 import { startAnnouncementWatcher } from '../../js/notification-service.js';
+import { checkStartupUpdate } from '../../js/app-updater.js';
+import { applyLiveHotPatch } from '../../js/hot-updater.js';
+import { openUpdateLink } from '../../js/updater.js';
 import {
   applyPrefsToDom,
   mergeRemoteSettings,
@@ -93,6 +99,10 @@ export function CommandProvider({ children }) {
   const [uiScale, setUiScaleState] = useState(() => readLocalPrefs().ui_scale);
   const [zenMode, setZenMode] = useState(false);
   const [authHold, setAuthHold] = useState(false);
+  const [startupUpdate, setStartupUpdate] = useState(null);
+  const [hotpatching, setHotpatching] = useState(false);
+  const [hotpatchStatus, setHotpatchStatus] = useState('');
+  const [hotpatchPct, setHotpatchPct] = useState(0);
   const rosterGen = useRef(0);
   const skipPersist = useRef(true);
 
@@ -251,6 +261,11 @@ export function CommandProvider({ children }) {
     applyPrefsToDom(readLocalPrefs());
     if (supabase) {
       startAnnouncementWatcher(supabase);
+      checkStartupUpdate(supabase).then((info) => {
+        if (info?.updateAvailable && !info.dismissed) {
+          setStartupUpdate(info);
+        }
+      }).catch(() => {});
     }
   }, []);
 
@@ -311,6 +326,30 @@ export function CommandProvider({ children }) {
 
   const t = useCallback((key) => translate(lang, key), [lang]);
 
+  const handleStartupHotPatch = useCallback(async () => {
+    setHotpatching(true);
+    try {
+      await applyLiveHotPatch((p) => {
+        if (p.stage === 'downloading') {
+          const pct = Math.round((p.current / p.total) * 100);
+          setHotpatchStatus(`Downloading ${p.fileName}...`);
+          setHotpatchPct(pct);
+        } else if (p.stage === 'applying') {
+          setHotpatchStatus(t('hotUpdate.applying'));
+        } else if (p.stage === 'success') {
+          setHotpatchStatus(t('hotUpdate.success'));
+          setHotpatchPct(100);
+        }
+      });
+      setTimeout(() => {
+        window.location.reload();
+      }, 1800);
+    } catch (err) {
+      setHotpatchStatus(err.message);
+      setHotpatching(false);
+    }
+  }, [t]);
+
   const value = useMemo(
     () => ({
       bootstrapping,
@@ -325,6 +364,12 @@ export function CommandProvider({ children }) {
       uiScale,
       zenMode,
       authHold,
+      startupUpdate,
+      setStartupUpdate,
+      hotpatching,
+      hotpatchStatus,
+      hotpatchPct,
+      handleStartupHotPatch,
       copy: layoutCopy(lang),
       t,
       isAdmin: roleIsAdmin(activePersonnel),
@@ -664,7 +709,24 @@ function AnimatedOutlet() {
 }
 
 export function GlobalLayout() {
-  const { copy, t, activePersonnel, formatPersonnelName, signOut, zenMode, theme, rain, glassVisible, glassMotion } = useCommand();
+  const {
+    copy,
+    t,
+    activePersonnel,
+    formatPersonnelName,
+    signOut,
+    zenMode,
+    theme,
+    rain,
+    glassVisible,
+    glassMotion,
+    startupUpdate,
+    setStartupUpdate,
+    hotpatching,
+    hotpatchStatus,
+    hotpatchPct,
+    handleStartupHotPatch
+  } = useCommand();
   const [open, setOpen] = useState(false);
   const location = useLocation();
   const navigate = useNavigate();
@@ -778,6 +840,118 @@ export function GlobalLayout() {
           );
         })}
       </motion.nav>
+
+      {/* Supabase Startup Auto-Update Notification Modal */}
+      <AnimatePresence>
+        {startupUpdate ? (
+          <div className="fixed inset-0 z-[130] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => {
+                if (!startupUpdate.isCritical) {
+                  sessionStorage.setItem(`wlr_dismissed_update_${startupUpdate.latestVersion}`, 'true');
+                  setStartupUpdate(null);
+                }
+              }}
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.94, y: 16 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.94, y: 16 }}
+              className="relative w-full max-w-md rounded-3xl border border-slate-200/80 bg-white/95 p-6 shadow-2xl backdrop-blur-2xl dark:border-white/10 dark:bg-slate-950/95"
+            >
+              <div className="flex items-center gap-3 text-[var(--accent)]">
+                <div className="flex h-11 w-11 items-center justify-center rounded-2xl bg-[var(--accent-soft)]">
+                  <Zap className="h-6 w-6" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">{t('settings.updateAvailableTitle')}</h3>
+                  <p className="text-xs text-slate-500">Supabase Cloud Registry • Official Release</p>
+                </div>
+              </div>
+
+              {startupUpdate.isCritical ? (
+                <div className="mt-3 inline-flex items-center gap-1.5 rounded-full border border-red-500/30 bg-red-500/10 px-3 py-1 text-xs font-semibold text-red-500">
+                  <AlertTriangle className="h-3.5 w-3.5" />
+                  <span>{t('update.criticalRequired')}</span>
+                </div>
+              ) : null}
+
+              <div className="mt-4 flex items-center justify-between rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900/50">
+                <div>
+                  <small className="block text-[11px] uppercase tracking-wider text-slate-400">Current</small>
+                  <strong className="text-sm font-semibold text-slate-900 dark:text-slate-100">v{startupUpdate.currentVersion}</strong>
+                </div>
+                <span className="text-slate-400">→</span>
+                <div>
+                  <small className="block text-[11px] uppercase tracking-wider text-slate-400">New Version</small>
+                  <strong className="text-sm font-semibold text-[var(--accent)]">v{startupUpdate.latestVersion}</strong>
+                </div>
+              </div>
+
+              {startupUpdate.releaseNotes ? (
+                <div className="mt-3 max-h-28 overflow-y-auto rounded-2xl border border-slate-200/80 bg-slate-50 p-3 text-xs leading-relaxed text-slate-600 dark:border-white/10 dark:bg-slate-900/50 dark:text-slate-400 whitespace-pre-line">
+                  {startupUpdate.releaseNotes}
+                </div>
+              ) : null}
+
+              <div className="mt-4 grid gap-2">
+                <button
+                  type="button"
+                  disabled={hotpatching}
+                  onClick={handleStartupHotPatch}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white shadow-lg shadow-emerald-600/30 transition hover:bg-emerald-500 disabled:opacity-50"
+                >
+                  <Zap className={`h-4 w-4 ${hotpatching ? 'animate-bounce' : ''}`} />
+                  <span>{hotpatching ? t('hotUpdate.applying') : t('hotUpdate.btn')}</span>
+                </button>
+
+                {hotpatching ? (
+                  <div className="rounded-2xl border border-slate-200/80 bg-slate-50 p-3 dark:border-white/10 dark:bg-slate-900/50">
+                    <div className="flex justify-between text-xs text-slate-500">
+                      <span>{hotpatchStatus || 'Downloading...'}</span>
+                      <span>{hotpatchPct}%</span>
+                    </div>
+                    <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-slate-200 dark:bg-white/10">
+                      <div
+                        className="h-full rounded-full bg-emerald-500 transition-all duration-300"
+                        style={{ width: `${hotpatchPct}%` }}
+                      />
+                    </div>
+                  </div>
+                ) : null}
+
+                <button
+                  type="button"
+                  onClick={() => openUpdateLink(startupUpdate.downloadUrl)}
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl border border-slate-200/80 bg-white/60 px-4 py-2.5 text-sm font-semibold text-slate-900 shadow-sm transition hover:bg-white dark:border-white/10 dark:bg-slate-900/60 dark:text-slate-100 dark:hover:bg-slate-800"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>{t('settings.downloadSetup')}</span>
+                </button>
+              </div>
+
+              {!startupUpdate.isCritical ? (
+                <div className="mt-4 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      sessionStorage.setItem(`wlr_dismissed_update_${startupUpdate.latestVersion}`, 'true');
+                      setStartupUpdate(null);
+                    }}
+                    className="text-xs font-semibold text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
+                  >
+                    {t('update.remindLater')}
+                  </button>
+                </div>
+              ) : null}
+            </motion.div>
+          </div>
+        ) : null}
+      </AnimatePresence>
     </div>
   );
 }

@@ -388,6 +388,77 @@ Write-Output $task.Result.ToString()
       return false;
     });
 
+    // ── Live In-Place Hot Patch Applier ───────────────────
+    ipcMain.handle('apply-hot-patch', async (event, files = []) => {
+      try {
+        for (const file of files) {
+          const { relativePath, content } = file;
+          if (!relativePath || typeof content !== 'string') continue;
+          
+          // Safety: avoid directory traversal
+          const safePath = path.normalize(relativePath).replace(/^(\.\.[\/\\])+/, '');
+          const destPath = path.join(APP_ROOT, safePath);
+          
+          const dir = path.dirname(destPath);
+          if (!fs.existsSync(dir)) {
+            fs.mkdirSync(dir, { recursive: true });
+          }
+          fs.writeFileSync(destPath, content, 'utf8');
+        }
+        return { success: true };
+      } catch (err) {
+        console.error('Failed to apply hot patch:', err);
+        return { success: false, error: err.message };
+      }
+    });
+
+    // ── Native Shortcut Creator Engine ────────────────────
+    ipcMain.handle('create-app-shortcuts', async (event, { makeDesktop = true, makeStart = true, autoStart = false } = {}) => {
+      try {
+        const exePath = process.execPath;
+        const iconPath = getAppIcon();
+        const appName = 'WLR Command Portal';
+
+        if (process.platform === 'win32') {
+          const psScript = `
+$WshShell = New-Object -ComObject WScript.Shell
+$desktop = [System.Environment]::GetFolderPath('Desktop')
+$startMenu = [System.Environment]::GetFolderPath('Programs')
+
+if ("${makeDesktop}" -eq "True") {
+    $Shortcut = $WshShell.CreateShortcut("$desktop\\${appName}.lnk")
+    $Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
+    $Shortcut.IconLocation = "${iconPath.replace(/\\/g, '\\\\')},0"
+    $Shortcut.Description = "White Lion Regiment Command Portal"
+    $Shortcut.Save()
+}
+
+if ("${makeStart}" -eq "True") {
+    $Shortcut = $WshShell.CreateShortcut("$startMenu\\${appName}.lnk")
+    $Shortcut.TargetPath = "${exePath.replace(/\\/g, '\\\\')}"
+    $Shortcut.IconLocation = "${iconPath.replace(/\\/g, '\\\\')},0"
+    $Shortcut.Description = "White Lion Regiment Command Portal"
+    $Shortcut.Save()
+}
+          `.trim();
+
+          execFile('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-Command', psScript], (err) => {
+            if (err) console.warn('Shortcut creation warning:', err);
+          });
+        }
+
+        app.setLoginItemSettings({
+          openAtLogin: Boolean(autoStart),
+          path: exePath
+        });
+
+        return { success: true };
+      } catch (err) {
+        console.error('Failed to create shortcuts:', err);
+        return { success: false, error: err.message };
+      }
+    });
+
     function compareSemVer(v1, v2) {
       const parts1 = String(v1).replace(/^v/, '').split('.').map(Number);
       const parts2 = String(v2).replace(/^v/, '').split('.').map(Number);

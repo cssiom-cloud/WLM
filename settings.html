@@ -160,7 +160,7 @@
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
                 </div>
                 <div>
-                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.6</span></strong>
+                  <strong style="display:block;font-size:1rem;">WLR Command Portal <span class="badge badge-blue">v1.0.7</span></strong>
                   <small style="color:var(--text-muted);" data-i18n="settings.updateStatusUpToDate">You are running the latest version with persistent session isolation.</small>
                 </div>
               </div>
@@ -266,7 +266,20 @@
         </div>
 
         <div style="display:grid;gap:0.5rem;margin-bottom:1rem;">
-          <button id="download-setup-btn" class="btn btn-primary" type="button" style="width:100%;justify-content:center;">
+          <button id="apply-hotpatch-btn" class="btn btn-primary" type="button" style="width:100%;justify-content:center;background:linear-gradient(135deg,#10b981 0%,#059669 100%);">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+            <span data-i18n="hotUpdate.btn">Apply In-Place Hot Patch</span>
+          </button>
+          <div id="hotpatch-progress-box" style="display:none;padding:0.65rem 0.85rem;border:1px solid var(--border);border-radius:8px;background:rgba(0,0,0,0.3);margin-bottom:0.25rem;">
+            <div style="display:flex;justify-content:space-between;font-size:0.75rem;color:var(--text-muted);margin-bottom:0.35rem;">
+              <span id="hotpatch-status-text">Downloading patch...</span>
+              <span id="hotpatch-pct-text">0%</span>
+            </div>
+            <div style="width:100%;height:6px;background:rgba(255,255,255,0.1);border-radius:10px;overflow:hidden;">
+              <div id="hotpatch-progress-fill" style="width:0%;height:100%;background:var(--accent);transition:width 0.2s;"></div>
+            </div>
+          </div>
+          <button id="download-setup-btn" class="btn" type="button" style="width:100%;justify-content:center;">
             <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="margin-right:0.35rem;"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
             <span data-i18n="settings.downloadSetup">Download Setup Installer (.exe)</span>
           </button>

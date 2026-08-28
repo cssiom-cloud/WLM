@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>WLR Command Portal - Setup Wizard</title>
+  <link rel="icon" href="../assets/icon.ico" type="image/x-icon">
+  <link rel="stylesheet" href="./installer.css">
+</head>
+<body>
+  <div class="aurora-glow" aria-hidden="true"></div>
+  <canvas id="rain-canvas"></canvas>
+  <canvas id="glass-canvas"></canvas>
+
+  <div class="installer-wrapper">
+    <!-- Header -->
+    <header class="installer-header">
+      <div class="brand-section">
+        <img class="brand-logo" src="../assets/logo_web.png" alt="WLR Logo">
+        <div>
+          <h1 class="brand-title">WHITE LION REGIMENT</h1>
+          <p style="font-size: 0.72rem; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.1em;" data-i18n="installer.title">Command Portal Setup</p>
+        </div>
+      </div>
+      <button id="lang-btn" class="lang-toggle-btn" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+        <span id="lang-label">EN</span>
+      </button>
+    </header>
+
+    <!-- Wizard Steps Body -->
+    <main class="installer-body">
+      <!-- Step 1: Welcome -->
+      <section id="step-1" class="step-pane active">
+        <p class="step-kicker">STEP 1 OF 5</p>
+        <h2 class="step-title" data-i18n="installer.stepWelcome">Welcome to White Lion Regiment</h2>
+        <p class="step-desc" data-i18n="installer.welcomeDesc">Install the official Command Portal Desktop application on this workstation with persistent session storage, real Windows Hello integration, and background atmosphere.</p>
+        
+        <div class="info-box">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;flex-shrink:0;">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong style="font-size:0.88rem;display:block;">Verified Architecture &amp; System Ready</strong>
+              <small style="color:var(--text-muted);font-size:0.78rem;">64-bit Windows OS • Embedded Secure Loopback • Web Crypto Support</small>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 2: Destination -->
+      <section id="step-2" class="step-pane">
+        <p class="step-kicker">STEP 2 OF 5</p>
+        <h2 class="step-title" data-i18n="installer.stepDestination">Installation Location</h2>
+        <p class="step-desc" data-i18n="installer.destDesc">Select the directory where WLR Command Portal will be installed on your computer.</p>
+        
+        <div class="info-box">
+          <label style="display:block;font-size:0.8rem;font-weight:600;margin-bottom:0.25rem;" data-i18n="installer.defaultDest">Recommended Directory (User AppData)</label>
+          <div class="path-input-row">
+            <input id="dest-path-input" class="text-input" type="text" readonly value="C:\Users\AppData\Local\Programs\WLR Command Portal">
+          </div>
+          <small style="color:var(--text-muted);font-size:0.75rem;margin-top:0.4rem;display:block;">Requires ~160 MB of available disk space.</small>
+        </div>
+      </section>
+
+      <!-- Step 3: Hardware Security & Windows Hello -->
+      <section id="step-3" class="step-pane">
+        <p class="step-kicker">STEP 3 OF 5</p>
+        <h2 class="step-title" data-i18n="installer.stepHardware">Hardware Security &amp; 2FA</h2>
+        <p class="step-desc" data-i18n="installer.hardwareDesc">Test Windows Hello and configure Secondary Verification for this PC.</p>
+        
+        <div class="info-box">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:0.75rem;margin-bottom:0.75rem;">
+            <div style="display:flex;align-items:center;gap:0.65rem;">
+              <div style="width:36px;height:36px;border-radius:8px;background:var(--accent-soft);display:grid;place-items:center;">
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+              </div>
+              <div>
+                <strong style="font-size:0.88rem;display:block;">Windows Hello Native Authenticator</strong>
+                <small id="hello-status-label" style="color:var(--text-muted);font-size:0.75rem;">Testing availability on this hardware...</small>
+              </div>
+            </div>
+            <button id="test-hello-btn" class="btn btn-ghost" type="button" style="font-size:0.78rem;padding:0.35rem 0.75rem;" data-i18n="installer.testHelloBtn">Test Windows Hello</button>
+          </div>
+          <div style="border-top:1px solid var(--border);padding-top:0.65rem;margin-top:0.65rem;">
+            <label style="display:block;font-size:0.78rem;font-weight:600;margin-bottom:0.25rem;">Secondary PIN (4-6 digits fallback)</label>
+            <input id="installer-pin-input" class="text-input" type="password" placeholder="••••" maxlength="8" style="max-width:180px;">
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 4: Options -->
+      <section id="step-4" class="step-pane">
+        <p class="step-kicker">STEP 4 OF 5</p>
+        <h2 class="step-title" data-i18n="installer.stepOptions">Shortcuts &amp; Startup</h2>
+        <p class="step-desc">Configure desktop icons and launch behavior for quick tactical access.</p>
+        
+        <label class="check-label">
+          <input id="chk-desktop" class="check-input" type="checkbox" checked>
+          <span data-i18n="installer.createDesktop">Create Desktop Shortcut with Custom Icon</span>
+        </label>
+        
+        <label class="check-label">
+          <input id="chk-startmenu" class="check-input" type="checkbox" checked>
+          <span data-i18n="installer.createStartMenu">Create Start Menu Entry</span>
+        </label>
+
+        <label class="check-label">
+          <input id="chk-autostart" class="check-input" type="checkbox">
+          <span data-i18n="installer.autoStart">Start WLR Command Portal on Windows boot</span>
+        </label>
+      </section>
+
+      <!-- Step 5: Installing Progress -->
+      <section id="step-5" class="step-pane">
+        <p class="step-kicker">INSTALLING</p>
+        <h2 class="step-title" data-i18n="installer.stepProgress">Installing WLR Command Portal</h2>
+        <p id="install-subtext" class="step-desc" data-i18n="installer.installingText">Deploying core binaries and setting up local data vaults...</p>
+        
+        <div class="progress-container">
+          <div class="progress-bar-bg">
+            <div id="install-progress-bar" class="progress-bar-fill"></div>
+          </div>
+          <div class="progress-status-text">
+            <span id="install-status-label">Extracting application package...</span>
+            <span id="install-percent-label">0%</span>
+          </div>
+        </div>
+      </section>
+
+      <!-- Step 6: Complete -->
+      <section id="step-6" class="step-pane">
+        <p class="step-kicker" style="color:var(--success);">SUCCESS</p>
+        <h2 class="step-title" data-i18n="installer.stepComplete">Installation Complete</h2>
+        <p class="step-desc" data-i18n="installer.completeDesc">WLR Command Portal is ready to launch on this device. All local sessions and hardware credentials are encrypted and active.</p>
+        
+        <div class="info-box" style="background:var(--success-soft);border-color:rgba(16,185,129,0.3);">
+          <div style="display:flex;align-items:center;gap:0.75rem;">
+            <div style="width:36px;height:36px;border-radius:8px;background:var(--success);color:#fff;display:grid;place-items:center;flex-shrink:0;">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+            <div>
+              <strong style="font-size:0.9rem;display:block;color:#fff;">Desktop Deployment Finished</strong>
+              <small style="color:rgba(255,255,255,0.8);font-size:0.78rem;">Clean In-Place System Isolation • Zero Duplicate Sessions</small>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer Navigation -->
+    <footer class="installer-footer">
+      <div id="step-dots" class="step-indicator">
+        <span class="step-dot active"></span>
+        <span class="step-dot"></span>
+        <span class="step-dot"></span>
+        <span class="step-dot"></span>
+        <span class="step-dot"></span>
+      </div>
+
+      <div class="btn-group">
+        <button id="btn-back" class="btn btn-ghost" type="button" style="display:none;" data-i18n="installer.back">Back</button>
+        <button id="btn-next" class="btn btn-primary" type="button" data-i18n="installer.next">Next</button>
+        <button id="btn-launch" class="btn btn-primary" type="button" style="display:none;" data-i18n="installer.launchBtn">Launch WLR Command Portal</button>
+      </div>
+    </footer>
+  </div>
+
+  <script type="module" src="./installer.js"></script>
+</body>
+</html>

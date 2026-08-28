@@ -1,0 +1,17 @@
+[package]
+name = "custom-installer"
+version = "1.0.1"
+edition = "2021"
+authors = ["White Lion Regiment"]
+description = "Custom Standalone Installer & Supabase Cloud Updater"
+
+[dependencies]
+reqwest = { version = "0.12", features = ["blocking", "json"] }
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+zip = "2.2"
+winreg = "0.52"
+dirs = "5.0"
+indicatif = "0.17"
+colored = "2.1"
+chrono = "0.4"

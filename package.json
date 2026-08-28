@@ -1,6 +1,6 @@
 {
   "name": "wlr-command-personnel",
-  "version": "1.0.6",
+  "version": "1.0.7",
   "description": "W.L.R Command Portal Desktop Application",
   "author": "White Lion Regiment",
   "private": true,
@@ -12,6 +12,7 @@
     "build": "vite build",
     "preview": "vite preview",
     "desktop:dev": "vite build && electron .",
+    "desktop:setup": "electron electron/installer-main.cjs",
     "desktop:build": "vite build && electron-builder --config electron-builder.json --win"
   },
   "dependencies": {
